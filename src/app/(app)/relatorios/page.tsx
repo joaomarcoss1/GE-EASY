@@ -77,7 +77,7 @@ export default async function RelatoriosPage({ searchParams }: { searchParams: P
       .eq("status", "inadimplente")
       .order("valor_credito", { ascending: false })
       .limit(25),
-    fetchAll<CancelRow>((f, t) => supabase.from("consorcio_cotas").select("valor_credito, administradora_id").eq("status", "cancelada").gte("updated_at", deTs).lt("updated_at", ateTs).order("id").range(f, t)),
+    fetchAll<CancelRow>((f, t) => supabase.from("consorcio_cotas").select("valor_credito, administradora_id").eq("status", "cancelada").gte("cancelada_em", de).lte("cancelada_em", ate).order("id").range(f, t)),
     supabase.from("consorcio_cotas").select("id", { count: "exact", head: true }).in("status", ["ativa", "contemplada", "inadimplente"]),
     getProfileMap(),
     parceiroMap(),

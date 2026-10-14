@@ -120,6 +120,7 @@ export interface ConsorcioCota {
   contemplada_em: string | null;
   forma_contemplacao: ContemplacaoForma | null;
   valor_lance: number | null;
+  cancelada_em: string | null;
   consultor_id: string | null;
   observacoes: string | null;
   created_at: string;
