@@ -23,6 +23,7 @@ const perfilSchema = z.object({
   full_name: zs.required("Nome", 120).refine((v) => v.length >= 2, "Informe o nome completo"),
   phone: zs.text(20).refine((v) => !v || [10, 11].includes(onlyDigits(v).length), "Telefone inválido"),
   cargo: zs.text(80),
+  oab: zs.text(30).refine((v) => !v || /^[A-Za-z]{2}\s?\d{2,7}[A-Za-z]?$/.test(v.replace(/[.\-/]/g, "").trim()), "Informe UF e número, ex.: SP 123456"),
   avatar_url: zs.text(500).refine((v) => !v || isAllowedAvatar(v), "Use uma imagem https do Google (googleusercontent.com) ou do armazenamento do sistema"),
 });
 
@@ -32,11 +33,11 @@ export async function updateMeuPerfil(_: ActionState, formData: FormData): Promi
   if ("denied" in g) return g.denied;
   const parsed = perfilSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
-  const { full_name, phone, cargo, avatar_url } = parsed.data;
+  const { full_name, phone, cargo, oab, avatar_url } = parsed.data;
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name, phone: phone ? onlyDigits(phone) : null, cargo, avatar_url })
+    .update({ full_name, phone: phone ? onlyDigits(phone) : null, cargo, oab: oab ? oab.toUpperCase() : null, avatar_url })
     .eq("id", g.session.userId);
   if (error) return dbError(error);
   revalidatePath("/", "layout");

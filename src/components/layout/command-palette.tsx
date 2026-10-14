@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, User, Landmark, ShieldCheck, CornerDownLeft, Loader2, ArrowRight } from "lucide-react";
+import { Search, User, Landmark, ShieldCheck, CornerDownLeft, Loader2, ArrowRight, Scale } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { NAV } from "@/lib/nav";
 import { can } from "@/lib/rbac";
@@ -68,7 +68,7 @@ export function CommandPalette({ role, open, setOpen }: { role: AppRole; open: b
   };
 
   if (!open) return null;
-  const iconFor = (t: string) => (t === "cliente" ? User : t === "consorcio" ? Landmark : t === "seguro" ? ShieldCheck : ArrowRight);
+  const iconFor = (t: string) => (t === "processo" ? Scale : t === "cliente" ? User : t === "consorcio" ? Landmark : t === "seguro" ? ShieldCheck : ArrowRight);
   return (
     <div className="fixed inset-0 z-[55] flex items-start justify-center p-4 pt-[12vh]" role="dialog" aria-modal="true" aria-label="Busca global">
       <div className="absolute inset-0 animate-fade-in bg-brand-950/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
@@ -85,7 +85,7 @@ export function CommandPalette({ role, open, setOpen }: { role: AppRole; open: b
               if (e.key === "ArrowUp") { e.preventDefault(); setIdx((i) => Math.max(i - 1, 0)); }
               if (e.key === "Enter" && all[idx]) go(all[idx]);
             }}
-            placeholder="Buscar clientes, CPF/CNPJ, apólices, grupos de consórcio…"
+            placeholder="Buscar processos (nº CNJ, parte), clientes, CPF/CNPJ…"
             className="h-14 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted"
           />
           <kbd className="rounded-md border border-line px-1.5 py-0.5 text-[10px] text-muted">ESC</kbd>

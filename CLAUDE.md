@@ -1,8 +1,9 @@
 # GE EASY — Gestão Especializada EASY
 
-Sistema de gestão da **EASY Consórcio & Seguros**: CRM, funil, consórcios, seguros,
-agenda (Google Agenda), documentos (Storage + Google Drive), comissões, metas,
-consultores externos (check-in de visitas) e administração.
+Sistema de **gestão jurídica** da EASY: o foco principal são **processos, prazos, audiências e a gestão por
+departamentos** (equipes, demandas e indicadores). Módulos de apoio: clientes, agenda (Google Agenda),
+documentos (Storage + Google Drive), tarefas/demandas e administração. O **comercial** (consórcios, seguros,
+funil, comissões, metas, visitas de consultores externos) é um módulo secundário agrupado em "Comercial".
 
 ## Stack
 - Next.js 15 (App Router, Server Components, Server Actions) + React 19 + TypeScript estrito
@@ -23,9 +24,20 @@ consultores externos (check-in de visitas) e administração.
 6. Redirecionamentos com `next` só aceitam caminhos relativos (`/x`, nunca `//x`).
 
 ## Papéis (enum `app_role`)
-`admin`, `gestor`, `financeiro`, `consultor` (interno), `consultor_externo`.
-- admin/gestor: veem e editam tudo; financeiro: lê tudo e gere comissões;
-- consultores: só a própria carteira (clientes/negócios com `consultor_id` ou `created_by` = ele).
+`admin`, `gestor`, `financeiro`, `advogado`, `assistente_juridico`, `consultor` (interno), `consultor_externo`.
+- admin/gestor: veem e editam tudo; financeiro: lê processos, lança custas/honorários e gere comissões;
+- advogado/assistente jurídico: processos do(s) seu(s) departamento(s), dos quais são responsáveis ou equipe;
+- consultores (comercial): só a própria carteira e sem acesso a processos.
+- `profiles.is_master`: administrador master, imutável por outros usuários.
+
+## Núcleo jurídico
+- Tabelas: `departamentos`, `departamento_membros`, `processos`, `processo_partes`, `processo_andamentos`,
+  `prazos`, `audiencias`, `processo_lancamentos` (+ `processo_id`/`departamento_id` em tarefas, documentos e agenda).
+- RLS por departamento: `is_membro_departamento()`, `is_responsavel_departamento()`, `can_access_processo()`,
+  `can_edit_processo()`. Triggers gravam andamentos automáticos (prazos, audiências, mudança de fase/situação).
+- `src/lib/juridico/cnj.ts`: validação/formatação do número CNJ (DV módulo 97) e identificação do tribunal.
+- `src/lib/juridico/prazos.ts`: contagem de prazos em dias úteis (CPC arts. 219, 220 e 224) com feriados
+  nacionais e recesso forense. Feriados locais via parâmetro `extras`.
 Permissões da interface em `src/lib/rbac.ts` (`can(role, "perm")`).
 
 ## Convenções de UI

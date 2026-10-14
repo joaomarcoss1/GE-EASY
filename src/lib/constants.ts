@@ -14,6 +14,8 @@ export const ROLES: Option[] = [
   { value: "admin", label: "Administrador", tone: "brand" },
   { value: "gestor", label: "Gestor", tone: "violet" },
   { value: "financeiro", label: "Financeiro", tone: "green" },
+  { value: "advogado", label: "Advogado(a)", tone: "brand" },
+  { value: "assistente_juridico", label: "Assistente jurídico", tone: "sky" },
   { value: "consultor", label: "Consultor interno", tone: "sky" },
   { value: "consultor_externo", label: "Consultor externo", tone: "accent" },
 ];
@@ -128,6 +130,8 @@ export const EVENTO_TIPOS: Option[] = [
   { value: "ligacao", label: "Ligação", tone: "sky" },
   { value: "assembleia", label: "Assembleia", tone: "violet" },
   { value: "renovacao", label: "Renovação", tone: "amber" },
+  { value: "audiencia", label: "Audiência", tone: "red" },
+  { value: "prazo", label: "Prazo", tone: "amber" },
   { value: "tarefa", label: "Tarefa", tone: "slate" },
   { value: "outro", label: "Outro", tone: "slate" },
 ];
@@ -175,3 +179,147 @@ export const INTERACAO_TIPOS: Option[] = [
 export const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO"
   .split(" ")
   .map((v) => ({ value: v, label: v }));
+
+// ---------------------------------------------------------------- Jurídico
+
+export const PROCESSO_AREAS: Option[] = [
+  { value: "civel", label: "Cível" },
+  { value: "consumidor", label: "Consumidor" },
+  { value: "bancario", label: "Bancário / Consórcio" },
+  { value: "trabalhista", label: "Trabalhista" },
+  { value: "tributario", label: "Tributário" },
+  { value: "previdenciario", label: "Previdenciário" },
+  { value: "familia", label: "Família e Sucessões" },
+  { value: "empresarial", label: "Empresarial" },
+  { value: "administrativo", label: "Administrativo" },
+  { value: "criminal", label: "Criminal" },
+  { value: "outro", label: "Outro" },
+];
+
+export const PROCESSO_STATUS: Option[] = [
+  { value: "ativo", label: "Ativo", tone: "green" },
+  { value: "suspenso", label: "Suspenso", tone: "amber" },
+  { value: "arquivado", label: "Arquivado", tone: "slate" },
+  { value: "encerrado", label: "Encerrado", tone: "violet" },
+];
+
+export const PROCESSO_FASES: Option[] = [
+  { value: "pre_processual", label: "Pré-processual", tone: "slate" },
+  { value: "conhecimento", label: "Conhecimento", tone: "brand" },
+  { value: "recursal", label: "Recursal", tone: "violet" },
+  { value: "execucao", label: "Execução", tone: "accent" },
+  { value: "cumprimento_sentenca", label: "Cumprimento de sentença", tone: "amber" },
+  { value: "acordo", label: "Acordo", tone: "green" },
+  { value: "transito_julgado", label: "Trânsito em julgado", tone: "sky" },
+];
+
+export const PROCESSO_RISCO: Option[] = [
+  { value: "provavel", label: "Provável", tone: "red" },
+  { value: "possivel", label: "Possível", tone: "amber" },
+  { value: "remoto", label: "Remoto", tone: "green" },
+];
+
+export const PROCESSO_POLO: Option[] = [
+  { value: "ativo", label: "Polo ativo (autor)" },
+  { value: "passivo", label: "Polo passivo (réu)" },
+  { value: "terceiro", label: "Terceiro interessado" },
+];
+
+export const INSTANCIAS: Option[] = [
+  { value: "1", label: "1ª instância" },
+  { value: "2", label: "2ª instância" },
+  { value: "3", label: "Tribunais superiores" },
+  { value: "4", label: "STF" },
+];
+
+export const PARTE_TIPOS: Option[] = [
+  { value: "autor", label: "Autor / Requerente" },
+  { value: "reu", label: "Réu / Requerido" },
+  { value: "terceiro", label: "Terceiro" },
+  { value: "advogado_contrario", label: "Advogado da parte contrária" },
+  { value: "perito", label: "Perito" },
+  { value: "testemunha", label: "Testemunha" },
+];
+
+export const ANDAMENTO_TIPOS: Option[] = [
+  { value: "publicacao", label: "Publicação", tone: "brand" },
+  { value: "intimacao", label: "Intimação", tone: "accent" },
+  { value: "citacao", label: "Citação", tone: "accent" },
+  { value: "despacho", label: "Despacho", tone: "slate" },
+  { value: "decisao", label: "Decisão", tone: "violet" },
+  { value: "sentenca", label: "Sentença", tone: "red" },
+  { value: "acordao", label: "Acórdão", tone: "red" },
+  { value: "peticao", label: "Petição", tone: "sky" },
+  { value: "juntada", label: "Juntada", tone: "slate" },
+  { value: "audiencia", label: "Audiência", tone: "amber" },
+  { value: "outro", label: "Outro", tone: "slate" },
+];
+
+export const PRAZO_STATUS: Option[] = [
+  { value: "pendente", label: "Pendente", tone: "amber" },
+  { value: "cumprido", label: "Cumprido", tone: "green" },
+  { value: "perdido", label: "Perdido", tone: "red" },
+  { value: "cancelado", label: "Cancelado", tone: "slate" },
+];
+
+export const PRAZO_CONTAGEM: Option[] = [
+  { value: "uteis", label: "Dias úteis (CPC art. 219)" },
+  { value: "corridos", label: "Dias corridos" },
+];
+
+export const AUDIENCIA_TIPOS: Option[] = [
+  { value: "conciliacao", label: "Conciliação" },
+  { value: "mediacao", label: "Mediação" },
+  { value: "instrucao", label: "Instrução" },
+  { value: "una", label: "Una (conciliação + instrução)" },
+  { value: "julgamento", label: "Julgamento" },
+  { value: "outra", label: "Outra" },
+];
+
+export const AUDIENCIA_STATUS: Option[] = [
+  { value: "agendada", label: "Agendada", tone: "brand" },
+  { value: "realizada", label: "Realizada", tone: "green" },
+  { value: "redesignada", label: "Redesignada", tone: "amber" },
+  { value: "cancelada", label: "Cancelada", tone: "red" },
+];
+
+export const AUDIENCIA_MODALIDADES: Option[] = [
+  { value: "presencial", label: "Presencial" },
+  { value: "virtual", label: "Virtual (videoconferência)" },
+  { value: "hibrida", label: "Híbrida" },
+];
+
+export const LANCAMENTO_TIPOS: Option[] = [
+  { value: "custas", label: "Custas processuais" },
+  { value: "despesa", label: "Despesa (diligências, cópias…)" },
+  { value: "deposito_judicial", label: "Depósito judicial" },
+  { value: "honorarios_contratuais", label: "Honorários contratuais" },
+  { value: "honorarios_sucumbenciais", label: "Honorários sucumbenciais" },
+  { value: "honorarios_exito", label: "Honorários de êxito" },
+  { value: "acordo", label: "Acordo" },
+  { value: "condenacao", label: "Condenação" },
+];
+
+export const LANCAMENTO_STATUS: Option[] = [
+  { value: "previsto", label: "Previsto", tone: "amber" },
+  { value: "pago", label: "Pago", tone: "slate" },
+  { value: "recebido", label: "Recebido", tone: "green" },
+  { value: "cancelado", label: "Cancelado", tone: "red" },
+];
+
+export const DEPARTAMENTO_CORES: Option[] = [
+  { value: "brand", label: "Índigo", tone: "brand" },
+  { value: "accent", label: "Laranja", tone: "accent" },
+  { value: "green", label: "Verde", tone: "green" },
+  { value: "amber", label: "Âmbar", tone: "amber" },
+  { value: "red", label: "Vermelho", tone: "red" },
+  { value: "sky", label: "Azul", tone: "sky" },
+  { value: "violet", label: "Violeta", tone: "violet" },
+  { value: "slate", label: "Cinza", tone: "slate" },
+];
+
+export const TRIBUNAIS: Option[] = [
+  "TJSP", "TJRJ", "TJMG", "TJRS", "TJPR", "TJSC", "TJBA", "TJPE", "TJCE", "TJGO", "TJDFT", "TJES", "TJMA", "TJPA", "TJPB", "TJPI", "TJRN", "TJAL", "TJSE",
+  "TJMT", "TJMS", "TJRO", "TJTO", "TJAC", "TJAP", "TJAM", "TJRR", "TRF1", "TRF2", "TRF3", "TRF4", "TRF5", "TRF6", "TRT1", "TRT2", "TRT3", "TRT4", "TRT5",
+  "TRT15", "TST", "STJ", "STF", "Procon", "Juizado Especial", "Administrativo",
+].map((v) => ({ value: v, label: v }));

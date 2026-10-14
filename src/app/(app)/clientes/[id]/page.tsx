@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Mail, MapPin, MessageCircle, Phone, Landmark, ShieldCheck, KanbanSquare, CalendarDays, ListChecks, Plus, Briefcase, Cake, Wallet } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, MessageCircle, Phone, Landmark, ShieldCheck, KanbanSquare, CalendarDays, ListChecks, Plus, Briefcase, Cake, Wallet, Scale } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { consultorOptions, getProfileMap } from "@/lib/data";
-import { APOLICE_STATUS, CLIENTE_STATUS, COTA_STATUS, ETAPAS, EVENTO_TIPOS, INTERACAO_TIPOS, ORIGENS, RAMOS_SEGURO, CATEGORIAS_CONSORCIO, TAREFA_STATUS, PRIORIDADES } from "@/lib/constants";
+import { PROCESSO_AREAS, PROCESSO_FASES, PROCESSO_STATUS, APOLICE_STATUS, CLIENTE_STATUS, COTA_STATUS, ETAPAS, EVENTO_TIPOS, INTERACAO_TIPOS, ORIGENS, RAMOS_SEGURO, CATEGORIAS_CONSORCIO, TAREFA_STATUS, PRIORIDADES } from "@/lib/constants";
 import { brl, date, dateTime, maskDocumento, maskPhone, relative, whatsappLink } from "@/lib/format";
 import type { AgendaEvento, Cliente, ConsorcioCota, Interacao, Oportunidade, SeguroApolice, Tarefa } from "@/lib/types";
 import { addInteracao, deleteCliente, deleteInteracao, updateCliente } from "@/lib/actions/clientes";
@@ -43,6 +43,11 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
     supabase.from("tarefas").select("*").eq("cliente_id", id).order("vencimento", { ascending: true }).limit(50),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("cliente_id", id),
   ]);
+  const canProcessos = can(profile.role, "processos.view");
+  const { data: processosData } = canProcessos
+    ? await supabase.from("processos").select("id, titulo, numero_cnj, area, fase, status, parte_contraria, updated_at").eq("cliente_id", id).order("updated_at", { ascending: false })
+    : { data: [] };
+  const procs = processosData ?? [];
   const [profiles, consultores] = await Promise.all([getProfileMap(), consultorOptions()]);
   const consultor = cliente.consultor_id ? profiles.get(cliente.consultor_id) : null;
   const canWrite = can(profile.role, "clientes.write");
@@ -106,6 +111,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
         active={tab}
         tabs={[
           { key: "geral", label: "Visão geral" },
+          ...(canProcessos ? [{ key: "processos", label: "Processos", count: procs.length }] : []),
           { key: "negocios", label: "Negócios", count: ops.length + cts.length + aps.length },
           { key: "agenda", label: "Agenda e tarefas", count: evs.length + tfs.length },
           { key: "documentos", label: "Documentos", count: docCount ?? 0 },
@@ -169,6 +175,21 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
             </CardBody>
           </Card>
         </div>
+      )}
+
+      {tab === "processos" && canProcessos && (
+        <Card>
+          <CardHeader
+            title="Processos do cliente"
+            icon={<Scale className="h-4 w-4" />}
+            action={can(profile.role, "processos.write") && <LinkButton href={`/processos?novo=1&cliente_id=${id}`} size="sm" variant="secondary"><Plus className="h-4 w-4" />Novo processo</LinkButton>}
+          />
+          {procs.length === 0 ? <EmptyState title="Nenhum processo vinculado" /> : (
+            <div className="overflow-x-auto"><table className="table-base"><thead><tr><th>Processo</th><th>Área</th><th>Fase</th><th>Situação</th><th>Atualizado</th></tr></thead><tbody>
+              {procs.map((pr) => <tr key={pr.id}><td><Link href={`/processos/${pr.id}`} className="font-medium hover:text-brand-600">{pr.titulo}</Link><div className="font-mono text-xs text-muted">{pr.numero_cnj ?? "sem número"}{pr.parte_contraria ? ` · × ${pr.parte_contraria}` : ""}</div></td><td className="text-sm">{optionLabel(PROCESSO_AREAS, pr.area)}</td><td><StatusBadge options={PROCESSO_FASES} value={pr.fase} /></td><td><StatusBadge options={PROCESSO_STATUS} value={pr.status} /></td><td className="text-xs text-muted">{date(pr.updated_at)}</td></tr>)}
+            </tbody></table></div>
+          )}
+        </Card>
       )}
 
       {tab === "negocios" && (

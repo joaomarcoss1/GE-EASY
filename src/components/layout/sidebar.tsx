@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, CalendarDays, ListChecks, Users, KanbanSquare, Landmark, ShieldCheck, MapPin, Wallet, Target,
-  BriefcaseBusiness, FolderOpen, BarChart3, Settings, X, type LucideIcon,
+  BriefcaseBusiness, FolderOpen, BarChart3, Settings, X, Scale, AlarmClock, Gavel, Building2, TrendingUp, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { NAV } from "@/lib/nav";
@@ -13,6 +13,7 @@ import type { AppRole } from "@/lib/types";
 
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard, CalendarDays, ListChecks, Users, KanbanSquare, Landmark, ShieldCheck, MapPin, Wallet, Target, BriefcaseBusiness, FolderOpen, BarChart3, Settings,
+  Scale, AlarmClock, Gavel, Building2, TrendingUp,
 };
 
 export function Sidebar({ role, open, onClose }: { role: AppRole; open: boolean; onClose: () => void }) {
@@ -35,7 +36,7 @@ export function Sidebar({ role, open, onClose }: { role: AppRole; open: boolean;
           </button>
         </div>
         <div className="mx-5 mb-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
-          GE <span className="text-accent-300">EASY</span> · Gestão Especializada
+          GE <span className="text-accent-300">EASY</span> · Gestão Jurídica
         </div>
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6" aria-label="Menu principal">
           {NAV.map((group) => {

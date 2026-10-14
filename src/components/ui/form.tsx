@@ -8,7 +8,7 @@ import type { ActionState } from "@/lib/actions/types";
 import { Button } from "./button";
 import { useToast } from "./toast";
 
-export type FieldType = "text" | "email" | "tel" | "number" | "money" | "percent" | "date" | "datetime-local" | "time" | "select" | "textarea" | "checkbox" | "hidden" | "password" | "url" | "documento" | "cep";
+export type FieldType = "text" | "email" | "tel" | "number" | "money" | "percent" | "date" | "datetime-local" | "time" | "select" | "multiselect" | "textarea" | "checkbox" | "hidden" | "password" | "url" | "documento" | "cep" | "cnj";
 
 export interface FieldDef {
   name: string;
@@ -28,7 +28,7 @@ export interface FieldDef {
   section?: string;
 }
 
-export type Values = Record<string, string | number | boolean | null | undefined>;
+export type Values = Record<string, string | number | boolean | string[] | null | undefined>;
 
 export function SubmitButton({ children, variant = "primary", className }: { children: React.ReactNode; variant?: "primary" | "accent" | "danger"; className?: string }) {
   const { pending } = useFormStatus();
@@ -51,6 +51,12 @@ function maskInput(type: FieldType | undefined, value: string) {
     return t.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").replace(/[-\s()]+$/, "");
   }
   if (type === "cep") return d.slice(0, 8).replace(/(\d{5})(\d)/, "$1-$2");
+  if (type === "cnj") {
+    const c = d.slice(0, 20);
+    const parts = [c.slice(0, 7), c.slice(7, 9), c.slice(9, 13), c.slice(13, 14), c.slice(14, 16), c.slice(16, 20)];
+    const seps = ["", "-", ".", ".", ".", "."];
+    return parts.reduce((acc, part, i) => (part ? acc + seps[i] + part : acc), "");
+  }
   return value;
 }
 
@@ -65,11 +71,33 @@ export function Field({ field, defaultValue, error }: { field: FieldDef; default
     "aria-invalid": error ? true : undefined,
     "aria-describedby": error ? `${id}-err` : undefined,
   } as const;
-  const dv = defaultValue === null || defaultValue === undefined ? "" : String(defaultValue);
+  const dv = defaultValue === null || defaultValue === undefined || Array.isArray(defaultValue) ? "" : String(defaultValue);
 
   if (t === "hidden") return <input type="hidden" name={field.name} value={dv} />;
 
   let control: React.ReactNode;
+  if (t === "multiselect") {
+    const selected = new Set(Array.isArray(defaultValue) ? defaultValue : []);
+    return (
+      <fieldset className={spanCls(field.span)}>
+        {field.label && <legend className="label">{field.label}</legend>}
+        <div className="grid max-h-48 grid-cols-1 gap-1 overflow-y-auto rounded-xl border border-line p-2 sm:grid-cols-2">
+          {field.options?.length ? (
+            field.options.map((o) => (
+              <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-surface-2">
+                <input type="checkbox" name={`${field.name}[]`} value={o.value} defaultChecked={selected.has(o.value)} className="h-4 w-4 rounded accent-brand-700" />
+                <span className="truncate">{o.label}</span>
+              </label>
+            ))
+          ) : (
+            <p className="px-2 py-1.5 text-xs text-muted">Nenhuma opção disponível.</p>
+          )}
+        </div>
+        {error ? <p className="mt-1 text-xs font-medium text-red-600">{error}</p> : field.help ? <p className="mt-1 text-xs text-muted">{field.help}</p> : null}
+      </fieldset>
+    );
+  }
+
   if (t === "select") {
     control = (
       <select {...common} defaultValue={dv} className="input appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23686a88%22 stroke-width=%222.5%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-[right_0.9rem_center] bg-no-repeat pr-9">
@@ -94,7 +122,7 @@ export function Field({ field, defaultValue, error }: { field: FieldDef; default
       </label>
     );
   } else {
-    const masked = ["documento", "tel", "cep"].includes(t);
+    const masked = ["documento", "tel", "cep", "cnj"].includes(t);
     const htmlType = t === "money" || t === "percent" ? "text" : masked ? "text" : t;
     control = (
       <div className="relative">

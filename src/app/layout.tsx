@@ -7,7 +7,7 @@ const font = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans", di
 
 export const metadata: Metadata = {
   title: { default: "GE EASY — Gestão Especializada EASY", template: "%s · GE EASY" },
-  description: "Sistema de gestão da EASY Consórcio & Seguros: clientes, consórcios, seguros, agenda, comissões e consultores.",
+  description: "Gestão jurídica da EASY: processos, prazos, audiências e departamentos, com o módulo comercial de consórcios e seguros.",
   robots: { index: false, follow: false },
   applicationName: "GE EASY",
   manifest: "/manifest.webmanifest",

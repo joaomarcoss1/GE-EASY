@@ -58,3 +58,28 @@ export function pageRange(page: string | undefined, size = 20) {
 export function searchTerm(q: string | undefined) {
   return (q ?? "").replace(/[%,()*\\]/g, " ").trim().slice(0, 80);
 }
+
+export const departamentoOptions = cache(async (): Promise<Option[]> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("departamentos").select("id, nome, sigla").eq("ativo", true).order("nome");
+  return (data ?? []).map((d) => ({ value: d.id, label: d.sigla ? `${d.nome} (${d.sigla})` : d.nome }));
+});
+
+export const departamentoMap = cache(async () => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("departamentos").select("id, nome, sigla, cor");
+  return new Map((data ?? []).map((d) => [d.id as string, d as { id: string; nome: string; sigla: string | null; cor: string }]));
+});
+
+/** Advogados, assistentes e gestão (responsáveis por processos, prazos e audiências) */
+export async function juridicoOptions(): Promise<Option[]> {
+  return (await getProfiles())
+    .filter((p) => p.active && ["admin", "gestor", "advogado", "assistente_juridico"].includes(p.role))
+    .map((p) => ({ value: p.id, label: p.full_name || p.email }));
+}
+
+export const processoOptions = cache(async (): Promise<Option[]> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("processos").select("id, titulo, numero_cnj").in("status", ["ativo", "suspenso"]).order("updated_at", { ascending: false }).limit(1000);
+  return (data ?? []).map((p) => ({ value: p.id, label: p.numero_cnj ? `${p.titulo} · ${p.numero_cnj}` : p.titulo }));
+});

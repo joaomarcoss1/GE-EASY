@@ -3,8 +3,8 @@
 </p>
 
 <h1 align="center">GE EASY — Gestão Especializada EASY</h1>
-<p align="center">Plataforma de gestão da <b>EASY Consórcio & Seguros</b>: CRM, funil de vendas, consórcios, seguros,
-agenda integrada ao Google, documentos no Drive, comissões, metas e módulo de consultores externos.</p>
+<p align="center">Plataforma de <b>gestão jurídica</b> da EASY: processos, prazos, audiências e gestão por departamentos —
+com agenda integrada ao Google, documentos no Drive e o módulo comercial de consórcios e seguros.</p>
 
 ---
 
@@ -12,7 +12,12 @@ agenda integrada ao Google, documentos no Drive, comissões, metas e módulo de 
 
 | Módulo | O que faz |
 |---|---|
-| **Painel** | Indicadores do mês, produção de 12 meses, funil, renovações, metas e ranking (visão por perfil). |
+| **Painel jurídico** | Prazos vencidos/próximos, audiências, carteira por área e fase, provisões e visão por departamento. |
+| **Processos** | Nº CNJ validado, partes, linha do tempo de andamentos, custas e honorários, equipe e risco (provável/possível/remoto). |
+| **Prazos** | Contagem em dias úteis (CPC), feriados e recesso forense, alertas diários, calculadora de prazos. |
+| **Audiências** | Agenda de audiências integrada ao Google Agenda, redesignação e resultado. |
+| **Departamentos** | Equipes, responsáveis, demandas (kanban), carga de trabalho e indicadores de cada área. |
+| **Painel comercial** | (Módulo comercial) produção de consórcios e seguros, funil, renovações, metas e ranking. |
 | **Clientes (CRM)** | Cadastro PF/PJ com validação de CPF/CNPJ, linha do tempo de contatos, negócios, agenda e documentos. |
 | **Funil de vendas** | Kanban com arrastar-e-soltar, previsão ponderada, motivo de perda e conversão. |
 | **Consórcios** | Cotas, grupos, parcelas, lances, assembleias e contemplações + simulador com comparação ao financiamento. |

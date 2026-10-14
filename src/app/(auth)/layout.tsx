@@ -1,10 +1,10 @@
 import Image from "next/image";
-import { ShieldCheck, CalendarDays, Landmark, Users } from "lucide-react";
+import { ShieldCheck, CalendarDays, Scale, Building2 } from "lucide-react";
 
 const highlights = [
-  { icon: Users, title: "CRM completo", text: "Carteira, funil de vendas e linha do tempo de cada cliente." },
-  { icon: Landmark, title: "Consórcio & Seguros", text: "Cotas, lances, contemplações, apólices, renovações e sinistros." },
-  { icon: CalendarDays, title: "Agenda + Google", text: "Sincronização com Google Agenda e documentos no Google Drive." },
+  { icon: Scale, title: "Gestão processual", text: "Processos, andamentos, partes, custas e honorários em um só lugar." },
+  { icon: CalendarDays, title: "Prazos e audiências", text: "Contagem em dias úteis (CPC), alertas e Google Agenda." },
+  { icon: Building2, title: "Por departamentos", text: "Equipes, demandas e indicadores de cada área." },
   { icon: ShieldCheck, title: "Segurança total", text: "Controle de acesso por perfil, 2FA e auditoria de alterações." },
 ];
 
@@ -20,7 +20,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <h1 className="text-4xl font-bold leading-tight tracking-tight">
             Gestão Especializada <span className="text-accent-400">EASY</span>
           </h1>
-          <p className="mt-4 text-base text-white/70">A plataforma que conecta escritório e consultores externos — do primeiro contato à comissão paga.</p>
+          <p className="mt-4 text-base text-white/70">A plataforma jurídica da EASY: processos, prazos, audiências e equipes organizados por departamento — com o comercial de consórcios e seguros integrado.</p>
           <div className="mt-10 grid grid-cols-2 gap-4">
             {highlights.map(({ icon: Icon, title, text }) => (
               <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur">

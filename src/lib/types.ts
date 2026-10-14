@@ -1,4 +1,4 @@
-export type AppRole = "admin" | "gestor" | "financeiro" | "consultor" | "consultor_externo";
+export type AppRole = "admin" | "gestor" | "financeiro" | "advogado" | "assistente_juridico" | "consultor" | "consultor_externo";
 export type LinhaNegocio = "consorcio" | "seguro";
 
 export interface Profile {
@@ -13,6 +13,7 @@ export interface Profile {
   territorio: string | null;
   comissao_percentual: number;
   is_master: boolean;
+  oab: string | null;
   created_at: string;
 }
 
@@ -205,7 +206,7 @@ export interface Meta {
   valor_meta: number;
 }
 
-export type EventoTipo = "reuniao" | "visita" | "ligacao" | "assembleia" | "renovacao" | "tarefa" | "outro";
+export type EventoTipo = "reuniao" | "visita" | "ligacao" | "assembleia" | "renovacao" | "tarefa" | "audiencia" | "prazo" | "outro";
 export interface AgendaEvento {
   id: string;
   titulo: string;
@@ -235,6 +236,8 @@ export interface Tarefa {
   vencimento: string | null;
   responsavel_id: string | null;
   cliente_id: string | null;
+  processo_id: string | null;
+  departamento_id: string | null;
   concluida_em: string | null;
   created_by: string | null;
   created_at: string;
@@ -290,4 +293,130 @@ export interface AuditLog {
   dados_antigos: Record<string, unknown> | null;
   dados_novos: Record<string, unknown> | null;
   created_at: string;
+}
+
+// ---------------------------------------------------------------- Jurídico
+
+export interface Departamento {
+  id: string;
+  nome: string;
+  sigla: string | null;
+  descricao: string | null;
+  cor: string;
+  responsavel_id: string | null;
+  ativo: boolean;
+}
+
+export interface DepartamentoMembro {
+  departamento_id: string;
+  user_id: string;
+  funcao: "responsavel" | "membro";
+}
+
+export type ProcessoStatus = "ativo" | "suspenso" | "arquivado" | "encerrado";
+export type ProcessoFase = "pre_processual" | "conhecimento" | "recursal" | "execucao" | "cumprimento_sentenca" | "acordo" | "transito_julgado";
+
+export interface Processo {
+  id: string;
+  numero_cnj: string | null;
+  numero_interno: string | null;
+  titulo: string;
+  cliente_id: string | null;
+  polo_cliente: "ativo" | "passivo" | "terceiro";
+  parte_contraria: string | null;
+  area: string;
+  classe: string | null;
+  assunto: string | null;
+  tribunal: string | null;
+  orgao: string | null;
+  comarca: string | null;
+  uf: string | null;
+  instancia: number;
+  fase: ProcessoFase;
+  status: ProcessoStatus;
+  risco: "provavel" | "possivel" | "remoto" | null;
+  valor_causa: number | null;
+  valor_provisionado: number | null;
+  data_distribuicao: string | null;
+  data_encerramento: string | null;
+  resultado: string | null;
+  segredo_justica: boolean;
+  link_autos: string | null;
+  departamento_id: string | null;
+  responsavel_id: string | null;
+  equipe: string[];
+  tags: string[];
+  observacoes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProcessoParte {
+  id: string;
+  processo_id: string;
+  tipo: "autor" | "reu" | "terceiro" | "advogado_contrario" | "perito" | "testemunha";
+  nome: string;
+  documento: string | null;
+  oab: string | null;
+  contato: string | null;
+  observacoes: string | null;
+}
+
+export interface ProcessoAndamento {
+  id: string;
+  processo_id: string;
+  data: string;
+  tipo: string;
+  descricao: string;
+  autor_id: string | null;
+  created_at: string;
+}
+
+export interface Prazo {
+  id: string;
+  processo_id: string | null;
+  descricao: string;
+  data_publicacao: string | null;
+  dias: number | null;
+  contagem: "uteis" | "corridos";
+  data_fim: string;
+  fatal: boolean;
+  prioridade: "baixa" | "media" | "alta" | "urgente";
+  status: "pendente" | "cumprido" | "perdido" | "cancelado";
+  responsavel_id: string | null;
+  departamento_id: string | null;
+  cumprido_em: string | null;
+  observacoes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface Audiencia {
+  id: string;
+  processo_id: string;
+  tipo: "conciliacao" | "instrucao" | "una" | "julgamento" | "mediacao" | "outra";
+  data_hora: string;
+  duracao_min: number;
+  modalidade: "presencial" | "virtual" | "hibrida";
+  local: string | null;
+  link: string | null;
+  responsavel_id: string | null;
+  preposto: string | null;
+  status: "agendada" | "realizada" | "redesignada" | "cancelada";
+  resultado: string | null;
+  agenda_evento_id: string | null;
+  created_by: string | null;
+}
+
+export interface ProcessoLancamento {
+  id: string;
+  processo_id: string;
+  tipo: string;
+  descricao: string | null;
+  valor: number;
+  data: string;
+  vencimento: string | null;
+  status: "previsto" | "pago" | "recebido" | "cancelado";
+  created_by: string | null;
 }

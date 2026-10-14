@@ -12,7 +12,8 @@ import { SettingsForm } from "./settings-form";
 const fields: FieldDef[] = [
   { name: "full_name", label: "Nome completo", required: true, span: 4 },
   { name: "phone", label: "Telefone / WhatsApp", type: "tel", span: 2 },
-  { name: "cargo", label: "Cargo", placeholder: "Ex.: Consultora de seguros", span: 3 },
+  { name: "cargo", label: "Cargo", placeholder: "Ex.: Advogada sênior", span: 3 },
+  { name: "oab", label: "OAB", placeholder: "Ex.: SP 123456", help: "Para advogados(as)", span: 3 },
   { name: "avatar_url", label: "Foto (URL)", type: "url", placeholder: "https://…", help: "Imagem https do Google (googleusercontent.com) ou do armazenamento do sistema.", span: 3 },
 ];
 
@@ -45,7 +46,7 @@ export function PerfilTab({ session }: { session: Session }) {
       </Card>
       <Card>
         <CardHeader title="Dados pessoais" description="Essas informações aparecem para a equipe no sistema." icon={<UserCog className="h-4 w-4" />} />
-        <SettingsForm action={updateMeuPerfil} fields={fields} values={{ full_name: p.full_name, phone: p.phone, cargo: p.cargo, avatar_url: p.avatar_url }} />
+        <SettingsForm action={updateMeuPerfil} fields={fields} values={{ full_name: p.full_name, phone: p.phone, cargo: p.cargo, oab: p.oab, avatar_url: p.avatar_url }} />
       </Card>
     </div>
   );

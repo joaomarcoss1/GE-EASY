@@ -19,7 +19,7 @@ import {
   Briefcase,
   BarChart3,
 } from "lucide-react";
-import { requireSession } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can, isBackofficeRole } from "@/lib/rbac";
 import { getProfileMap } from "@/lib/data";
@@ -40,7 +40,7 @@ import { fetchAll } from "@/components/dashboard/fetch-all";
 import { addDays, addMonths, currentMonth, firstDay, lastMonths, monthLong, monthShort, spDateOf, spStartOf, sum, trendOf, TZ } from "@/components/dashboard/periods";
 import { isCountMeta, realizadoMeta, type RealizadoRows } from "@/components/metas/realizado";
 
-export const metadata: Metadata = { title: "Painel" };
+export const metadata: Metadata = { title: "Painel comercial" };
 
 type Num = number | string;
 interface CotaRow { valor_credito: Num; data_adesao: string; consultor_id: string | null; status: string }
@@ -72,8 +72,8 @@ function eventWhen(e: EventoRow, today: string) {
   return e.dia_inteiro ? `${day} · dia inteiro` : `${day} · ${time(e.inicio)}`;
 }
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const { profile, userId } = await requireSession();
+export default async function ComercialPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const { profile, userId } = await requirePermission("comercial.view");
   const sp = await searchParams;
   const backoffice = isBackofficeRole(profile.role);
   const supabase = await createClient();
@@ -237,8 +237,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <>
       {sp.erro === "permissao" && <PermissionAlert />}
       <PageHeader
-        eyebrow={backoffice ? "Painel executivo · toda a corretora" : "Painel · sua carteira"}
-        title={`${greeting()}, ${firstName}`}
+        eyebrow={backoffice ? "Comercial · Consórcios & Seguros" : "Comercial · sua carteira"}
+        title="Painel comercial"
         description={hoje.charAt(0).toUpperCase() + hoje.slice(1)}
         actions={
           <>
