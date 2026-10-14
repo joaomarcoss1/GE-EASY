@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: "Sistema de gestão da EASY Consórcio & Seguros: clientes, consórcios, seguros, agenda, comissões e consultores.",
   robots: { index: false, follow: false },
   applicationName: "GE EASY",
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {

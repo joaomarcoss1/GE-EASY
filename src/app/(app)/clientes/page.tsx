@@ -55,7 +55,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
                 Exportar CSV
               </LinkButton>
             )}
-            {canWrite && <FormDrawerButton action={createCliente} fields={clienteFields(consultores, canTransfer)} values={{ tipo_pessoa: "PF", status: "lead" }} title="Novo cliente" label="Novo cliente" variant="accent" redirectTo="/clientes/:id" />}
+            {canWrite && <FormDrawerButton action={createCliente} fields={clienteFields(consultores, canTransfer)} values={{ tipo_pessoa: "PF", status: "lead" }} title="Novo cliente" label="Novo cliente" variant="accent" redirectTo="/clientes/:id" defaultOpen={sp.novo === "1"} />}
           </>
         }
       />
