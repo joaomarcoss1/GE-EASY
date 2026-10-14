@@ -73,7 +73,10 @@ export async function UsuariosTab({ currentUserId }: { currentUserId: string }) 
                       </div>
                     </td>
                     <td>
-                      <StatusBadge options={ROLES} value={u.role} />
+                      <div className="flex flex-wrap items-center gap-1">
+                        <StatusBadge options={ROLES} value={u.role} />
+                        {u.is_master && <Badge tone="accent">Master</Badge>}
+                      </div>
                     </td>
                     <td>{u.active ? <Badge tone="green" dot>Ativo</Badge> : <Badge tone="amber" dot>Aguardando aprovação</Badge>}</td>
                     <td className="text-sm">{pct(u.comissao_percentual, 2)}</td>
@@ -81,7 +84,7 @@ export async function UsuariosTab({ currentUserId }: { currentUserId: string }) 
                     <td className="text-xs text-muted">{date(u.created_at)}</td>
                     <td>
                       <div className="flex justify-end gap-1">
-                        <FormDrawerButton
+                        {(!u.is_master || u.id === currentUserId) && <FormDrawerButton
                           action={updateUsuario}
                           fields={editUsuarioFields}
                           values={{ role: u.role, active: u.active, comissao_percentual: u.comissao_percentual, territorio: u.territorio, cargo: u.cargo }}
@@ -92,7 +95,7 @@ export async function UsuariosTab({ currentUserId }: { currentUserId: string }) 
                           size="icon"
                           variant="ghost"
                           width="max-w-lg"
-                        />
+                        />}
                         {serviceRole && (
                           <ConfirmAction
                             action={reenviarAcesso}

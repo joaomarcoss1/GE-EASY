@@ -12,6 +12,7 @@ export interface Profile {
   cargo: string | null;
   territorio: string | null;
   comissao_percentual: number;
+  is_master: boolean;
   created_at: string;
 }
 
