@@ -61,12 +61,13 @@ export async function registerDocumento(input: { cliente_id?: string | null; pro
 
   // Cliente/processo precisa estar visível para o usuário (RLS)
   if (processoId) {
-    const { data: proc } = await supabase.from("processos").select("id, cliente_id").eq("id", processoId).maybeSingle();
+    const { data: proc } = await supabase.from("processos").select("id").eq("id", processoId).maybeSingle();
     if (!proc) {
       await discard();
       return { error: "Processo não encontrado ou sem acesso." };
     }
-    clienteId = proc.cliente_id ?? null;
+    // Documento do processo: o acesso segue o processo (não a carteira do cliente)
+    clienteId = null;
   } else {
     const { data: cliente } = await supabase.from("clientes").select("id").eq("id", clienteId!).maybeSingle();
     if (!cliente) {

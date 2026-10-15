@@ -102,6 +102,7 @@ export async function getAccessToken(userId: string): Promise<string | null> {
   const { googleClientId, googleClientSecret } = serverEnv();
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
+    signal: AbortSignal.timeout(10_000),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: googleClientId,
@@ -176,6 +177,7 @@ export async function upsertCalendarEvent(userId: string, e: CalendarEventInput,
   if (googleEventId) {
     const check = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${cal}/events/${encodeURIComponent(googleEventId)}?fields=extendedProperties`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(10_000),
     });
     const ev = check.ok ? ((await check.json()) as { extendedProperties?: { private?: Record<string, string> } }) : null;
     if (ev?.extendedProperties?.private?.geeasy !== "1") googleEventId = null; // não altera eventos alheios: cria um novo
@@ -184,6 +186,7 @@ export async function upsertCalendarEvent(userId: string, e: CalendarEventInput,
     ? `https://www.googleapis.com/calendar/v3/calendars/${cal}/events/${encodeURIComponent(googleEventId)}`
     : `https://www.googleapis.com/calendar/v3/calendars/${cal}/events`;
   const res = await fetch(url, {
+    signal: AbortSignal.timeout(10_000),
     method: googleEventId ? "PATCH" : "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(toGoogleEvent(e)),
@@ -247,7 +250,7 @@ export class DriveError extends Error {
 }
 
 async function driveFetch(token: string, url: string, init?: RequestInit) {
-  return fetch(url, { ...init, cache: "no-store", signal: AbortSignal.timeout(45_000), headers: { Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) } });
+  return fetch(url, { ...init, cache: "no-store", signal: AbortSignal.timeout(30_000), headers: { Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) } });
 }
 
 /** Escapa valores usados na linguagem de consulta do Drive ('...'). */

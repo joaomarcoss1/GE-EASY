@@ -167,6 +167,16 @@ export function tipoDoMovimento(nome: string): AndamentoTipo {
   return "outro";
 }
 
+/** Hash curto e estável (FNV-1a 32 bits) para compor o id externo do movimento. */
+export function hashCurto(s: string) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+
 const humanize = (s: string) => s.replace(/_/g, " ").replace(/\s+/g, " ").trim();
 
 function descricaoMovimento(m: DjMovimento) {
@@ -199,7 +209,7 @@ export function normalizarDatajud(resp: DjResposta): ProcessoDatajud | null {
       if (!dt) continue;
       const descricao = descricaoMovimento(m);
       if (descricao.length < 2) continue;
-      const externoId = `dj:${f.grau ?? "?"}:${m.codigo ?? "x"}:${dt.toISOString()}:${descricao.length}`.slice(0, 200);
+      const externoId = `dj:${f.grau ?? "?"}:${m.codigo ?? "x"}:${dt.toISOString()}:${hashCurto(descricao)}`.slice(0, 200);
       if (!movs.has(externoId))
         movs.set(externoId, { externoId, dataHora: dt.toISOString(), data: dataBrasilia(dt), tipo: tipoDoMovimento(String(m.nome ?? "")), descricao, grau: f.grau ?? null });
     }

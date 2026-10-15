@@ -6,10 +6,11 @@
    (apenas geolocalização no próprio site) e remove o cabeçalho `X-Powered-By`.
 2. **Autenticação** — Supabase Auth (cookies httpOnly via `@supabase/ssr`). O middleware valida o JWT com
    `getUser()` em toda requisição, renova a sessão e exige **AAL2** quando o usuário tem 2FA. Login com limite de
-   tentativas **persistido no banco** (5 falhas por IP+e-mail a cada 15 min, chave HMAC — vale entre instâncias
-   do servidor, além do rate limit do Supabase) e mensagens que não revelam se o e-mail existe.
+   tentativas **persistido no banco** e contado antes de testar a senha (5 por IP+e-mail e 20 por e-mail a cada
+   15 min, chaves HMAC — vale entre instâncias e para tentativas paralelas, além do rate limit do Supabase) e mensagens que não revelam se o e-mail existe.
    Sessão encerrada por **inatividade** (padrão 30 min, aviso 60 s antes, sincronizado entre abas) e 2FA
-   **obrigatória** configurável (gestão/financeiro ou todos) em *Configurações › Segurança*.
+   **obrigatória** configurável (gestão/financeiro ou todos) em *Configurações › Segurança*, aplicada em
+   `requireSession()` (toda página) e em `guard()` (toda Server Action).
    Senhas novas: mínimo 10 caracteres com maiúscula, minúscula e número.
 3. **Autorização na aplicação** — `requirePermission()` em páginas e `guard()` em Server Actions (`src/lib/rbac.ts`).
 4. **Autorização no banco (fonte da verdade)** — RLS em 100% das tabelas do schema `public`:
@@ -25,6 +26,9 @@
    `processos/<id>/…` validados por `storage_can_access()` (envio em processo exige poder editá-lo). O conteúdo real
    do arquivo é conferido pela **assinatura (magic bytes)** — um HTML disfarçado de PDF é descartado
    (`src/lib/seguranca/arquivos.ts`). Downloads somente por URL assinada de 60 s, com limite (120/10 min) e registro.
+   O trigger `documentos_integridade` exige que o caminho pertença ao cliente/processo da linha e impede que usuários
+   alterem caminho, vínculo ou campos do Drive (só o servidor). Documento de processo não leva `cliente_id`: só quem
+   acessa o processo o enxerga.
 6. **Segredos** — `SUPABASE_SERVICE_ROLE_KEY`, `APP_ENCRYPTION_KEY` e `GOOGLE_CLIENT_SECRET` só no servidor
    (`server-only`). Tokens OAuth do Google cifrados com AES-256-GCM em tabela sem políticas (só service role).
    OAuth com `state` aleatório em cookie httpOnly verificado com comparação em tempo constante; desconexão

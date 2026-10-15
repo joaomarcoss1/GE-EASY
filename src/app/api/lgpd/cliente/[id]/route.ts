@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, getSituacao2fa } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 
@@ -15,6 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const session = await getSession();
   if (!session?.profile.active) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!can(session.profile.role, "lgpd.exportar")) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  if ((await getSituacao2fa(session.profile.role)).bloqueado) return NextResponse.json({ error: "Conclua a autenticação em dois fatores." }, { status: 403 });
 
   const supabase = await createClient();
   const { data: permitido } = await supabase.rpc("rate_limit", { p_acao: "lgpd-exportar", p_max: 20, p_janela_seg: 3600 });

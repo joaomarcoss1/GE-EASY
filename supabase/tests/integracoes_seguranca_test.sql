@@ -1,11 +1,11 @@
 -- =====================================================================
 -- Teste de segurança das integrações e da camada LGPD (rollback ao final via RAISE).
--- Resultado esperado (15/10/2026): 15 linhas "ok".
+-- Resultado esperado (15/10/2026): 20 linhas "ok".
 -- =====================================================================
 do $$
 declare
   adv1 uuid := gen_random_uuid(); adv2 uuid := gen_random_uuid();
-  dep_cont uuid; dep_trab uuid; p1 uuid; n int; b boolean; r text := '';
+  dep_cont uuid; dep_trab uuid; p1 uuid; d1 uuid; n int; b boolean; r text := '';
 begin
   insert into auth.users (id, instance_id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) values
     (adv1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-int-adv1@test.local', '{"ge_role":"advogado","ge_active":true}', '{}', now(), now()),
@@ -56,13 +56,31 @@ begin
   -- ---------------------------------------------------------------- adv1 (responsável)
   perform set_config('request.jwt.claims', json_build_object('sub', adv1, 'role', 'authenticated')::text, true);
   execute 'set local role authenticated';
-  insert into public.documentos (nome, processo_id, enviado_por) values ('peticao.pdf', p1, adv1);
+  insert into public.documentos (nome, processo_id, enviado_por, storage_path, cliente_id, drive_url)
+    values ('peticao.pdf', p1, adv1, 'processos/' || p1 || '/a.pdf', gen_random_uuid(), 'https://evil.example') returning id into d1;
   r := r || E'\n13 responsável anexa documento ao processo: ok';
+  select count(*) into n from public.documentos where id = d1 and cliente_id is null and drive_url is null;
+  r := r || E'\n16 documento de processo sem cliente e sem drive_url do usuário: ' || case when n = 1 then 'ok' else 'FALHOU' end;
+  update public.documentos set storage_path = 'clientes/' || gen_random_uuid() || '/x.pdf', drive_status = 'pendente', nome = 'renomeado.pdf' where id = d1;
+  select count(*) into n from public.documentos where id = d1 and storage_path = 'processos/' || p1 || '/a.pdf' and nome = 'renomeado.pdf';
+  r := r || E'\n17 usuário não altera o caminho no Storage (só o nome): ' || case when n = 1 then 'ok' else 'FALHOU' end;
+  begin insert into public.documentos (nome, processo_id, enviado_por, storage_path) values ('x.pdf', p1, adv1, 'clientes/' || gen_random_uuid() || '/x.pdf');
+    r := r || E'\n18 caminho de outro cliente: FALHOU';
+  exception when others then r := r || E'\n18 caminho incompatível bloqueado: ok'; end;
   r := r || E'\n14 storage do próprio processo: ' || case when public.storage_can_access('processos/' || p1 || '/a.pdf') then 'ok' else 'FALHOU' end;
   insert into public.processo_andamentos (processo_id, descricao, origem, externo_id, autor_id) values (p1, 'Movimento DataJud', 'datajud', 'dj:G1:1:x', null);
   begin insert into public.processo_andamentos (processo_id, descricao, origem, externo_id, autor_id) values (p1, 'Duplicado', 'datajud', 'dj:G1:1:x', null);
     r := r || E'\n15 movimento duplicado: FALHOU';
   exception when unique_violation then r := r || E'\n15 movimento duplicado bloqueado: ok'; end;
+  execute 'reset role';
+
+  -- adv2 não enxerga o documento do processo alheio
+  perform set_config('request.jwt.claims', json_build_object('sub', adv2, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.documentos where id = d1;
+  r := r || E'\n19 documento de processo alheio invisível: ' || case when n = 0 then 'ok' else 'FALHOU' end;
+  b := public.tentativa_login(repeat('a', 64), 2) and public.tentativa_login(repeat('a', 64), 2) and not public.tentativa_login(repeat('a', 64), 2);
+  r := r || E'\n20 tentativas de login contadas antes da senha: ' || case when b then 'ok' else 'FALHOU' end;
   execute 'reset role';
 
   raise exception 'RESULTADO:%', r;

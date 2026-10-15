@@ -50,6 +50,7 @@ interface ProcRow {
   tribunal: string | null;
   data_distribuicao: string | null;
   datajud_sincronizado_em: string | null;
+  datajud_atualizado_em: string | null;
   responsavel_id: string | null;
   equipe: string[] | null;
 }
@@ -62,7 +63,7 @@ interface ProcRow {
 export async function sincronizarProcessoDatajud(db: SupabaseClient, processoId: string, opts: { notificarDireto?: boolean } = {}): Promise<ResultadoDatajud> {
   const { data: p } = await db
     .from("processos")
-    .select("id, titulo, numero_cnj, classe, assunto, orgao, tribunal, data_distribuicao, datajud_sincronizado_em, responsavel_id, equipe")
+    .select("id, titulo, numero_cnj, classe, assunto, orgao, tribunal, data_distribuicao, datajud_sincronizado_em, datajud_atualizado_em, responsavel_id, equipe")
     .eq("id", processoId)
     .maybeSingle<ProcRow>();
   if (!p) return { status: "erro", novos: 0, mensagem: "Processo não encontrado ou sem acesso." };
@@ -121,8 +122,8 @@ export async function sincronizarProcessoDatajud(db: SupabaseClient, processoId:
   }
   await db.from("processos").update(patch).eq("id", p.id);
 
-  // Notifica só a partir da 2ª sincronização (a 1ª importa o histórico inteiro)
-  if (p.datajud_sincronizado_em && gravados > 0) {
+  // Notifica só depois da 1ª importação bem-sucedida (ela traz o histórico inteiro)
+  if (p.datajud_atualizado_em && gravados > 0) {
     if (opts.notificarDireto) {
       const destinos = [...new Set([p.responsavel_id, ...(p.equipe ?? [])].filter((u): u is string => !!u))];
       if (destinos.length)

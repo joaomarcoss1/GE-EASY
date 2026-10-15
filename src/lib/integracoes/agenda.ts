@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 import { formatCNJ } from "@/lib/juridico/cnj";
 import { toSpIso } from "@/components/agenda/date-utils";
-import { deleteCalendarEvent, upsertCalendarEvent, type CalendarEventInput } from "@/lib/google";
+import { deleteCalendarEvent, getAccessToken, upsertCalendarEvent, type CalendarEventInput } from "@/lib/google";
 
 /** Prazo => evento de dia inteiro no vencimento, com lembretes 2 dias e 1 dia antes (9h). */
 export function prazoParaEvento(p: {
@@ -81,8 +81,14 @@ export async function removerPrazoGoogle(responsavelId: string | null, googleEve
  * Envia ao Google Agenda os prazos pendentes e compromissos futuros ainda não sincronizados
  * dos usuários informados (que têm a conta Google conectada).
  */
-export async function sincronizarPendentesAgenda(db: SupabaseClient, usuarios: string[], limite = 40, prazoFinal = Date.now() + 40_000) {
+export async function sincronizarPendentesAgenda(db: SupabaseClient, todos: string[], limite = 40, prazoFinal = Date.now() + 40_000) {
   const resultado = { prazos: 0, eventos: 0, falhas: 0 };
+  // Só quem tem a conexão Google válida (um token revogado não pode travar a fila dos demais)
+  const usuarios: string[] = [];
+  for (const u of todos) {
+    if (Date.now() > prazoFinal) break;
+    if (await getAccessToken(u).catch(() => null)) usuarios.push(u);
+  }
   if (!usuarios.length) return resultado;
   const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
   const { data: prazos } = await db
@@ -95,7 +101,7 @@ export async function sincronizarPendentesAgenda(db: SupabaseClient, usuarios: s
     .order("data_fim")
     .limit(limite);
   for (const p of prazos ?? []) {
-    if (Date.now() > prazoFinal) return resultado;
+    if (prazoFinal - Date.now() < 12_000) return resultado;
     await sincronizarPrazoGoogle(db, p.id);
     const { data: ok } = await db.from("prazos").select("google_event_id").eq("id", p.id).maybeSingle();
     if (ok?.google_event_id) resultado.prazos++;
@@ -111,7 +117,7 @@ export async function sincronizarPendentesAgenda(db: SupabaseClient, usuarios: s
     .order("inicio")
     .limit(limite);
   for (const e of eventos ?? []) {
-    if (Date.now() > prazoFinal) return resultado;
+    if (prazoFinal - Date.now() < 12_000) return resultado;
     try {
       const gid = await upsertCalendarEvent(e.responsavel_id!, {
         titulo: e.titulo,

@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { getSession, type Session } from "@/lib/auth";
+import { getSession, getSituacao2fa, type Session } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can, type Permission } from "@/lib/rbac";
 import type { ActionState } from "./types";
@@ -91,6 +91,8 @@ export function dbError(error: { code?: string; message?: string } | null): Acti
 export async function guard(permission?: Permission): Promise<{ session: Session } | { denied: ActionState }> {
   const session = await getSession();
   if (!session || !session.profile.active) return { denied: { error: "Sessão expirada. Entre novamente." } };
+  const mfa = await getSituacao2fa(session.profile.role);
+  if (mfa.bloqueado) return { denied: { error: mfa.verificar ? "Confirme o código de verificação em duas etapas para continuar." : "A política do escritório exige autenticação em dois fatores. Cadastre-a em Configurações › Segurança." } };
   if (permission && !can(session.profile.role, permission)) return { denied: { error: "Você não tem permissão para esta ação." } };
   return { session };
 }

@@ -10,15 +10,17 @@ import type { ActionState } from "./types";
 const safeNext = (v: unknown) => (typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : "/dashboard");
 
 /**
- * Limitador de tentativas de login persistido no banco (vale entre instâncias do servidor):
- * 5 falhas em 15 minutos por IP + e-mail. A chave é um HMAC (o e-mail não fica em claro e
- * terceiros não conseguem calcular a chave de outra pessoa).
+ * Limitador de tentativas de login persistido no banco (vale entre instâncias do servidor).
+ * Cada tentativa é contada ANTES de testar a senha (atômico, vale para requisições paralelas):
+ * 5 por IP + e-mail e 20 por e-mail (independente do IP) a cada 15 minutos. As chaves são HMAC:
+ * o e-mail não fica em claro e terceiros não conseguem calcular a chave de outra pessoa.
  */
-function chaveLogin(ip: string, email: string) {
+function chaveLogin(...partes: string[]) {
   const segredo = process.env.APP_ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "geeasy-login";
-  return createHmac("sha256", segredo).update(`${ip}|${email}`).digest("hex");
+  return createHmac("sha256", segredo).update(partes.join("|")).digest("hex");
 }
 
+/** IP do cliente. Na Vercel, x-real-ip / x-forwarded-for são definidos pela própria plataforma. */
 async function ipDaRequisicao() {
   const h = await headers();
   return (h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0] ?? "local").trim().slice(0, 64);
@@ -31,17 +33,18 @@ export async function signIn(_: ActionState, formData: FormData): Promise<Action
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const ip = await ipDaRequisicao();
-  const chave = chaveLogin(ip, parsed.data.email);
+  const chaveIp = chaveLogin("ip", ip, parsed.data.email);
+  const chaveEmail = chaveLogin("email", parsed.data.email);
   const supabase = await createClient();
-  const { data: liberado } = await supabase.rpc("rate_limit_login", { p_hash: chave, p_registrar_falha: false });
-  if (liberado === false) return { error: "Muitas tentativas. Aguarde 15 minutos e tente novamente." };
+  const [porIp, porEmail] = await Promise.all([
+    supabase.rpc("tentativa_login", { p_hash: chaveIp, p_max: 5 }),
+    supabase.rpc("tentativa_login", { p_hash: chaveEmail, p_max: 20 }),
+  ]);
+  if (porIp.data === false || porEmail.data === false) return { error: "Muitas tentativas. Aguarde 15 minutos e tente novamente." };
 
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) {
-    await supabase.rpc("rate_limit_login", { p_hash: chave, p_registrar_falha: true });
-    return { error: error.message.includes("Email not confirmed") ? "Confirme seu e-mail antes de entrar." : "E-mail ou senha incorretos." };
-  }
-  await supabase.rpc("limpar_rate_limit_login", { p_hash: chave });
+  if (error) return { error: error.message.includes("Email not confirmed") ? "Confirme seu e-mail antes de entrar." : "E-mail ou senha incorretos." };
+  await Promise.all([supabase.rpc("limpar_rate_limit_login", { p_hash: chaveIp }), supabase.rpc("limpar_rate_limit_login", { p_hash: chaveEmail })]);
   // Registro de acesso (Marco Civil da Internet, art. 15: guarda dos registros de acesso a aplicações)
   const ua = (await headers()).get("user-agent")?.slice(0, 200) ?? null;
   await supabase.rpc("registrar_acesso", { p_acao: "LOGIN", p_tabela: "auth", p_registro: data.user?.id ?? null, p_detalhes: { ip, ua } });

@@ -27,10 +27,11 @@ export async function oabsMonitoradas(db: SupabaseClient): Promise<OabMonitorada
   return [...mapa.values()];
 }
 
-/** Busca as comunicações de uma OAB no período (máx. 10 páginas de 100). */
-export async function buscarComunicacoesDjen(oab: Oab, inicio: string, fim: string): Promise<{ itens: ComunicacaoDjen[]; erro?: string }> {
+/** Busca as comunicações de uma OAB no período (máx. 10 páginas de 100), respeitando o prazo final da execução. */
+export async function buscarComunicacoesDjen(oab: Oab, inicio: string, fim: string, prazoFinal = Date.now() + 240_000): Promise<{ itens: ComunicacaoDjen[]; erro?: string }> {
   const itens: ComunicacaoDjen[] = [];
   for (let pagina = 1; pagina <= 10; pagina++) {
+    if (prazoFinal - Date.now() < 22_000) return { itens, erro: pagina > 1 ? "Busca interrompida pelo limite de tempo; o restante será buscado na próxima rodada." : undefined };
     let res: Response;
     try {
       res = await fetch(`${DJEN_URL}?${djenParams(oab, inicio, fim, pagina)}`, {
@@ -50,9 +51,9 @@ export async function buscarComunicacoesDjen(oab: Oab, inicio: string, fim: stri
     } catch {
       return { itens, erro: "Resposta inválida do DJEN." };
     }
-    const { itens: pag } = lerResposta(json);
+    const { itens: pag, brutos, total } = lerResposta(json);
     itens.push(...pag);
-    if (pag.length < 100) break;
+    if (brutos < 100 || (total !== null && pagina * 100 >= total)) break;
   }
   return { itens };
 }

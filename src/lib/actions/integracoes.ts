@@ -242,31 +242,36 @@ export async function salvarModeloNoDrive(ids: { modeloId: string; clienteId?: s
   const supabase = await createClient();
   const m = await montarDocumentoModelo(supabase, g.session.userId, { modeloId: ids.modeloId, clienteId: chk(ids.clienteId), processoId: chk(ids.processoId), contratoId: chk(ids.contratoId) });
   if (!m.modelo || !m.rendered) return { error: "Modelo não encontrado." };
-  if (!m.clienteId && !m.processoId) return { error: "Selecione o cliente ou o processo para arquivar o documento na pasta certa." };
+  // Somente registros que o RLS devolveu ao usuário (ids informados e não visíveis são ignorados)
+  const processoId = m.processo?.id ?? null;
+  const clienteId = processoId ? null : (m.cliente?.id ?? null);
+  if (!processoId && !clienteId) return { error: "Selecione o cliente ou o processo para arquivar o documento na pasta certa." };
+  if (processoId && !can(g.session.profile.role, "processos.write")) return { error: "Você não tem permissão para arquivar documentos neste processo." };
   const titulo = `${m.modelo.titulo}${m.cliente ? ` - ${m.cliente.nome}` : ""} (${new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })})`;
+
+  // 1º o registro com a sessão do usuário: o RLS confirma que ele pode anexar documentos ao processo/cliente
+  const { data: registro, error: regErro } = await supabase
+    .from("documentos")
+    .insert({ nome: titulo.slice(0, 255), categoria: "gerado", cliente_id: clienteId, processo_id: processoId, mime_type: "application/vnd.google-apps.document", enviado_por: g.session.userId })
+    .select("id")
+    .single();
+  if (regErro) return regErro.code === "42501" ? { error: "Sem permissão para anexar documentos a este processo/cliente." } : dbError(regErro);
+
+  const admin = createAdminClient();
   let arquivo: { id: string; webViewLink: string };
   try {
-    arquivo = await salvarGoogleDoc(createAdminClient(), { cliente_id: m.clienteId, processo_id: m.processoId }, titulo, m.rendered.html);
+    arquivo = await salvarGoogleDoc(admin, { cliente_id: clienteId, processo_id: processoId }, titulo, m.rendered.html);
   } catch (e) {
+    await supabase.from("documentos").delete().eq("id", registro.id);
     return { error: e instanceof DriveError ? e.message : "Não foi possível salvar no Drive." };
   }
-  // registro do documento (RLS do usuário)
-  const { error } = await supabase.from("documentos").insert({
-    nome: titulo.slice(0, 255),
-    categoria: "gerado",
-    cliente_id: m.clienteId,
-    processo_id: m.processoId,
-    mime_type: "application/vnd.google-apps.document",
-    drive_file_id: arquivo.id,
-    drive_url: arquivo.webViewLink,
-    drive_status: "sincronizado",
-    drive_sincronizado_em: new Date().toISOString(),
-    enviado_por: g.session.userId,
-  });
-  if (error) console.error("[modelos.drive] registro", error.code, error.message);
-  if (m.processoId && can(g.session.profile.role, "processos.write")) {
-    await supabase.from("processo_andamentos").insert({ processo_id: m.processoId, tipo: "peticao", descricao: `Documento gerado e arquivado no Drive: ${m.modelo.titulo}`.slice(0, 300), autor_id: g.session.userId });
-    revalidatePath(`/processos/${m.processoId}`);
+  await admin
+    .from("documentos")
+    .update({ drive_file_id: arquivo.id, drive_url: arquivo.webViewLink, drive_status: "sincronizado", drive_sincronizado_em: new Date().toISOString() })
+    .eq("id", registro.id);
+  if (processoId) {
+    await supabase.from("processo_andamentos").insert({ processo_id: processoId, tipo: "peticao", descricao: `Documento gerado e arquivado no Drive: ${m.modelo.titulo}`.slice(0, 300), autor_id: g.session.userId });
+    revalidatePath(`/processos/${processoId}`);
   }
   revalidatePath("/documentos");
   return { ok: true, message: "Documento salvo como Google Docs na pasta do Drive.", url: arquivo.webViewLink };

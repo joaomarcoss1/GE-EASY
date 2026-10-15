@@ -7,7 +7,7 @@ export async function updateSession(request: NextRequest) {
   // Rotina agendada: autenticada pelo segredo CRON_SECRET dentro da própria rota (sem sessão)
   if (request.nextUrl.pathname.startsWith("/api/cron/")) return NextResponse.next();
   // Caminho atual para o layout (ex.: exigir 2FA sem bloquear a tela de segurança)
-  request.headers.set("x-geeasy-path", request.nextUrl.pathname);
+  request.headers.set("x-geeasy-path", request.nextUrl.pathname + request.nextUrl.search);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

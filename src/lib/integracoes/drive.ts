@@ -41,6 +41,10 @@ export async function tokenDoEscritorio(admin: SupabaseClient) {
   return token;
 }
 
+const PENDENTE = "__pendente__";
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const notFound = (e: unknown) => e instanceof DriveError && e.status === 404;
+
 const categoriaLabel = (c: string | null | undefined) => DOC_CATEGORIAS.find((o) => o.value === c)?.label ?? "Outros";
 
 class Pastas {
@@ -50,14 +54,35 @@ class Pastas {
     private token: string,
   ) {}
 
-  /** Garante a subpasta `nome` em `pai`, usando/atualizando o cache pela chave lógica. */
+  /**
+   * Garante a subpasta `nome` em `pai`, usando o cache pela chave lógica. Envios simultâneos não criam
+   * pastas duplicadas: quem cria reserva a chave (linha "pendente"); os demais aguardam o id.
+   */
   async garantir(chave: string, nome: string, pai: string | null): Promise<string> {
     this.usadas.push(chave);
-    const { data } = await this.admin.from("drive_pastas").select("folder_id").eq("chave", chave).maybeSingle();
-    if (data?.folder_id) return data.folder_id;
-    const id = await findOrCreateFolder(this.token, nome, pai);
-    await this.admin.from("drive_pastas").upsert({ chave, folder_id: id });
-    return id;
+    for (let tentativa = 0; tentativa < 40; tentativa++) {
+      const { data } = await this.admin.from("drive_pastas").select("folder_id, created_at").eq("chave", chave).maybeSingle();
+      if (data?.folder_id && data.folder_id !== PENDENTE) return data.folder_id;
+      if (data && Date.now() - Date.parse(data.created_at) < 60_000) {
+        await espera(500); // outra execução está criando esta pasta
+        continue;
+      }
+      if (data) await this.admin.from("drive_pastas").delete().eq("chave", chave).eq("folder_id", PENDENTE); // reserva abandonada
+      const { error } = await this.admin.from("drive_pastas").insert({ chave, folder_id: PENDENTE });
+      if (error) {
+        await espera(300); // outra execução reservou primeiro
+        continue;
+      }
+      try {
+        const id = await findOrCreateFolder(this.token, nome, pai);
+        await this.admin.from("drive_pastas").update({ folder_id: id }).eq("chave", chave);
+        return id;
+      } catch (e) {
+        await this.admin.from("drive_pastas").delete().eq("chave", chave).eq("folder_id", PENDENTE);
+        throw e;
+      }
+    }
+    throw new DriveError("Tempo esgotado aguardando a criação da pasta no Drive.", 503);
   }
 
   /** Remove do cache as pastas usadas nesta operação (ex.: alguém apagou a pasta no Drive). */
@@ -130,6 +155,28 @@ async function pastaDestino(admin: SupabaseClient, pastas: Pastas, alvo: { clien
   return pastas.garantir(`internos:${alvo.categoria ?? "outros"}`, cat, internos);
 }
 
+/** O caminho no Storage precisa pertencer ao cliente/processo do próprio registro. */
+function caminhoCoerente(d: Pick<DocRow, "storage_path" | "cliente_id" | "processo_id">) {
+  if (!d.storage_path || d.storage_path.includes("..")) return false;
+  if (d.processo_id) return d.storage_path.startsWith(`processos/${d.processo_id}/`);
+  return !!d.cliente_id && d.storage_path.startsWith(`clientes/${d.cliente_id}/`);
+}
+
+/** Envia ao Drive, recriando a árvore de pastas uma vez se alguma tiver sido apagada no Drive. */
+async function enviarComRecriacao(admin: SupabaseClient, pastas: Pastas, alvo: { cliente_id: string | null; processo_id: string | null; categoria: string | null }, enviar: (pasta: string) => Promise<{ id: string; webViewLink: string }>) {
+  for (let tentativa = 0; ; tentativa++) {
+    try {
+      return await enviar(await pastaDestino(admin, pastas, alvo));
+    } catch (e) {
+      if (notFound(e) && tentativa === 0) {
+        await pastas.invalidar();
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
 /** Arquiva um documento do Storage no Drive do escritório, na pasta certa. Nunca lança. */
 export async function arquivarDocumentoNoDrive(admin: SupabaseClient, docId: string): Promise<{ ok: boolean; mensagem: string; url?: string }> {
   const { data: doc } = await admin
@@ -139,14 +186,25 @@ export async function arquivarDocumentoNoDrive(admin: SupabaseClient, docId: str
     .maybeSingle<DocRow & { drive_url: string | null }>();
   if (!doc) return { ok: false, mensagem: "Documento não encontrado." };
   if (doc.drive_file_id) return { ok: true, mensagem: "Documento já arquivado no Drive.", url: doc.drive_url ?? undefined };
-  if (!doc.storage_path) {
-    await admin.from("documentos").update({ drive_status: "ignorado" }).eq("id", doc.id);
-    return { ok: false, mensagem: "Documento sem arquivo no armazenamento." };
+  if (!doc.storage_path || !caminhoCoerente(doc)) {
+    await admin.from("documentos").update({ drive_status: "ignorado", drive_erro: doc.storage_path ? "Caminho incompatível com o registro." : null }).eq("id", doc.id);
+    return { ok: false, mensagem: "Documento sem arquivo válido no armazenamento." };
   }
+  // Reserva o documento (evita dois envios simultâneos do mesmo arquivo)
+  const { data: reservado } = await admin
+    .from("documentos")
+    .update({ drive_bloqueado_ate: new Date(Date.now() + 3 * 60_000).toISOString() })
+    .eq("id", doc.id)
+    .is("drive_file_id", null)
+    .or(`drive_bloqueado_ate.is.null,drive_bloqueado_ate.lt.${new Date().toISOString()}`)
+    .select("id")
+    .maybeSingle();
+  if (!reservado) return { ok: false, mensagem: "O documento já está sendo arquivado. Tente novamente em instantes." };
+
   const falha = async (mensagem: string) => {
     await admin
       .from("documentos")
-      .update({ drive_status: "erro", drive_erro: mensagem.slice(0, 300), drive_tentativas: (doc.drive_tentativas ?? 0) + 1 })
+      .update({ drive_status: "erro", drive_erro: mensagem.slice(0, 300), drive_tentativas: (doc.drive_tentativas ?? 0) + 1, drive_bloqueado_ate: null })
       .eq("id", doc.id);
     return { ok: false, mensagem };
   };
@@ -156,23 +214,12 @@ export async function arquivarDocumentoNoDrive(admin: SupabaseClient, docId: str
     if (error || !blob) return falha("Não foi possível ler o arquivo no armazenamento.");
     const data = await blob.arrayBuffer();
     const pastas = new Pastas(admin, token);
-    let enviado: { id: string; webViewLink: string } | null = null;
-    for (let tentativa = 0; tentativa < 2 && !enviado; tentativa++) {
-      const pasta = await pastaDestino(admin, pastas, doc);
-      try {
-        enviado = await uploadDriveFile(token, pasta, { name: doc.nome, type: doc.mime_type ?? "application/octet-stream", data, description: "Arquivado pelo GE EASY" });
-      } catch (e) {
-        if (e instanceof DriveError && e.status === 404 && tentativa === 0) {
-          await pastas.invalidar(); // pasta apagada no Drive: recria a árvore
-          continue;
-        }
-        throw e;
-      }
-    }
-    if (!enviado) return falha("Não foi possível enviar ao Drive.");
+    const enviado = await enviarComRecriacao(admin, pastas, doc, (pasta) =>
+      uploadDriveFile(token, pasta, { name: doc.nome, type: doc.mime_type ?? "application/octet-stream", data, description: "Arquivado pelo GE EASY" }),
+    );
     await admin
       .from("documentos")
-      .update({ drive_file_id: enviado.id, drive_url: enviado.webViewLink, drive_status: "sincronizado", drive_erro: null, drive_sincronizado_em: new Date().toISOString() })
+      .update({ drive_file_id: enviado.id, drive_url: enviado.webViewLink, drive_status: "sincronizado", drive_erro: null, drive_sincronizado_em: new Date().toISOString(), drive_bloqueado_ate: null })
       .eq("id", doc.id);
     return { ok: true, mensagem: "Documento arquivado no Drive do escritório.", url: enviado.webViewLink };
   } catch (e) {
@@ -191,19 +238,9 @@ export async function salvarGoogleDoc(
   const pastas = new Pastas(admin, token);
   const doc = `<html><head><meta charset="utf-8"></head><body style="font-family:'Times New Roman',serif;font-size:12pt;white-space:pre-wrap">${html}</body></html>`;
   const data = new TextEncoder().encode(doc);
-  for (let tentativa = 0; tentativa < 2; tentativa++) {
-    const pasta = await pastaDestino(admin, pastas, { ...alvo, categoria: "gerado" });
-    try {
-      return await uploadDriveFile(token, pasta, { name: titulo, type: "text/html", data, description: "Gerado pelo GE EASY a partir de modelo" }, { converterParaDocs: true });
-    } catch (e) {
-      if (e instanceof DriveError && e.status === 404 && tentativa === 0) {
-        await pastas.invalidar();
-        continue;
-      }
-      throw e;
-    }
-  }
-  throw new DriveError("Não foi possível salvar no Drive.", 500);
+  return enviarComRecriacao(admin, pastas, { ...alvo, categoria: "gerado" }, (pasta) =>
+    uploadDriveFile(token, pasta, { name: titulo, type: "text/html", data, description: "Gerado pelo GE EASY a partir de modelo" }, { converterParaDocs: true }),
+  );
 }
 
 /** Garante (e devolve) a pasta do processo ou do cliente — usada no botão "Abrir pasta no Drive". */

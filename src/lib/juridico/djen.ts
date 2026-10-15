@@ -114,11 +114,13 @@ export function lerComunicacao(item: Raw): ComunicacaoDjen | null {
   };
 }
 
-export function lerResposta(json: unknown): { itens: ComunicacaoDjen[]; total: number } {
+/** `total` = quantidade informada pela API (null se ausente); `brutos` = itens recebidos na página, antes do filtro. */
+export function lerResposta(json: unknown): { itens: ComunicacaoDjen[]; total: number | null; brutos: number } {
   const obj = (json ?? {}) as Raw;
   const lista = Array.isArray(obj.items) ? obj.items : Array.isArray(obj.itens) ? obj.itens : Array.isArray(json) ? (json as unknown[]) : [];
   const itens = (lista as Raw[]).map(lerComunicacao).filter((c): c is ComunicacaoDjen => !!c);
-  return { itens, total: Number(obj.count ?? obj.total ?? itens.length) || itens.length };
+  const informado = Number(obj.count ?? obj.total);
+  return { itens, total: Number.isFinite(informado) && informado >= 0 ? informado : null, brutos: lista.length };
 }
 
 /** Texto gravado na caixa de publicações. */

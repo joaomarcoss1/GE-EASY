@@ -35,7 +35,9 @@ async function executar(req: NextRequest) {
   if (!tarefas.length) return NextResponse.json({ error: "tarefa inválida" }, { status: 400 });
 
   const admin = createAdminClient();
-  const fim = Date.now() + 50_000;
+  // Prazo final da execução (maxDuration 60 s; pg_net também espera 60 s). Cada etapa só inicia
+  // uma chamada externa se sobrar tempo para o pior caso dela (DataJud/DJEN 20 s, Drive 30 s).
+  const fim = Date.now() + 56_000;
   const resumo: Record<string, unknown> = {};
   const registrar = (tipo: string, status: "ok" | "erro" | "parcial", mensagem: string, detalhes?: unknown) =>
     admin.from("integracoes_log").insert({ tipo, status, mensagem: mensagem.slice(0, 1000), detalhes: detalhes ?? null });
@@ -54,7 +56,7 @@ async function executar(req: NextRequest) {
     const r = { consultados: 0, movimentos: 0, falhas: 0 };
     const lista = [...(fila ?? [])];
     const worker = async () => {
-      while (lista.length && Date.now() < fim - 8_000) {
+      while (lista.length && fim - Date.now() > 25_000) {
         const p = lista.shift()!;
         const s = await sincronizarProcessoDatajud(admin, p.id, { notificarDireto: true });
         r.consultados++;
@@ -74,8 +76,8 @@ async function executar(req: NextRequest) {
     const inicio = isoDiasAtras(3);
     const hoje = isoDiasAtras(0);
     for (const oab of oabs) {
-      if (Date.now() > fim - 5_000) break;
-      const { itens, erro } = await buscarComunicacoesDjen(oab, inicio, hoje);
+      if (fim - Date.now() < 25_000) break;
+      const { itens, erro } = await buscarComunicacoesDjen(oab, inicio, hoje, fim);
       r.encontradas += itens.length;
       if (erro) r.erros.push(`${oab.rotulo}: ${erro}`);
       const imp = await importarComunicacoes(admin, itens, oab);
@@ -100,7 +102,7 @@ async function executar(req: NextRequest) {
       .limit(10);
     const r = { arquivados: 0, falhas: 0 };
     for (const d of docs ?? []) {
-      if (Date.now() > fim - 10_000) break;
+      if (fim - Date.now() < 40_000) break;
       const s = await arquivarDocumentoNoDrive(admin, d.id);
       if (s.ok) r.arquivados++;
       else r.falhas++;
@@ -113,7 +115,7 @@ async function executar(req: NextRequest) {
   if (tarefas.includes("agenda") && googleConfigured() && Date.now() < fim) {
     const { data: conectados } = await admin.from("integracoes_google").select("user_id").not("refresh_token_enc", "is", null);
     const usuarios = (conectados ?? []).map((c) => c.user_id as string);
-    const r = await sincronizarPendentesAgenda(admin, usuarios, 40, fim - 3_000);
+    const r = await sincronizarPendentesAgenda(admin, usuarios, 40, fim);
     resumo.agenda = r;
     if (r.prazos || r.eventos || r.falhas) await registrar("agenda", r.falhas ? "parcial" : "ok", `Rotina: ${r.prazos} prazo(s) e ${r.eventos} compromisso(s) enviados`, r);
   }

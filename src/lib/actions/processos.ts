@@ -108,12 +108,14 @@ export async function updateProcesso(_: ActionState, formData: FormData): Promis
   if (!parsed.success) return zodErrors(parsed.error);
   const supabase = await createClient();
   const { data: antes } = await supabase.from("processos").select("numero_cnj").eq("id", id).maybeSingle();
-  const { data: row, error } = await supabase.from("processos").update(parsed.data).eq("id", id).select("id").maybeSingle();
+  const cnjMudou = !!antes && antes.numero_cnj !== parsed.data.numero_cnj;
+  const patch = cnjMudou ? { ...parsed.data, datajud_sincronizado_em: null, datajud_atualizado_em: null, datajud_status: null, datajud_erro: null } : parsed.data;
+  const { data: row, error } = await supabase.from("processos").update(patch).eq("id", id).select("id").maybeSingle();
   if (error) return cnjDuplicate(error) ?? dbError(error);
   if (!row) return { error: "Você não tem permissão para editar este processo." };
   revalidateProcesso(id, parsed.data.cliente_id);
   // Número CNJ informado/alterado: busca no DataJud em segundo plano
-  if (podeConsultarDatajud(parsed.data.numero_cnj) && antes?.numero_cnj !== parsed.data.numero_cnj) {
+  if (podeConsultarDatajud(parsed.data.numero_cnj) && cnjMudou) {
     after(async () => {
       try {
         await sincronizarProcessoDatajud(supabase, id);
