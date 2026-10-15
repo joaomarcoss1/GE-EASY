@@ -323,3 +323,76 @@ export const TRIBUNAIS: Option[] = [
   "TJMT", "TJMS", "TJRO", "TJTO", "TJAC", "TJAP", "TJAM", "TJRR", "TRF1", "TRF2", "TRF3", "TRF4", "TRF5", "TRF6", "TRT1", "TRT2", "TRT3", "TRT4", "TRT5",
   "TRT15", "TST", "STJ", "STF", "Procon", "Juizado Especial", "Administrativo",
 ].map((v) => ({ value: v, label: v }));
+
+// ---------------------------------------------------------------- Escritório
+
+export const CONTRATO_TIPOS: Option[] = [
+  { value: "fixo", label: "Valor fixo (à vista ou parcelado)" },
+  { value: "mensal", label: "Mensal (partido / assessoria)" },
+  { value: "exito", label: "Êxito (% do proveito)" },
+  { value: "por_ato", label: "Por ato processual" },
+  { value: "hora", label: "Por hora trabalhada" },
+  { value: "misto", label: "Misto (fixo + êxito)" },
+];
+
+export const CONTRATO_STATUS: Option[] = [
+  { value: "proposta", label: "Proposta", tone: "slate" },
+  { value: "ativo", label: "Ativo", tone: "green" },
+  { value: "suspenso", label: "Suspenso", tone: "amber" },
+  { value: "encerrado", label: "Encerrado", tone: "violet" },
+  { value: "cancelado", label: "Cancelado", tone: "red" },
+];
+
+export const FIN_STATUS: Option[] = [
+  { value: "aberto", label: "Em aberto", tone: "amber" },
+  { value: "pago", label: "Pago / recebido", tone: "green" },
+  { value: "cancelado", label: "Cancelado", tone: "slate" },
+];
+
+export const FIN_CATEGORIAS_RECEITA: Option[] = [
+  "Honorários contratuais", "Honorários de êxito", "Honorários sucumbenciais", "Assessoria mensal", "Consultas", "Reembolso de despesas", "Outras receitas",
+].map((v) => ({ value: v, label: v }));
+
+export const FIN_CATEGORIAS_DESPESA: Option[] = [
+  "Custas processuais", "Diligências e deslocamentos", "Correspondentes", "Folha e pró-labore", "Aluguel e condomínio", "Sistemas e tecnologia",
+  "Impostos e taxas", "OAB e anuidades", "Marketing", "Material de escritório", "Serviços contábeis", "Outras despesas",
+].map((v) => ({ value: v, label: v }));
+
+export const FORMAS_PAGAMENTO_ESC: Option[] = ["PIX", "Boleto", "Transferência", "Cartão de crédito", "Dinheiro", "Cheque", "Alvará judicial"].map((v) => ({ value: v, label: v }));
+
+export const ATENDIMENTO_STATUS: Option[] = [
+  { value: "novo", label: "Novo", tone: "sky" },
+  { value: "em_analise", label: "Em análise", tone: "violet" },
+  { value: "proposta_enviada", label: "Proposta enviada", tone: "amber" },
+  { value: "contratado", label: "Contratado", tone: "green" },
+  { value: "recusado", label: "Recusado", tone: "red" },
+  { value: "arquivado", label: "Arquivado", tone: "slate" },
+];
+
+export const ATENDIMENTO_CANAIS: Option[] = [
+  { value: "presencial", label: "Presencial" },
+  { value: "telefone", label: "Telefone" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "email", label: "E-mail" },
+  { value: "videochamada", label: "Videochamada" },
+  { value: "indicacao", label: "Indicação" },
+  { value: "site", label: "Site" },
+];
+
+export const PUBLICACAO_STATUS: Option[] = [
+  { value: "nova", label: "Nova", tone: "accent" },
+  { value: "tratada", label: "Tratada", tone: "green" },
+  { value: "descartada", label: "Descartada", tone: "slate" },
+];
+
+export const MODELO_CATEGORIAS: Option[] = [
+  { value: "peticao", label: "Petição" },
+  { value: "procuracao", label: "Procuração" },
+  { value: "contrato", label: "Contrato" },
+  { value: "declaracao", label: "Declaração" },
+  { value: "notificacao", label: "Notificação" },
+  { value: "parecer", label: "Parecer" },
+  { value: "recibo", label: "Recibo" },
+  { value: "oficio", label: "Ofício" },
+  { value: "outro", label: "Outro" },
+];

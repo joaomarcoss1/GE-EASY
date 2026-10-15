@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { AlertOctagon, ArrowDownToLine, Building2, Filter, PieChart, ShieldCheck, Users, Landmark, TrendingUp } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileMap, parceiroMap } from "@/lib/data";
-import { CLIENTE_STATUS, LINHAS } from "@/lib/constants";
+import { CLIENTE_STATUS, LINHAS, type Option } from "@/lib/constants";
 import { brl, brlShort, date, num, pct } from "@/lib/format";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -15,6 +16,8 @@ import { LinkButton } from "@/components/ui/button";
 import { DonutChart, HBarChart } from "@/components/dashboard/charts";
 import { PrintButton } from "@/components/relatorios/print-button";
 import { PeriodFilter } from "@/components/relatorios/period-filter";
+import { SegmentTabs } from "@/components/ui/filters";
+import { RelatorioJuridico } from "@/components/juridico/relatorio-juridico";
 import { fetchAll } from "@/components/dashboard/fetch-all";
 import { addDays, firstDay, monthShort, rangeParam, spStartOf, sum } from "@/components/dashboard/periods";
 
@@ -50,10 +53,74 @@ function SectionTitle({ n, children }: { n: number; children: React.ReactNode })
   );
 }
 
+const SECOES: Option[] = [
+  { value: "juridico", label: "Jurídico" },
+  { value: "comercial", label: "Comercial" },
+];
+
 export default async function RelatoriosPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requirePermission("relatorios.view");
   const sp = await searchParams;
+  const secao = sp.secao === "comercial" ? "comercial" : "juridico";
   const { de, ate } = rangeParam(sp.de, sp.ate);
+
+  const q = `de=${de}&ate=${ate}`;
+  const exports =
+    secao === "juridico"
+      ? [
+          { href: `/api/exportar/processos`, label: "Processos (carteira completa)" },
+          { href: `/api/exportar/prazos?${q}`, label: "Prazos do período" },
+        ]
+      : [
+          { href: `/api/exportar/clientes?${q}`, label: "Clientes" },
+          { href: `/api/exportar/cotas?${q}`, label: "Cotas" },
+          { href: `/api/exportar/apolices?${q}`, label: "Apólices" },
+          { href: `/api/exportar/oportunidades?${q}`, label: "Oportunidades" },
+          { href: `/api/exportar/comissoes?${q}`, label: "Comissões" },
+        ];
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Gestão"
+        title="Relatórios gerenciais"
+        description={`${secao === "juridico" ? "Jurídico" : "Comercial"} · período: ${date(de)} a ${date(ate)}`}
+        actions={<PrintButton />}
+      />
+
+      <div className="no-print mb-4">
+        <Suspense fallback={null}>
+          <SegmentTabs param="secao" options={SECOES} />
+        </Suspense>
+      </div>
+
+      <Card className="no-print mb-6">
+        <div className="space-y-4 p-4">
+          <PeriodFilter de={de} ate={ate} extra={secao === "comercial" ? { secao } : undefined} />
+          <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
+            <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-muted">Exportar CSV</span>
+            {exports.map((e) => (
+              <LinkButton key={e.label} href={e.href} variant="secondary" size="sm" prefetch={false}>
+                <ArrowDownToLine className="h-3.5 w-3.5" /> {e.label}
+              </LinkButton>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      <div className="hidden print:mb-4 print:block">
+        <p className="text-xs text-muted">
+          GE EASY · Relatório {secao === "juridico" ? "jurídico" : "comercial"} · {date(de)} a {date(ate)} · gerado em {date(new Date().toISOString())}
+        </p>
+      </div>
+
+      {secao === "juridico" ? <RelatorioJuridico de={de} ate={ate} /> : <RelatorioComercial de={de} ate={ate} />}
+    </>
+  );
+}
+
+/** Seção comercial (consórcios e seguros) — conteúdo original dos relatórios. */
+async function RelatorioComercial({ de, ate }: { de: string; ate: string }) {
   const deTs = spStartOf(de);
   const ateTs = spStartOf(addDays(ate, 1));
   const supabase = await createClient();
@@ -152,42 +219,8 @@ export default async function RelatoriosPage({ searchParams }: { searchParams: P
   const baseAtiva = baseAtivaRes.count ?? 0;
   const taxaInad = baseAtiva ? (inadCount / baseAtiva) * 100 : 0;
 
-  const q = `de=${de}&ate=${ate}`;
-  const exports = [
-    { href: `/api/exportar/clientes?${q}`, label: "Clientes" },
-    { href: `/api/exportar/cotas?${q}`, label: "Cotas" },
-    { href: `/api/exportar/apolices?${q}`, label: "Apólices" },
-    { href: `/api/exportar/oportunidades?${q}`, label: "Oportunidades" },
-    { href: `/api/exportar/comissoes?${q}`, label: "Comissões" },
-  ];
-
   return (
     <>
-      <PageHeader
-        eyebrow="Gestão"
-        title="Relatórios gerenciais"
-        description={`Período: ${date(de)} a ${date(ate)}`}
-        actions={<PrintButton />}
-      />
-
-      <Card className="no-print mb-6">
-        <div className="space-y-4 p-4">
-          <PeriodFilter de={de} ate={ate} />
-          <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
-            <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-muted">Exportar CSV do período</span>
-            {exports.map((e) => (
-              <LinkButton key={e.label} href={e.href} variant="secondary" size="sm" prefetch={false}>
-                <ArrowDownToLine className="h-3.5 w-3.5" /> {e.label}
-              </LinkButton>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      <div className="hidden print:mb-4 print:block">
-        <p className="text-xs text-muted">GE EASY · EASY Consórcio & Seguros · Relatório gerado em {date(new Date().toISOString())}</p>
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 print:grid-cols-4">
         <StatCard label="Crédito vendido" value={brl(totCredito)} icon={<Landmark className="h-5 w-5" />} hint={`${num(cotas.length)} cota(s)`} />
         <StatCard label="Prêmio emitido" value={brl(totPremio)} icon={<ShieldCheck className="h-5 w-5" />} tone="accent" hint={`${num(apolices.length)} apólice(s)`} />

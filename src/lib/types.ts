@@ -224,6 +224,7 @@ export interface AgendaEvento {
   participantes: string[];
   lembrete_minutos: number | null;
   google_event_id: string | null;
+  processo_id?: string | null;
   created_by: string | null;
 }
 
@@ -419,4 +420,125 @@ export interface ProcessoLancamento {
   vencimento: string | null;
   status: "previsto" | "pago" | "recebido" | "cancelado";
   created_by: string | null;
+}
+
+// ---------------------------------------------------------------- Escritório
+
+export interface ContratoHonorarios {
+  id: string;
+  numero: string | null;
+  titulo: string;
+  cliente_id: string;
+  processo_id: string | null;
+  tipo: "fixo" | "mensal" | "exito" | "por_ato" | "hora" | "misto";
+  valor_fixo: number | null;
+  valor_mensal: number | null;
+  percentual_exito: number | null;
+  valor_hora: number | null;
+  parcelas: number;
+  dia_vencimento: number | null;
+  data_inicio: string;
+  data_fim: string | null;
+  indice_reajuste: string | null;
+  status: "proposta" | "ativo" | "suspenso" | "encerrado" | "cancelado";
+  responsavel_id: string | null;
+  departamento_id: string | null;
+  observacoes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface FinanceiroLancamento {
+  id: string;
+  tipo: "receita" | "despesa";
+  categoria: string;
+  descricao: string;
+  valor: number;
+  vencimento: string;
+  data_pagamento: string | null;
+  valor_pago: number | null;
+  status: "aberto" | "pago" | "cancelado";
+  forma_pagamento: string | null;
+  cliente_id: string | null;
+  processo_id: string | null;
+  contrato_id: string | null;
+  departamento_id: string | null;
+  fornecedor: string | null;
+  parcela: number | null;
+  total_parcelas: number | null;
+  reembolsavel: boolean;
+  documento_ref: string | null;
+  observacoes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface HoraLancamento {
+  id: string;
+  user_id: string;
+  data: string;
+  minutos: number;
+  descricao: string;
+  processo_id: string | null;
+  cliente_id: string | null;
+  contrato_id: string | null;
+  faturavel: boolean;
+  valor_hora: number | null;
+  faturado: boolean;
+  lancamento_id: string | null;
+  created_at: string;
+}
+
+export interface Atendimento {
+  id: string;
+  cliente_id: string | null;
+  nome_contato: string;
+  telefone: string | null;
+  email: string | null;
+  canal: string;
+  data: string;
+  area: string;
+  assunto: string;
+  relato: string | null;
+  urgencia: "baixa" | "media" | "alta" | "urgente";
+  status: "novo" | "em_analise" | "proposta_enviada" | "contratado" | "recusado" | "arquivado";
+  valor_estimado: number | null;
+  responsavel_id: string | null;
+  departamento_id: string | null;
+  processo_id: string | null;
+  contrato_id: string | null;
+  motivo_recusa: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface Publicacao {
+  id: string;
+  data_publicacao: string;
+  data_disponibilizacao: string | null;
+  fonte: string | null;
+  numero_processo: string | null;
+  processo_id: string | null;
+  conteudo: string;
+  status: "nova" | "tratada" | "descartada";
+  prazo_id: string | null;
+  responsavel_id: string | null;
+  tratado_por: string | null;
+  tratado_em: string | null;
+  observacoes: string | null;
+  hash: string | null;
+  created_at: string;
+}
+
+export interface ModeloDocumento {
+  id: string;
+  titulo: string;
+  categoria: string;
+  area: string | null;
+  descricao: string | null;
+  conteudo: string;
+  departamento_id: string | null;
+  ativo: boolean;
+  created_by: string | null;
+  updated_at: string;
 }

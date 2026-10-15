@@ -7,7 +7,7 @@ import { todayISO } from "@/lib/format";
 import { addDays, addMonths, currentMonth, firstDay, lastDay } from "@/components/dashboard/periods";
 
 /** Filtro de período (`?de=YYYY-MM-DD&ate=YYYY-MM-DD`) com atalhos. */
-export function PeriodFilter({ de, ate }: { de: string; ate: string }) {
+export function PeriodFilter({ de, ate, extra }: { de: string; ate: string; /** parâmetros mantidos na URL (ex.: `secao`) */ extra?: Record<string, string> }) {
   const router = useRouter();
   const pathname = usePathname();
   const [pending, start] = useTransition();
@@ -17,7 +17,10 @@ export function PeriodFilter({ de, ate }: { de: string; ate: string }) {
   const go = (x: string, y: string) => {
     setA(x);
     setB(y);
-    start(() => router.replace(`${pathname}?de=${x}&ate=${y}`, { scroll: false }));
+    const p = new URLSearchParams(extra);
+    p.set("de", x);
+    p.set("ate", y);
+    start(() => router.replace(`${pathname}?${p}`, { scroll: false }));
   };
   const mes = currentMonth();
   const today = todayISO();

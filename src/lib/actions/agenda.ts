@@ -8,7 +8,7 @@ import { spIsoFromMs, toSpIso } from "@/components/agenda/date-utils";
 import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
-const TIPOS = ["reuniao", "visita", "ligacao", "assembleia", "renovacao", "tarefa", "outro"] as const;
+const TIPOS = ["reuniao", "visita", "ligacao", "assembleia", "renovacao", "tarefa", "audiencia", "prazo", "outro"] as const;
 const STATUS = ["agendado", "concluido", "cancelado"] as const;
 
 /** Aceita "YYYY-MM-DD", "YYYY-MM-DDTHH:mm" ou "YYYY-MM-DDTHH:mm:ss" (horário de Brasília). */

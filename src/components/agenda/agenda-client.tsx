@@ -14,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   RotateCcw,
+  Scale,
   UserRound,
   Users,
   Video,
@@ -31,7 +32,7 @@ import { ResourceForm, type FieldDef, type Values } from "@/components/ui/form";
 import { useToast } from "@/components/ui/toast";
 import { addDays, dayLong, durationLabel, relativeDay, toLocal, WEEKDAYS_SHORT } from "./date-utils";
 import { eventoValues, lembreteLabel, type CalEvent } from "./shared";
-import { toneOf } from "./tones";
+import { eventTone, toneOf } from "./tones";
 
 export interface AgendaActions {
   create: (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -235,7 +236,7 @@ function EventDetails({ event, actions, onEdit, onClose }: { event: CalEvent; ac
   const [status, setStatus] = useState(event.status);
   const [pending, start] = useTransition();
   const [target, setTarget] = useState<string | null>(null);
-  const t = toneOf(event.tipo);
+  const t = eventTone(event);
   const google = event.source === "google";
   const minutes = Math.max(0, Math.round((Date.parse(event.fim) - Date.parse(event.inicio)) / 60000));
 
@@ -257,6 +258,14 @@ function EventDetails({ event, actions, onEdit, onClose }: { event: CalEvent; ac
       <div className="flex flex-wrap items-center gap-2">
         {google ? (
           <Badge tone="slate">Google Agenda</Badge>
+        ) : event.source === "prazo" ? (
+          <>
+            <StatusBadge options={EVENTO_TIPOS} value={event.tipo} />
+            {event.fatal && <Badge tone="red">Fatal</Badge>}
+            <Badge tone="amber" dot>
+              Pendente
+            </Badge>
+          </>
         ) : (
           <>
             <StatusBadge options={EVENTO_TIPOS} value={event.tipo} />
@@ -303,7 +312,18 @@ function EventDetails({ event, actions, onEdit, onClose }: { event: CalEvent; ac
             <span className="font-medium">{event.responsavel_nome}</span>
           </InfoRow>
         )}
-        {!google && <InfoRow icon={Bell}>{lembreteLabel(event.lembrete_minutos)}</InfoRow>}
+        {event.subtitle && (
+          <InfoRow icon={Scale}>
+            {event.href ? (
+              <Link href={event.href} className="font-medium hover:text-brand-600 hover:underline">
+                {event.subtitle}
+              </Link>
+            ) : (
+              <span className="font-medium">{event.subtitle}</span>
+            )}
+          </InfoRow>
+        )}
+        {event.source === "app" && <InfoRow icon={Bell}>{lembreteLabel(event.lembrete_minutos)}</InfoRow>}
       </div>
 
       {event.descricao && (
@@ -319,6 +339,21 @@ function EventDetails({ event, actions, onEdit, onClose }: { event: CalEvent; ac
         </a>
       )}
       {google && <p className="text-xs text-muted">Eventos do Google Agenda são exibidos somente para leitura. Edite-os diretamente no Google.</p>}
+
+      {!google && event.href && (
+        <div className="space-y-2">
+          <Link href={event.href} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-semibold hover:bg-surface-2">
+            <ExternalLink className="h-4 w-4" /> {event.href.startsWith("/processos/") ? "Abrir processo" : "Ver agenda de prazos"}
+          </Link>
+          {!event.canEdit && (event.source === "prazo" || event.tipo === "audiencia") && (
+            <p className="text-xs text-muted">
+              {event.source === "prazo"
+                ? "Prazos são gerenciados na Agenda de prazos ou na aba Prazos do processo."
+                : "Audiências são gerenciadas pela aba Audiências do processo (a agenda é atualizada automaticamente)."}
+            </p>
+          )}
+        </div>
+      )}
 
       {!google && event.canEdit && (
         <div className="flex flex-wrap items-center gap-2 border-t border-line pt-5">
@@ -361,7 +396,7 @@ function EventDetails({ event, actions, onEdit, onClose }: { event: CalEvent; ac
 // ------------------------------------------------------------------ Peças visuais
 
 function EventChip({ e, onClick }: { e: CalEvent; onClick: () => void }) {
-  const t = toneOf(e.tipo);
+  const t = eventTone(e);
   const google = e.source === "google";
   return (
     <button
@@ -395,7 +430,7 @@ function EventChip({ e, onClick }: { e: CalEvent; onClick: () => void }) {
 }
 
 function EventRow({ e, onClick }: { e: CalEvent; onClick: () => void }) {
-  const t = toneOf(e.tipo);
+  const t = eventTone(e);
   const google = e.source === "google";
   return (
     <button type="button" onClick={onClick} className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-surface-2 sm:gap-4">
@@ -413,7 +448,13 @@ function EventRow({ e, onClick }: { e: CalEvent; onClick: () => void }) {
       <div className="min-w-0 flex-1">
         <p className={cn("truncate font-semibold", e.status === "cancelado" && "line-through opacity-60")}>{e.titulo}</p>
         <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
-          <span>{google ? "Google Agenda" : optionLabel(EVENTO_TIPOS, e.tipo)}</span>
+          <span>{google ? "Google Agenda" : optionLabel(EVENTO_TIPOS, e.tipo)}{e.fatal ? " fatal" : ""}</span>
+          {e.subtitle && (
+            <span className="inline-flex min-w-0 items-center gap-1">
+              <Scale className="h-3 w-3 shrink-0" />
+              <span className="truncate">{e.subtitle}</span>
+            </span>
+          )}
           {e.cliente_nome && (
             <span className="inline-flex items-center gap-1">
               <Users className="h-3 w-3" />
@@ -530,7 +571,7 @@ export function MonthView({ days, month, events }: { days: string[]; month: stri
               {items.length > 0 && (
                 <div className="mt-1 flex flex-wrap justify-center gap-0.5 sm:hidden">
                   {items.slice(0, 4).map((e) => (
-                    <span key={e.id} className={cn("h-1.5 w-1.5 rounded-full", e.source === "google" ? "border border-slate-400 bg-transparent" : toneOf(e.tipo).dot)} />
+                    <span key={e.id} className={cn("h-1.5 w-1.5 rounded-full", e.source === "google" ? "border border-slate-400 bg-transparent" : eventTone(e).dot)} />
                   ))}
                 </div>
               )}
@@ -679,7 +720,7 @@ export function WeekView({ days, events, nowMin }: { days: string[]; events: Cal
                       title={`${e.startTime}–${e.endTime} · ${e.titulo}`}
                       className={cn(
                         "absolute z-[2] overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm transition",
-                        google ? "border border-dashed border-slate-300 bg-surface/95 text-muted hover:text-fg dark:border-white/25" : cn("border-l-[3px]", toneOf(e.tipo).block),
+                        google ? "border border-dashed border-slate-300 bg-surface/95 text-muted hover:text-fg dark:border-white/25" : cn("border-l-[3px]", eventTone(e).block),
                         e.status === "cancelado" && "line-through opacity-50",
                         e.status === "concluido" && "opacity-60",
                       )}

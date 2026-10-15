@@ -7,7 +7,8 @@ import { addDays, toLocal } from "./date-utils";
 /** Evento serializável exibido no calendário (interno ou do Google Agenda). */
 export interface CalEvent {
   id: string;
-  source: "app" | "google";
+  /** "prazo": prazo processual pendente (somente leitura, dia inteiro) */
+  source: "app" | "google" | "prazo";
   titulo: string;
   tipo: string;
   status: "agendado" | "concluido" | "cancelado";
@@ -32,6 +33,12 @@ export interface CalEvent {
   google_event_id: string | null;
   htmlLink: string | null;
   canEdit: boolean;
+  /** Link interno relacionado (ex.: /processos/<id>) */
+  href?: string | null;
+  /** Linha extra de contexto (ex.: processo do prazo/audiência) */
+  subtitle?: string | null;
+  /** Prazo fatal (exibido em vermelho) */
+  fatal?: boolean;
 }
 
 function localParts(inicio: string, fim: string, diaInteiro: boolean) {
@@ -159,5 +166,46 @@ export function eventoValues(e: CalEvent): Values {
     responsavel_id: e.responsavel_id,
     lembrete_minutos: e.lembrete_minutos === null ? "" : String(e.lembrete_minutos),
     descricao: e.descricao,
+  };
+}
+
+/** Prazo processual pendente exibido na agenda (dia inteiro, somente leitura). */
+export function fromPrazo(p: {
+  id: string;
+  descricao: string;
+  data_fim: string;
+  fatal: boolean;
+  processo_id: string | null;
+  processo_titulo: string | null;
+  responsavel_id: string | null;
+  responsavel_nome: string | null;
+}): CalEvent {
+  const inicio = `${p.data_fim}T00:00:00-03:00`;
+  const fim = `${p.data_fim}T23:59:59-03:00`;
+  return {
+    id: `prazo:${p.id}`,
+    source: "prazo",
+    titulo: `${p.fatal ? "Prazo fatal" : "Prazo"}: ${p.descricao}`,
+    tipo: "prazo",
+    status: "agendado",
+    inicio,
+    fim,
+    dia_inteiro: true,
+    ...localParts(inicio, fim, true),
+    local: null,
+    link_reuniao: null,
+    descricao: null,
+    cliente_id: null,
+    cliente_nome: null,
+    oportunidade_id: null,
+    responsavel_id: p.responsavel_id,
+    responsavel_nome: p.responsavel_nome,
+    lembrete_minutos: null,
+    google_event_id: null,
+    htmlLink: null,
+    canEdit: false,
+    href: p.processo_id ? `/processos/${p.processo_id}?tab=prazos` : "/prazos",
+    subtitle: p.processo_titulo ?? (p.processo_id ? null : "Prazo administrativo"),
+    fatal: p.fatal,
   };
 }

@@ -142,6 +142,8 @@ function toGoogleEvent(e: CalendarEventInput) {
     summary: e.titulo,
     description: [e.descricao, "— Agendado pelo GE EASY"].filter(Boolean).join("\n\n"),
     location: e.local ?? undefined,
+    // marca de origem: só eventos criados pelo GE EASY podem ser apagados pelo sistema
+    extendedProperties: { private: { geeasy: "1" } },
     reminders: e.lembrete_minutos
       ? { useDefault: false, overrides: [{ method: "popup", minutes: e.lembrete_minutos }] }
       : { useDefault: true },
@@ -164,6 +166,13 @@ export async function upsertCalendarEvent(userId: string, e: CalendarEventInput,
   const token = await getAccessToken(userId);
   if (!token) return null;
   const cal = encodeURIComponent(await getCalendarId(userId));
+  if (googleEventId) {
+    const check = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${cal}/events/${encodeURIComponent(googleEventId)}?fields=extendedProperties`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const ev = check.ok ? ((await check.json()) as { extendedProperties?: { private?: Record<string, string> } }) : null;
+    if (ev?.extendedProperties?.private?.geeasy !== "1") googleEventId = null; // não altera eventos alheios: cria um novo
+  }
   const url = googleEventId
     ? `https://www.googleapis.com/calendar/v3/calendars/${cal}/events/${encodeURIComponent(googleEventId)}`
     : `https://www.googleapis.com/calendar/v3/calendars/${cal}/events`;
@@ -183,10 +192,13 @@ export async function deleteCalendarEvent(userId: string, googleEventId: string)
   const token = await getAccessToken(userId);
   if (!token) return;
   const cal = encodeURIComponent(await getCalendarId(userId));
-  await fetch(`https://www.googleapis.com/calendar/v3/calendars/${cal}/events/${encodeURIComponent(googleEventId)}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${cal}/events/${encodeURIComponent(googleEventId)}`;
+  // Segurança: o id vem do banco; só apaga se o evento foi criado pelo GE EASY (marca privada)
+  const check = await fetch(`${url}?fields=extendedProperties`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!check.ok) return;
+  const ev = (await check.json()) as { extendedProperties?: { private?: Record<string, string> } };
+  if (ev.extendedProperties?.private?.geeasy !== "1") return;
+  await fetch(url, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
 }
 
 export interface GoogleEventItem {

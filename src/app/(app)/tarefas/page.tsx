@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AlertTriangle, CheckCircle2, ListChecks, Sun } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { isManagerRole } from "@/lib/rbac";
-import { clienteOptions, getProfileMap, userOptions } from "@/lib/data";
+import { can, isManagerRole } from "@/lib/rbac";
+import { clienteOptions, departamentoMap, departamentoOptions, getProfileMap, processoOptions, userOptions } from "@/lib/data";
 import { PRIORIDADES, type Option } from "@/lib/constants";
 import { todayISO } from "@/lib/format";
 import type { Tarefa } from "@/lib/types";
@@ -16,7 +17,7 @@ import { TarefasBoard, type TarefaItem } from "@/components/tarefas/tarefas-boar
 import { tarefaFields } from "@/components/tarefas/fields";
 import { addDays, spStartOfDay, weekday } from "@/components/agenda/date-utils";
 
-export const metadata: Metadata = { title: "Tarefas" };
+export const metadata: Metadata = { title: "Tarefas e demandas" };
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const PRIO_VALUES = PRIORIDADES.map((p) => p.value);
@@ -27,6 +28,8 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
   const manager = isManagerRole(profile.role);
   const resp = manager && sp.resp && UUID.test(sp.resp) ? sp.resp : undefined;
   const prioridade = sp.prioridade && PRIO_VALUES.includes(sp.prioridade) ? sp.prioridade : undefined;
+  const dep = sp.dep && UUID.test(sp.dep) ? sp.dep : undefined;
+  const canProcessos = can(profile.role, "processos.view");
   const today = todayISO();
   const weekStart = addDays(today, -((weekday(today) + 6) % 7)); // segunda-feira
 
@@ -44,24 +47,59 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
     doneQ = doneQ.eq("prioridade", prioridade);
     weekQ = weekQ.eq("prioridade", prioridade);
   }
+  if (dep) {
+    openQ = openQ.eq("departamento_id", dep);
+    doneQ = doneQ.eq("departamento_id", dep);
+    weekQ = weekQ.eq("departamento_id", dep);
+  }
 
-  const [{ data: openRows, count: openCount }, { data: doneRows }, { count: weekCount }, profiles, clientes, users] = await Promise.all([
+  const [{ data: openRows, count: openCount }, { data: doneRows }, { count: weekCount }, profiles, clientes, allUsers, departamentos, depMap, processos, respDeps] = await Promise.all([
     openQ,
     doneQ,
     weekQ,
     getProfileMap(),
     clienteOptions(),
-    manager ? userOptions() : Promise.resolve([] as Option[]),
+    userOptions(),
+    departamentoOptions(),
+    departamentoMap(),
+    canProcessos ? processoOptions() : Promise.resolve([] as Option[]),
+    // Responsável de algum departamento? (pode distribuir demandas do departamento)
+    manager
+      ? Promise.resolve(true)
+      : Promise.all([
+          supabase.from("departamento_membros").select("departamento_id", { count: "exact", head: true }).eq("user_id", userId).eq("funcao", "responsavel"),
+          supabase.from("departamentos").select("id", { count: "exact", head: true }).eq("responsavel_id", userId),
+        ]).then(([a, b]) => (a.count ?? 0) + (b.count ?? 0) > 0),
   ]);
+  const canAssign = !manager && respDeps;
+  const users = manager || canAssign ? allUsers : ([] as Option[]);
   const open = (openRows ?? []) as Tarefa[];
   const done = (doneRows ?? []) as Tarefa[];
 
   const clienteIds = [...new Set([...open, ...done].map((t) => t.cliente_id).filter((v): v is string => !!v))];
+  const processoIds = [...new Set([...open, ...done].map((t) => t.processo_id).filter((v): v is string => !!v))];
   const clienteNomes = new Map<string, string>();
-  if (clienteIds.length) {
-    const { data } = await supabase.from("clientes").select("id, nome").in("id", clienteIds);
-    for (const c of data ?? []) clienteNomes.set(c.id as string, c.nome as string);
-  }
+  const processoTitulos = new Map<string, string>();
+  await Promise.all([
+    clienteIds.length
+      ? supabase
+          .from("clientes")
+          .select("id, nome")
+          .in("id", clienteIds)
+          .then(({ data }) => {
+            for (const c of data ?? []) clienteNomes.set(c.id as string, c.nome as string);
+          })
+      : null,
+    processoIds.length && canProcessos
+      ? supabase
+          .from("processos")
+          .select("id, titulo")
+          .in("id", processoIds)
+          .then(({ data }) => {
+            for (const p of data ?? []) processoTitulos.set(p.id as string, p.titulo as string);
+          })
+      : null,
+  ]);
 
   const toItem = (t: Tarefa): TarefaItem => ({
     id: t.id,
@@ -76,27 +114,50 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
     responsavel_nome: t.responsavel_id ? (profiles.get(t.responsavel_id)?.full_name ?? null) : null,
     concluida_em: t.concluida_em,
     canDelete: manager || t.created_by === userId,
+    departamento_id: t.departamento_id,
+    departamento_label: t.departamento_id ? (depMap.get(t.departamento_id)?.sigla || depMap.get(t.departamento_id)?.nome || null) : null,
+    departamento_cor: t.departamento_id ? (depMap.get(t.departamento_id)?.cor ?? null) : null,
+    processo_id: t.processo_id,
+    processo_titulo: t.processo_id ? (processoTitulos.get(t.processo_id) ?? null) : null,
   });
 
   const atrasadas = open.filter((t) => t.vencimento && t.vencimento < today).length;
   const hoje = open.filter((t) => t.vencimento === today).length;
   const urgentes = open.filter((t) => t.prioridade === "urgente").length;
 
-  const novoValues =
-    sp.novo === "1"
-      ? { prioridade: "media", vencimento: today, ...(sp.cliente_id && UUID.test(sp.cliente_id) ? { cliente_id: sp.cliente_id } : {}) }
-      : { prioridade: "media", vencimento: today };
+  const fromUrl = (k: string) => (sp.novo === "1" && sp[k] && UUID.test(sp[k]!) ? { [k]: sp[k] } : {});
+  const novoValues = {
+    prioridade: "media",
+    vencimento: today,
+    ...(dep ? { departamento_id: dep } : {}),
+    ...fromUrl("cliente_id"),
+    ...fromUrl("departamento_id"),
+    ...fromUrl("processo_id"),
+  };
+  // Garante que vínculos atuais (processo encerrado, departamento inativo) apareçam no formulário de edição.
+  const withMissing = (opts: Option[], entries: [string, string][]) => {
+    const have = new Set(opts.map((o) => o.value));
+    return [...opts, ...entries.filter(([id]) => !have.has(id)).map(([value, label]) => ({ value, label }))];
+  };
+  const depEntries = [...new Set([...open, ...done].map((t) => t.departamento_id).filter((v): v is string => !!v))].map(
+    (id) => [id, depMap.get(id)?.nome ?? "Departamento"] as [string, string],
+  );
+  const extra = {
+    departamentos: withMissing(departamentos, depEntries),
+    processos: canProcessos ? withMissing(processos, [...processoTitulos.entries()]) : undefined,
+    canAssign,
+  };
 
   return (
     <>
       <PageHeader
         eyebrow="Principal"
-        title="Tarefas"
-        description="Acompanhe follow-ups, pendências de documentos e próximos passos com os clientes."
+        title="Tarefas e demandas"
+        description="Pendências pessoais, demandas dos departamentos e providências vinculadas a processos e clientes."
         actions={
           <FormDrawerButton
             action={createTarefa}
-            fields={tarefaFields(clientes, users, manager, false)}
+            fields={tarefaFields(clientes, users, manager, false, extra)}
             values={novoValues}
             title="Nova tarefa"
             label="Nova tarefa"
@@ -115,9 +176,12 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
         <StatCard label="Concluídas na semana" value={weekCount ?? 0} hint="desde segunda-feira" icon={<CheckCircle2 className="h-5 w-5" />} tone="green" />
       </div>
 
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-        {manager && <FilterSelect param="resp" options={users} allLabel="Todos os responsáveis" />}
-        <FilterSelect param="prioridade" options={PRIORIDADES} allLabel="Todas as prioridades" />
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <Suspense fallback={null}>
+          {manager && <FilterSelect param="resp" options={users} allLabel="Todos os responsáveis" />}
+          <FilterSelect param="dep" options={departamentos} allLabel="Todos os departamentos" />
+          <FilterSelect param="prioridade" options={PRIORIDADES} allLabel="Todas as prioridades" />
+        </Suspense>
         {(openCount ?? 0) > open.length && <span className="text-xs text-muted sm:ml-auto">Exibindo as {open.length} primeiras tarefas abertas.</span>}
       </div>
 
@@ -126,9 +190,9 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
         done={done.map(toItem)}
         today={today}
         showResp={manager}
-        editFields={tarefaFields(clientes, users, manager, true)}
+        editFields={tarefaFields(clientes, users, manager, true, extra)}
         actions={{ toggle: toggleTarefa, update: updateTarefa, remove: deleteTarefa }}
-        filtered={!!(resp || prioridade)}
+        filtered={!!(resp || prioridade || dep)}
       />
     </>
   );

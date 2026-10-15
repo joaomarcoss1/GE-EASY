@@ -4,8 +4,10 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, CalendarDays, ListChecks, Users, KanbanSquare, Landmark, ShieldCheck, MapPin, Wallet, Target,
-  BriefcaseBusiness, FolderOpen, BarChart3, Settings, X, Scale, AlarmClock, Gavel, Building2, TrendingUp, type LucideIcon,
+  BriefcaseBusiness, FolderOpen, BarChart3, Settings, X, Scale, AlarmClock, Gavel, Building2, TrendingUp,
+  Newspaper, MessagesSquare, FileSignature, FileText, Timer, BadgePercent, ChevronDown, type LucideIcon,
 } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { NAV } from "@/lib/nav";
 import { can } from "@/lib/rbac";
@@ -13,11 +15,12 @@ import type { AppRole } from "@/lib/types";
 
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard, CalendarDays, ListChecks, Users, KanbanSquare, Landmark, ShieldCheck, MapPin, Wallet, Target, BriefcaseBusiness, FolderOpen, BarChart3, Settings,
-  Scale, AlarmClock, Gavel, Building2, TrendingUp,
+  Scale, AlarmClock, Gavel, Building2, TrendingUp, Newspaper, MessagesSquare, FileSignature, FileText, Timer, BadgePercent,
 };
 
 export function Sidebar({ role, open, onClose }: { role: AppRole; open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   return (
     <>
       {open && <div className="fixed inset-0 z-40 bg-brand-950/60 lg:hidden" onClick={onClose} />}
@@ -42,10 +45,24 @@ export function Sidebar({ role, open, onClose }: { role: AppRole; open: boolean;
           {NAV.map((group) => {
             const items = group.items.filter((i) => !i.permission || can(role, i.permission));
             if (!items.length) return null;
+            const hasActive = items.some((i) => pathname === i.href || pathname.startsWith(i.href + "/"));
+            const isOpen = !group.collapsed || hasActive || expanded[group.label];
             return (
               <div key={group.label}>
-                <p className="px-3 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/40">{group.label}</p>
-                <ul className="space-y-0.5">
+                {group.collapsed ? (
+                  <button
+                    type="button"
+                    onClick={() => setExpanded((e) => ({ ...e, [group.label]: !isOpen }))}
+                    className="flex w-full items-center justify-between rounded-lg px-3 pb-1.5 text-left text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/40 hover:text-white/70"
+                    aria-expanded={isOpen}
+                  >
+                    {group.label}
+                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")} />
+                  </button>
+                ) : (
+                  <p className="px-3 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/40">{group.label}</p>
+                )}
+                {isOpen && <ul className="space-y-0.5">
                   {items.map((item) => {
                     const Icon = ICONS[item.icon] ?? LayoutDashboard;
                     const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -66,7 +83,7 @@ export function Sidebar({ role, open, onClose }: { role: AppRole; open: boolean;
                       </li>
                     );
                   })}
-                </ul>
+                </ul>}
               </div>
             );
           })}

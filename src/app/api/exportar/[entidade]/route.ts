@@ -2,8 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can, isBackofficeRole, type Permission } from "@/lib/rbac";
-import { getProfileMap, parceiroMap } from "@/lib/data";
-import { APOLICE_STATUS, CATEGORIAS_CONSORCIO, CLIENTE_STATUS, COMISSAO_STATUS, CONTEMPLACAO, COTA_STATUS, ETAPAS, LINHAS, RAMOS_SEGURO, type Option } from "@/lib/constants";
+import { departamentoMap, getProfileMap, parceiroMap } from "@/lib/data";
+import {
+  APOLICE_STATUS, CATEGORIAS_CONSORCIO, CLIENTE_STATUS, COMISSAO_STATUS, CONTEMPLACAO, COTA_STATUS, ETAPAS, INSTANCIAS, LINHAS, PRAZO_CONTAGEM, PRAZO_STATUS, PRIORIDADES,
+  PROCESSO_AREAS, PROCESSO_FASES, PROCESSO_POLO, PROCESSO_RISCO, PROCESSO_STATUS, RAMOS_SEGURO, type Option,
+} from "@/lib/constants";
 import { date as dateBR, maskDocumento, maskPhone, todayISO } from "@/lib/format";
 import { fetchAll } from "@/components/dashboard/fetch-all";
 import { addDays, firstDay, isISODate, isMonth, lastDay, spStartOf } from "@/components/dashboard/periods";
@@ -25,10 +28,12 @@ const label = (opts: Option[], r: Row, k: string) => {
   const v = str(r, k);
   return opts.find((o) => o.value === v)?.label ?? v;
 };
-const embedded = (r: Row, k: string) => {
-  const v = r[k] as { nome?: string } | { nome?: string }[] | null | undefined;
-  return (Array.isArray(v) ? v[0]?.nome : v?.nome) ?? "";
+const embedded = (r: Row, k: string, field = "nome") => {
+  const v = r[k] as Record<string, unknown> | Record<string, unknown>[] | null | undefined;
+  const o = Array.isArray(v) ? v[0] : v;
+  return o?.[field] == null ? "" : String(o[field]);
 };
+const yesNo = (r: Row, k: string) => (r[k] === true ? "Sim" : r[k] === false ? "Não" : "");
 
 /** Aspas sempre; neutraliza injeção de fórmula (= + - @ TAB CR) prefixando apóstrofo. */
 function csvCell(v: Cell): string {
@@ -49,9 +54,12 @@ interface Entity {
   table: string;
   permission: Permission;
   select: string;
-  dateCol: string;
+  /** Coluna do filtro de período; null = exporta tudo o que o usuário enxerga (ignora o período). */
+  dateCol: string | null;
   dateKind: DateKind;
-  columns: (ctx: { consultor: (id: unknown) => string; parceiro: (id: unknown) => string; backoffice: boolean }) => Column[];
+  /** Ordenação (padrão: dateCol desc) */
+  orderCol?: string;
+  columns: (ctx: { consultor: (id: unknown) => string; parceiro: (id: unknown) => string; departamento: (id: unknown) => string; backoffice: boolean }) => Column[];
 }
 
 const ENTITIES: Record<string, Entity> = {
@@ -182,6 +190,71 @@ const ENTITIES: Record<string, Entity> = {
   },
 };
 
+// Núcleo jurídico (RLS do processo/prazo aplicado pelo cliente do usuário)
+ENTITIES.processos = {
+  table: "processos",
+  permission: "processos.view",
+  select:
+    "id, numero_cnj, numero_interno, titulo, clientes(nome), polo_cliente, parte_contraria, area, classe, assunto, tribunal, orgao, comarca, uf, instancia, fase, status, risco, valor_causa, valor_provisionado, data_distribuicao, data_encerramento, resultado, segredo_justica, departamento_id, responsavel_id, tags, created_at",
+  dateCol: null,
+  dateKind: "date",
+  orderCol: "created_at",
+  columns: ({ consultor, departamento }) => [
+    ["Número CNJ", (r) => str(r, "numero_cnj")],
+    ["Nº interno", (r) => str(r, "numero_interno")],
+    ["Título", (r) => str(r, "titulo")],
+    ["Cliente", (r) => embedded(r, "clientes")],
+    ["Posição do cliente", (r) => label(PROCESSO_POLO, r, "polo_cliente")],
+    ["Parte contrária", (r) => str(r, "parte_contraria")],
+    ["Área", (r) => label(PROCESSO_AREAS, r, "area")],
+    ["Classe", (r) => str(r, "classe")],
+    ["Assunto", (r) => str(r, "assunto")],
+    ["Tribunal", (r) => str(r, "tribunal")],
+    ["Vara / órgão", (r) => str(r, "orgao")],
+    ["Comarca", (r) => str(r, "comarca")],
+    ["UF", (r) => str(r, "uf")],
+    ["Instância", (r) => label(INSTANCIAS, r, "instancia")],
+    ["Fase", (r) => label(PROCESSO_FASES, r, "fase")],
+    ["Situação", (r) => label(PROCESSO_STATUS, r, "status")],
+    ["Risco", (r) => (r.risco ? label(PROCESSO_RISCO, r, "risco") : "Não avaliado")],
+    ["Valor da causa (R$)", (r) => money(r, "valor_causa")],
+    ["Valor provisionado (R$)", (r) => money(r, "valor_provisionado")],
+    ["Distribuição", (r) => dt(r, "data_distribuicao")],
+    ["Encerramento", (r) => dt(r, "data_encerramento")],
+    ["Resultado", (r) => (r.segredo_justica === true ? "" : str(r, "resultado"))],
+    ["Segredo de justiça", (r) => yesNo(r, "segredo_justica")],
+    ["Departamento", (r) => departamento(r.departamento_id)],
+    ["Responsável", (r) => consultor(r.responsavel_id)],
+    ["Etiquetas", (r) => (Array.isArray(r.tags) ? (r.tags as string[]).join(", ") : "")],
+    ["Cadastrado em", (r) => dt(r, "created_at")],
+  ],
+};
+
+ENTITIES.prazos = {
+  table: "prazos",
+  permission: "processos.view",
+  select:
+    "id, descricao, processos(titulo, numero_cnj), data_publicacao, dias, contagem, data_fim, fatal, prioridade, status, responsavel_id, departamento_id, cumprido_em, observacoes, created_at",
+  dateCol: "data_fim",
+  dateKind: "date",
+  columns: ({ consultor, departamento }) => [
+    ["Vencimento", (r) => dt(r, "data_fim")],
+    ["Prazo", (r) => str(r, "descricao")],
+    ["Processo", (r) => embedded(r, "processos", "titulo")],
+    ["Número CNJ", (r) => embedded(r, "processos", "numero_cnj")],
+    ["Publicação / intimação", (r) => dt(r, "data_publicacao")],
+    ["Dias", (r) => str(r, "dias")],
+    ["Contagem", (r) => label(PRAZO_CONTAGEM, r, "contagem")],
+    ["Fatal", (r) => yesNo(r, "fatal")],
+    ["Prioridade", (r) => label(PRIORIDADES, r, "prioridade")],
+    ["Situação", (r) => (r.status === "pendente" && typeof r.data_fim === "string" && r.data_fim < todayISO() ? "Vencido sem baixa" : label(PRAZO_STATUS, r, "status"))],
+    ["Cumprido em", (r) => dt(r, "cumprido_em")],
+    ["Responsável", (r) => consultor(r.responsavel_id)],
+    ["Departamento", (r) => departamento(r.departamento_id)],
+    ["Observações", (r) => str(r, "observacoes")],
+  ],
+};
+
 function plain(status: number, message: string) {
   return new NextResponse(message, { status, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
 }
@@ -217,7 +290,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ enti
 
   const rows = await fetchAll<Row>((from, to) => {
     let q = supabase.from(entity.table).select(entity.select);
-    if (entity.dateKind === "timestamp") {
+    if (!entity.dateCol) {
+      // sem filtro de período
+    } else if (entity.dateKind === "timestamp") {
       if (de) q = q.gte(entity.dateCol, spStartOf(de));
       if (ate) q = q.lt(entity.dateCol, spStartOf(addDays(ate, 1)));
     } else if (entity.dateKind === "month") {
@@ -229,12 +304,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ enti
     }
     // Consultores só exportam as próprias comissões (o RLS também garante).
     if (entity.table === "comissoes" && !backoffice) q = q.eq("consultor_id", session.userId);
-    return q.order(entity.dateCol, { ascending: false }).order("id").range(from, to) as unknown as PromiseLike<{ data: Row[] | null; error: { message: string } | null }>;
+    return q.order(entity.orderCol ?? entity.dateCol ?? "id", { ascending: false }).order("id").range(from, to) as unknown as PromiseLike<{ data: Row[] | null; error: { message: string } | null }>;
   }, MAX_ROWS);
 
-  const [profiles, parceiros] = await Promise.all([getProfileMap(), parceiroMap()]);
+  const [profiles, parceiros, deps] = await Promise.all([getProfileMap(), parceiroMap(), departamentoMap()]);
   const ctx = {
     backoffice,
+    departamento: (id: unknown) => (typeof id === "string" ? (deps.get(id)?.nome ?? "") : ""),
     consultor: (id: unknown) => (typeof id === "string" ? (profiles.get(id)?.full_name ?? "") : ""),
     parceiro: (id: unknown) => (typeof id === "string" ? (parceiros.get(id) ?? "") : ""),
   };

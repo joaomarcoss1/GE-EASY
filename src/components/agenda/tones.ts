@@ -55,3 +55,6 @@ export const TONE_CLS: Record<Tone, { chip: string; block: string; dot: string; 
 
 export const tipoTone = (tipo: string): Tone => EVENTO_TIPOS.find((t) => t.value === tipo)?.tone ?? "slate";
 export const toneOf = (tipo: string) => TONE_CLS[tipoTone(tipo)];
+
+/** Tom do evento: prazos fatais em vermelho; demais pelo tipo. */
+export const eventTone = (e: { tipo: string; fatal?: boolean }) => (e.tipo === "prazo" && e.fatal ? TONE_CLS.red : toneOf(e.tipo));

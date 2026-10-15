@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CalendarClock, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, Download, Link2 } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { isManagerRole } from "@/lib/rbac";
+import { can, isManagerRole } from "@/lib/rbac";
 import { clienteOptions, getProfileMap, userOptions } from "@/lib/data";
 import { googleConfigured } from "@/lib/env";
 import { listCalendarEvents } from "@/lib/google";
@@ -18,7 +18,7 @@ import { FilterSelect, SegmentTabs } from "@/components/ui/filters";
 import { StatCard } from "@/components/ui/stat-card";
 import { AgendaProvider, ListView, MonthView, NewEventButton, TipoLegend, WeekView } from "@/components/agenda/agenda-client";
 import { addDays, addMonths, dayRange, endOfMonth, isYmd, monthTitle, spIsoFromMs, spStartOfDay, startOfMonth, startOfWeek, toLocal, weekTitle } from "@/components/agenda/date-utils";
-import { eventoFields, fromAgendaEvento, fromGoogleEvent, type CalEvent } from "@/components/agenda/shared";
+import { eventoFields, fromAgendaEvento, fromGoogleEvent, fromPrazo, type CalEvent } from "@/components/agenda/shared";
 
 export const metadata: Metadata = { title: "Agenda" };
 
@@ -96,13 +96,49 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
     for (const c of data ?? []) clienteNomes.set(c.id as string, c.nome as string);
   }
 
-  const events: CalEvent[] = eventos.map((e) =>
-    fromAgendaEvento(e, {
-      clienteNome: e.cliente_id ? (clienteNomes.get(e.cliente_id) ?? null) : null,
-      responsavelNome: e.responsavel_id ? (profiles.get(e.responsavel_id)?.full_name ?? null) : null,
-      canEdit: manager || e.responsavel_id === userId || e.created_by === userId,
-    }),
-  );
+  const events: CalEvent[] = eventos.map((e) => {
+    // Audiências/prazos vinculados a processo são geridos no módulo jurídico (somente leitura aqui).
+    const processoId = (e as { processo_id?: string | null }).processo_id ?? null;
+    const juridico = !!processoId && (e.tipo === "audiencia" || e.tipo === "prazo");
+    return {
+      ...fromAgendaEvento(e, {
+        clienteNome: e.cliente_id ? (clienteNomes.get(e.cliente_id) ?? null) : null,
+        responsavelNome: e.responsavel_id ? (profiles.get(e.responsavel_id)?.full_name ?? null) : null,
+        canEdit: !juridico && (manager || e.responsavel_id === userId || e.created_by === userId),
+      }),
+      href: processoId ? `/processos/${processoId}${e.tipo === "audiencia" ? "?tab=audiencias" : ""}` : null,
+    };
+  });
+
+  // Prazos processuais pendentes do período (dia inteiro, somente leitura; vermelho se fatais)
+  if (can(profile.role, "processos.view")) {
+    let pq = supabase
+      .from("prazos")
+      .select("id, descricao, data_fim, fatal, processo_id, responsavel_id")
+      .eq("status", "pendente")
+      .gte("data_fim", rangeStart)
+      .lte("data_fim", rangeEnd)
+      .order("data_fim")
+      .limit(500);
+    if (resp) pq = pq.eq("responsavel_id", resp);
+    const { data: prazos } = await pq;
+    const rows = (prazos ?? []) as { id: string; descricao: string; data_fim: string; fatal: boolean; processo_id: string | null; responsavel_id: string | null }[];
+    const procIds = [...new Set(rows.map((p) => p.processo_id).filter((v): v is string => !!v))];
+    const procTitulos = new Map<string, string>();
+    if (procIds.length) {
+      const { data } = await supabase.from("processos").select("id, titulo").in("id", procIds);
+      for (const p of data ?? []) procTitulos.set(p.id as string, p.titulo as string);
+    }
+    for (const p of rows) {
+      events.push(
+        fromPrazo({
+          ...p,
+          processo_titulo: p.processo_id ? (procTitulos.get(p.processo_id) ?? null) : null,
+          responsavel_nome: p.responsavel_id ? (profiles.get(p.responsavel_id)?.full_name ?? null) : null,
+        }),
+      );
+    }
+  }
 
   // Google Agenda do usuário atual (somente leitura)
   if (googleConnected && (!resp || resp === userId)) {

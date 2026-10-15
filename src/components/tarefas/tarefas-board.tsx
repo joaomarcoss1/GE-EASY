@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
-import { AlertTriangle, CalendarClock, CalendarRange, Check, CheckCircle2, ChevronDown, Inbox, PartyPopper, Sun, Users } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarRange, Check, CheckCircle2, ChevronDown, Inbox, PartyPopper, Scale, Sun, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { PRIORIDADES, TAREFA_STATUS } from "@/lib/constants";
 import type { ActionState } from "@/lib/actions/types";
@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import type { FieldDef } from "@/components/ui/form";
 import { useToast } from "@/components/ui/toast";
+import { toneOf } from "@/components/departamentos/tone";
 
 export interface TarefaItem {
   id: string;
@@ -26,6 +27,12 @@ export interface TarefaItem {
   responsavel_nome: string | null;
   concluida_em: string | null;
   canDelete: boolean;
+  /** Demanda de departamento / vínculo com processo (opcionais) */
+  departamento_id?: string | null;
+  departamento_label?: string | null;
+  departamento_cor?: string | null;
+  processo_id?: string | null;
+  processo_titulo?: string | null;
 }
 
 interface Actions {
@@ -236,6 +243,19 @@ function TarefaRow({
                 <Link href={`/clientes/${t.cliente_id}`} className="inline-flex max-w-[220px] items-center gap-1 truncate text-xs text-brand-700 hover:underline dark:text-brand-300">
                   <Users className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{t.cliente_nome ?? "Cliente"}</span>
+                </Link>
+              )}
+              {t.processo_id && (
+                <Link href={`/processos/${t.processo_id}`} className="inline-flex max-w-[240px] items-center gap-1 truncate text-xs text-brand-700 hover:underline dark:text-brand-300">
+                  <Scale className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{t.processo_titulo ?? "Processo"}</span>
+                </Link>
+              )}
+              {t.departamento_id && (
+                <Link href={`/departamentos/${t.departamento_id}?tab=demandas`} className="inline-flex" title="Demanda do departamento">
+                  <Badge tone={toneOf(t.departamento_cor)} className="max-w-[200px] truncate">
+                    {t.departamento_label ?? "Departamento"}
+                  </Badge>
                 </Link>
               )}
               {t.status === "em_andamento" && !done && <StatusBadge options={TAREFA_STATUS} value="em_andamento" />}

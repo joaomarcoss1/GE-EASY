@@ -59,11 +59,6 @@ interface MetaRow { id: string; consultor_id: string | null; tipo: MetaTipo; val
 const clienteNome = (c: ClienteRef) => (Array.isArray(c) ? c[0]?.nome : c?.nome) ?? null;
 const OPEN_STAGES = ["novo", "contato", "qualificacao", "proposta", "negociacao"] as const;
 
-function greeting() {
-  const h = Number(new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, hour: "numeric", hour12: false }).format(new Date()));
-  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
-}
-
 function eventWhen(e: EventoRow, today: string) {
   const d = spDateOf(e.inicio);
   const diff = daysUntil(d);
@@ -228,7 +223,6 @@ export default async function ComercialPage({ searchParams }: { searchParams: Pr
   });
   const atrasadas = tarefas.filter((t) => t.vencimento && t.vencimento < today).length;
 
-  const firstName = (profile.full_name || profile.email).split(/\s+/)[0];
   const hoje = new Date().toLocaleDateString("pt-BR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const canNegocio = can(profile.role, "negocios.write");
   const canCliente = can(profile.role, "clientes.write");
