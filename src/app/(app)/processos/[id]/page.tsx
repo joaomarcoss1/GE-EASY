@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import {
-  AlarmClock, ArrowLeft, Building2, CalendarClock, ExternalLink, FileText, Gavel, Landmark, ListChecks, Lock, Plus, Scale, Users, Wallet,
+  AlarmClock, ArrowLeft, Building2, CalendarClock, ExternalLink, FileSignature, FileText, Gavel, Landmark, ListChecks, Lock, Plus, Scale, Timer, Users, Wallet,
 } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -126,6 +126,21 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
                 <a href={p.link_autos} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">
                   <ExternalLink className="h-4 w-4" /> Autos
                 </a>
+              )}
+              {can(profile.role, "modelos.view") && (
+                <Link href={`/modelos/gerar?processo_id=${id}`} className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">
+                  <FileText className="h-4 w-4" /> Gerar documento
+                </Link>
+              )}
+              {can(profile.role, "horas.lancar") && (
+                <Link href={`/horas?novo=1&processo_id=${id}`} className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">
+                  <Timer className="h-4 w-4" /> Lançar horas
+                </Link>
+              )}
+              {can(profile.role, "contratos.write") && (
+                <Link href={`/contratos?novo=1&processo_id=${id}${p.cliente_id ? `&cliente_id=${p.cliente_id}` : ""}`} className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">
+                  <FileSignature className="h-4 w-4" /> Novo contrato
+                </Link>
               )}
               {canWrite && (
                 <FormDrawerButton

@@ -38,6 +38,9 @@ funil, comissões, metas, visitas de consultores externos) é um módulo secund�
 - `src/lib/juridico/cnj.ts`: validação/formatação do número CNJ (DV módulo 97) e identificação do tribunal.
 - `src/lib/juridico/prazos.ts`: contagem de prazos em dias úteis (CPC arts. 219, 220 e 224) com feriados
   nacionais e recesso forense. Feriados locais via parâmetro `extras`.
+- Escritório: `contratos_honorarios`, `financeiro_lancamentos` (receber/pagar), `horas_lancamentos` (timesheet),
+  `atendimentos` (triagem → cliente/processo/contrato), `publicacoes` (vínculo automático por CNJ) e
+  `modelos_documentos` (`{{placeholders}}` resolvidos por `src/lib/juridico/merge.ts`, sempre com escape HTML).
 Permissões da interface em `src/lib/rbac.ts` (`can(role, "perm")`).
 
 ## Convenções de UI

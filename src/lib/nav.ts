@@ -19,7 +19,7 @@ export interface NavGroup {
  * (consórcios e seguros) fica em um grupo recolhido.
  */
 /** Rotas ainda em construção (ocultas do menu até a página existir) */
-const EM_CONSTRUCAO = new Set(["/financeiro", "/contratos", "/horas", "/publicacoes", "/atendimentos", "/modelos"]);
+const EM_CONSTRUCAO = new Set<string>([]);
 
 const ALL_NAV: NavGroup[] = [
   {

@@ -45,3 +45,21 @@ describe("prazos processuais", () => {
     expect(isDiaUtil("2026-10-17")).toBe(false);
   });
 });
+
+import { dividirPublicacoes, sugerirDias } from "../juridico/publicacoes";
+
+describe("publicações", () => {
+  it("divide por processo e anexa blocos sem número ao anterior", () => {
+    const dv = cnjCheckDigits("0001234", "2026", "8", "26", "0100");
+    const texto = `Processo 0001234-${dv}.2026.8.26.0100 - Intimação\nManifeste-se em 15 (quinze) dias.\n\nAdv: Fulano\n\nProcesso 0009999-00.2026.8.26.0100\nDespacho: cite-se.`;
+    const b = dividirPublicacoes(texto);
+    expect(b).toHaveLength(2);
+    expect(b[0].numero).toBe(`0001234-${dv}.2026.8.26.0100`);
+    expect(b[0].conteudo).toContain("Adv: Fulano");
+  });
+  it("sugere dias do prazo pelo texto", () => {
+    expect(sugerirDias("Manifeste-se em 15 (quinze) dias.")).toBe(15);
+    expect(sugerirDias("no prazo de cinco dias")).toBe(5);
+    expect(sugerirDias("Cite-se.")).toBeNull();
+  });
+});
