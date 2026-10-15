@@ -36,6 +36,16 @@ const TABELAS: Record<string, string> = {
   metas: "Metas",
   documentos: "Documentos",
   configuracoes: "Configurações",
+  processos: "Processos",
+  processo_partes: "Partes do processo",
+  prazos: "Prazos",
+  audiencias: "Audiências",
+  publicacoes: "Publicações",
+  contratos_honorarios: "Contratos de honorários",
+  financeiro_lancamentos: "Financeiro",
+  atendimentos: "Atendimentos",
+  departamentos: "Departamentos",
+  auth: "Acessos (login/logout)",
 };
 
 export default async function ConfiguracoesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -61,8 +71,8 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       <PageHeader eyebrow="Sistema" title="Configurações" description="Perfil, segurança, integrações com o Google e administração do GE EASY." />
       <LinkTabs base="/configuracoes" tabs={tabs} active={tab} />
       {tab === "perfil" && <PerfilTab session={session} />}
-      {tab === "seguranca" && <SegurancaTab />}
-      {tab === "integracoes" && <IntegracoesTab ok={sp.ok} erro={sp.erro} />}
+      {tab === "seguranca" && <SegurancaTab isAdmin={isAdmin} exigir2fa={sp.exigir2fa === "1"} />}
+      {tab === "integracoes" && <IntegracoesTab ok={sp.ok} erro={sp.erro} isAdmin={can(profile.role, "integracoes.manage")} />}
       {tab === "usuarios" && isAdmin && <UsuariosTab currentUserId={profile.id} />}
       {tab === "cadastros" && canCadastros && <CadastrosTab />}
       {tab === "auditoria" && <AuditoriaTab sp={sp} />}
@@ -114,7 +124,7 @@ async function AuditoriaTab({ sp }: { sp: Record<string, string | undefined> }) 
   const { page, size, from, to } = pageRange(sp.page, 30);
   let query = supabase.from("audit_logs").select("*", { count: "exact" }).order("created_at", { ascending: false }).range(from, to);
   if (sp.tabela && TABELAS[sp.tabela]) query = query.eq("tabela", sp.tabela);
-  if (sp.acao && ["INSERT", "UPDATE", "DELETE"].includes(sp.acao)) query = query.eq("acao", sp.acao);
+  if (sp.acao && ["INSERT", "UPDATE", "DELETE", "LOGIN", "DOWNLOAD", "EXPORTACAO", "VISUALIZACAO_SIGILOSA", "LGPD_EXPORTACAO", "LGPD_ANONIMIZACAO"].includes(sp.acao)) query = query.eq("acao", sp.acao);
   if (sp.usuario && /^[0-9a-f-]{36}$/i.test(sp.usuario)) query = query.eq("actor_id", sp.usuario);
   if (sp.de && /^\d{4}-\d{2}-\d{2}$/.test(sp.de)) query = query.gte("created_at", `${sp.de}T00:00:00-03:00`);
   if (sp.ate && /^\d{4}-\d{2}-\d{2}$/.test(sp.ate)) query = query.lte("created_at", `${sp.ate}T23:59:59-03:00`);
@@ -138,7 +148,17 @@ async function AuditoriaTab({ sp }: { sp: Record<string, string | undefined> }) 
       <CardHeader title="Trilha de auditoria" description="Toda inclusão, alteração e exclusão nas tabelas de negócio" icon={<History className="h-4 w-4" />} />
       <div className="flex flex-col flex-wrap gap-3 border-b border-line p-4 sm:flex-row sm:items-center">
         <FilterSelect param="tabela" options={Object.entries(TABELAS).map(([value, label]) => ({ value, label }))} allLabel="Todas as tabelas" />
-        <FilterSelect param="acao" options={[{ value: "INSERT", label: "Inclusão" }, { value: "UPDATE", label: "Alteração" }, { value: "DELETE", label: "Exclusão" }]} allLabel="Todas as ações" />
+        <FilterSelect param="acao" options={[
+            { value: "INSERT", label: "Inclusão" },
+            { value: "UPDATE", label: "Alteração" },
+            { value: "DELETE", label: "Exclusão" },
+            { value: "LOGIN", label: "Entrada no sistema" },
+            { value: "DOWNLOAD", label: "Download" },
+            { value: "EXPORTACAO", label: "Exportação" },
+            { value: "VISUALIZACAO_SIGILOSA", label: "Processo sigiloso" },
+            { value: "LGPD_EXPORTACAO", label: "LGPD: relatório" },
+            { value: "LGPD_ANONIMIZACAO", label: "LGPD: anonimização" },
+          ]} allLabel="Todas as ações" />
         <FilterSelect param="usuario" options={usuarios} allLabel="Todos os usuários" />
         <Suspense>
           <DateRangeFilter />

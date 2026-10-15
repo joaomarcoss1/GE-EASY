@@ -1,5 +1,6 @@
 "use server";
 import { redirect } from "next/navigation";
+import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -8,19 +9,19 @@ import type { ActionState } from "./types";
 
 const safeNext = (v: unknown) => (typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : "/dashboard");
 
-// Limitador simples por IP+e-mail em memória (defesa extra além do rate limit do Supabase Auth)
-const attempts = new Map<string, { n: number; until: number }>();
-function throttled(key: string) {
-  const now = Date.now();
-  const a = attempts.get(key);
-  if (a && a.until > now && a.n >= 5) return true;
-  return false;
+/**
+ * Limitador de tentativas de login persistido no banco (vale entre instâncias do servidor):
+ * 5 falhas em 15 minutos por IP + e-mail. A chave é um HMAC (o e-mail não fica em claro e
+ * terceiros não conseguem calcular a chave de outra pessoa).
+ */
+function chaveLogin(ip: string, email: string) {
+  const segredo = process.env.APP_ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "geeasy-login";
+  return createHmac("sha256", segredo).update(`${ip}|${email}`).digest("hex");
 }
-function registerFail(key: string) {
-  const now = Date.now();
-  const a = attempts.get(key);
-  if (!a || a.until < now) attempts.set(key, { n: 1, until: now + 15 * 60_000 });
-  else a.n++;
+
+async function ipDaRequisicao() {
+  const h = await headers();
+  return (h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0] ?? "local").trim().slice(0, 64);
 }
 
 export async function signIn(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -29,24 +30,37 @@ export async function signIn(_: ActionState, formData: FormData): Promise<Action
     .safeParse({ email: formData.get("email"), password: formData.get("password") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-  const key = `${ip}:${parsed.data.email}`;
-  if (throttled(key)) return { error: "Muitas tentativas. Aguarde 15 minutos e tente novamente." };
-
+  const ip = await ipDaRequisicao();
+  const chave = chaveLogin(ip, parsed.data.email);
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data: liberado } = await supabase.rpc("rate_limit_login", { p_hash: chave, p_registrar_falha: false });
+  if (liberado === false) return { error: "Muitas tentativas. Aguarde 15 minutos e tente novamente." };
+
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
-    registerFail(key);
+    await supabase.rpc("rate_limit_login", { p_hash: chave, p_registrar_falha: true });
     return { error: error.message.includes("Email not confirmed") ? "Confirme seu e-mail antes de entrar." : "E-mail ou senha incorretos." };
   }
-  attempts.delete(key);
+  await supabase.rpc("limpar_rate_limit_login", { p_hash: chave });
+  // Registro de acesso (Marco Civil da Internet, art. 15: guarda dos registros de acesso a aplicações)
+  const ua = (await headers()).get("user-agent")?.slice(0, 200) ?? null;
+  await supabase.rpc("registrar_acesso", { p_acao: "LOGIN", p_tabela: "auth", p_registro: data.user?.id ?? null, p_detalhes: { ip, ua } });
   redirect(safeNext(formData.get("next")));
 }
 
 export async function signOut() {
   const supabase = await createClient();
+  await supabase.rpc("registrar_acesso", { p_acao: "LOGOUT", p_tabela: "auth", p_registro: null, p_detalhes: null });
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+/** Saída por inatividade (chamada pelo vigia de sessão no navegador). */
+export async function signOutInatividade() {
+  const supabase = await createClient();
+  await supabase.rpc("registrar_acesso", { p_acao: "LOGOUT", p_tabela: "auth", p_registro: null, p_detalhes: { motivo: "inatividade" } });
+  await supabase.auth.signOut();
+  redirect("/login?motivo=inatividade");
 }
 
 export async function requestPasswordReset(_: ActionState, formData: FormData): Promise<ActionState> {

@@ -12,6 +12,8 @@ import type { AgendaEvento } from "@/lib/types";
 import type { Option } from "@/lib/constants";
 import { createEvento, deleteEvento, setEventoStatus, updateEvento } from "@/lib/actions/agenda";
 import { PageHeader } from "@/components/ui/page-header";
+import { SincronizarAgendaButton } from "@/components/integracoes/acao-botoes";
+import { sincronizarMinhaAgenda } from "@/lib/actions/integracoes";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
 import { FilterSelect, SegmentTabs } from "@/components/ui/filters";
@@ -204,6 +206,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
             <LinkButton href={`/api/agenda/ics${resp ? `?resp=${resp}` : ""}`} variant="secondary" prefetch={false} title="Baixar arquivo .ics (próximos 180 dias)">
               <Download className="h-4 w-4" /> Exportar .ics
             </LinkButton>
+            {googleConnected && <SincronizarAgendaButton action={sincronizarMinhaAgenda} />}
             <NewEventButton />
           </>
         }

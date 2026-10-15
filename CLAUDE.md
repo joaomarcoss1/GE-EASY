@@ -43,6 +43,21 @@ funil, comissões, metas, visitas de consultores externos) é um módulo secund�
   `modelos_documentos` (`{{placeholders}}` resolvidos por `src/lib/juridico/merge.ts`, sempre com escape HTML).
 Permissões da interface em `src/lib/rbac.ts` (`can(role, "perm")`).
 
+## Integrações
+- `src/lib/juridico/datajud.ts` (puro) + `src/lib/integracoes/datajud.ts`: API pública do DataJud (CNJ); movimentos viram
+  `processo_andamentos` com `origem='datajud'` e `externo_id` único.
+- `src/lib/juridico/djen.ts` + `src/lib/integracoes/djen.ts`: intimações do DJEN (Comunica PJe) por OAB → `publicacoes`
+  (hash `djen:*`, publicação = 1º dia útil após a disponibilização).
+- `src/lib/integracoes/agenda.ts`: prazos → evento de dia inteiro no Google Agenda do responsável (`prazos.google_event_id`).
+- `src/lib/integracoes/drive.ts`: Drive do escritório (`configuracoes.drive_escritorio`), pastas por cliente/processo/
+  categoria com cache em `drive_pastas`. Funções recebem o cliente service role — chame só após autorizar o usuário.
+- Rotina `src/app/api/cron/sincronizar/route.ts` (segredo `CRON_SECRET`), disparada pelo pg_cron via `disparar_sincronizacao()`.
+
+## Segurança adicional
+- `limitar(acao, max, janela)` e `registrarAcesso(acao, tabela, id, detalhes)` em `actions/utils.ts` para ações sensíveis.
+- Uploads: conferir assinatura com `detectarTipoArquivo()` (`src/lib/seguranca/arquivos.ts`).
+- LGPD: `actions/lgpd.ts` (anonimização) e `/api/lgpd/cliente/[id]` (relatório do titular).
+
 ## Convenções de UI
 - Componentes base em `src/components/ui/*`: `Button`/`LinkButton`, `Card`/`CardHeader`/`CardBody`,
   `PageHeader`, `StatCard`, `Badge`/`StatusBadge`, `EmptyState`, `Avatar`, `Progress`, `LinkTabs`,

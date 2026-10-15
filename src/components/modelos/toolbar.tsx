@@ -1,6 +1,6 @@
 "use client";
 import { useTransition } from "react";
-import { ClipboardCopy, Download, NotebookPen, Printer } from "lucide-react";
+import { ClipboardCopy, Download, HardDrive, NotebookPen, Printer } from "lucide-react";
 import type { ActionState } from "@/lib/actions/types";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -13,14 +13,17 @@ export function DocumentoToolbar({
   html,
   texto,
   registrar,
+  salvarDrive,
 }: {
   titulo: string;
   html: string;
   texto: string;
   registrar?: () => Promise<ActionState>;
+  salvarDrive?: () => Promise<ActionState & { url?: string }>;
 }) {
   const toast = useToast();
   const [pending, start] = useTransition();
+  const [salvando, startSalvar] = useTransition();
   const baixarDoc = () => {
     const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${titulo.replace(/</g, "")}</title>
 <style>body{font-family:'Times New Roman',serif;font-size:12pt;line-height:1.5} .doc{white-space:pre-wrap} mark{background:#fde68a}</style></head><body><div class="doc">${html}</div></body></html>`;
@@ -53,6 +56,22 @@ export function DocumentoToolbar({
       >
         <ClipboardCopy className="h-4 w-4" /> Copiar texto
       </Button>
+      {salvarDrive && (
+        <Button
+          variant="outline"
+          loading={salvando}
+          title="Salva como Google Docs na pasta do processo/cliente no Drive do escritório"
+          onClick={() =>
+            startSalvar(async () => {
+              const r = await salvarDrive();
+              toast(r.ok ? (r.message ?? "Salvo no Drive.") : (r.error ?? "Erro."), r.ok ? "success" : "error");
+              if (r.ok && r.url && /^https:\/\/(docs|drive)\.google\.com\//.test(r.url)) window.open(r.url, "_blank", "noopener,noreferrer");
+            })
+          }
+        >
+          <HardDrive className="h-4 w-4" /> Salvar no Drive (Google Docs)
+        </Button>
+      )}
       {registrar && (
         <Button
           variant="outline"

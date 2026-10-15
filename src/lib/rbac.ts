@@ -37,6 +37,9 @@ export const PERMISSIONS = {
   "cadastros.manage": ["admin", "gestor"],
   "usuarios.manage": ["admin"],
   "auditoria.view": ["admin"],
+  "integracoes.manage": ["admin"],
+  "lgpd.exportar": ["admin", "gestor"],
+  "lgpd.anonimizar": ["admin"],
   "visitas.checkin": ["consultor", "consultor_externo", "gestor", "admin"],
 } as const satisfies Record<string, readonly AppRole[]>;
 

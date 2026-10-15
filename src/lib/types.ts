@@ -270,6 +270,9 @@ export interface Documento {
   tamanho: number | null;
   drive_file_id: string | null;
   drive_url: string | null;
+  drive_status?: "pendente" | "sincronizado" | "erro" | "ignorado";
+  drive_erro?: string | null;
+  processo_id?: string | null;
   enviado_por: string | null;
   created_at: string;
 }
@@ -348,6 +351,12 @@ export interface Processo {
   equipe: string[];
   tags: string[];
   observacoes: string | null;
+  datajud_monitorar?: boolean;
+  datajud_sincronizado_em?: string | null;
+  datajud_atualizado_em?: string | null;
+  datajud_status?: "ok" | "nao_encontrado" | "erro" | "indisponivel" | null;
+  datajud_erro?: string | null;
+  drive_folder_id?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -371,6 +380,8 @@ export interface ProcessoAndamento {
   tipo: string;
   descricao: string;
   autor_id: string | null;
+  origem?: "manual" | "sistema" | "datajud" | "publicacao";
+  data_hora?: string | null;
   created_at: string;
 }
 
@@ -527,6 +538,12 @@ export interface Publicacao {
   tratado_em: string | null;
   observacoes: string | null;
   hash: string | null;
+  origem?: "manual" | "djen";
+  tribunal?: string | null;
+  orgao?: string | null;
+  tipo_comunicacao?: string | null;
+  link?: string | null;
+  oab?: string | null;
   created_at: string;
 }
 

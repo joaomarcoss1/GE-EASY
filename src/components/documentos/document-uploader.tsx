@@ -29,9 +29,9 @@ const STATUS_LABEL: Record<Status, string> = {
 };
 
 /** Área de envio (arrastar e soltar) — o arquivo vai direto do navegador ao Storage (RLS) e depois é registrado. */
-export function DocumentUploader({ clienteId }: { clienteId: string }) {
+export function DocumentUploader({ clienteId, processoId }: { clienteId?: string | null; processoId?: string | null }) {
   const [items, setItems] = useState<Item[]>([]);
-  const [categoria, setCategoria] = useState("outros");
+  const [categoria, setCategoria] = useState(processoId ? "peticao" : "outros");
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -67,15 +67,16 @@ export function DocumentUploader({ clienteId }: { clienteId: string }) {
     for (const [n, item] of queue.entries()) {
       setProgress({ done: n, total: queue.length });
       const mime = resolveMime(item.file.name, item.file.type) ?? "application/octet-stream";
-      const path = `clientes/${clienteId}/${crypto.randomUUID()}-${sanitizeFileName(item.file.name)}`;
+      const pasta = processoId ? `processos/${processoId}` : `clientes/${clienteId}`;
+      const path = `${pasta}/${crypto.randomUUID()}-${sanitizeFileName(item.file.name)}`;
       update(item.key, { status: "enviando", error: undefined });
       const { error: upError } = await supabase.storage.from("documentos").upload(path, item.file, { contentType: mime, upsert: false, cacheControl: "3600" });
       if (upError) {
-        update(item.key, { status: "erro", error: upError.message.includes("row-level security") ? "Sem permissão para este cliente" : "Falha no envio" });
+        update(item.key, { status: "erro", error: upError.message.includes("row-level security") ? processoId ? "Sem permissão para este processo" : "Sem permissão para este cliente" : "Falha no envio" });
         continue;
       }
       update(item.key, { status: "registrando" });
-      const r = await registerDocumento({ cliente_id: clienteId, storage_path: path, nome: item.file.name.slice(0, 255), categoria });
+      const r = await registerDocumento({ cliente_id: processoId ? null : clienteId, processo_id: processoId ?? null, storage_path: path, nome: item.file.name.slice(0, 255), categoria });
       if (r.ok) {
         ok++;
         update(item.key, { status: "concluido" });

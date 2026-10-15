@@ -39,3 +39,20 @@ Cada usuário conecta a própria conta em *Configurações › Integrações*.
 - Cadastre administradoras, seguradoras e produtos (com % de comissão) em *Configurações › Cadastros*.
 - Defina % de comissão de cada consultor em *Configurações › Usuários*.
 - Cadastre as metas do mês em *Metas & ranking*.
+
+## 5. Integrações jurídicas (DataJud, DJEN, Google Agenda e Drive)
+1. **Variáveis na Vercel** (Production): `SUPABASE_SERVICE_ROLE_KEY` (obrigatória para as rotinas automáticas, Drive
+   e Agenda), `APP_ENCRYPTION_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `CRON_SECRET` (já criada) e,
+   opcionalmente, `DATAJUD_API_KEY` (se o CNJ trocar a chave pública).
+2. **Google Cloud**: ative *Google Calendar API* e *Google Drive API*; tela de consentimento com os escopos
+   `calendar.events` e `drive.file`; URI de redirecionamento `https://ge-easy.vercel.app/api/integracoes/google/callback`.
+3. **Drive do escritório**: o administrador conecta a conta Google institucional (*Configurações › Integrações*) e clica
+   em **Usar minha conta como Drive do escritório**. A árvore `GE EASY — Arquivo do escritório/Clientes/…/Processos/…`
+   é criada automaticamente; uploads novos são arquivados em segundo plano e pendências são reprocessadas a cada hora.
+4. **DJEN**: cada advogado(a) informa a OAB em *Meu perfil* (ex.: `SP 123456`); OABs extras em *Integrações*.
+   A rotina busca as comunicações às 7h, 12h e 18h (Brasília).
+5. **DataJud**: processos ativos com número CNJ são consultados a cada hora (30 por rodada, os mais antigos primeiro;
+   cada processo no máximo a cada 6 h). O botão **Sincronizar agora** no processo faz a consulta na hora.
+6. **Agendamentos** (`cron.job`): `geeasy-datajud` (:15 de cada hora), `geeasy-djen` (10h/15h/21h UTC),
+   `geeasy-drive-agenda` (:40 de cada hora) e `geeasy-limpeza` (6h30 UTC). URL e segredo ficam no Vault
+   (`geeasy_site_url`, `geeasy_cron_secret`).

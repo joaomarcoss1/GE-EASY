@@ -74,7 +74,7 @@ export function docKind(mime: string | null | undefined): DocKind {
   if (mime === "application/pdf") return "pdf";
   if (mime.startsWith("image/")) return "image";
   if (mime.includes("spreadsheet") || mime === "application/vnd.ms-excel" || mime === "text/csv") return "sheet";
-  if (mime.includes("word")) return "word";
+  if (mime.includes("word") || mime === "application/vnd.google-apps.document") return "word";
   if (mime.startsWith("text/")) return "text";
   return "other";
 }

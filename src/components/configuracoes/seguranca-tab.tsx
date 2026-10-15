@@ -8,14 +8,20 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { MfaManager } from "./mfa-manager";
 import { PasswordForm } from "./settings-form";
+import { SegurancaEscritorio } from "./seguranca-escritorio";
 
-export async function SegurancaTab() {
+export async function SegurancaTab({ isAdmin = false, exigir2fa = false }: { isAdmin?: boolean; exigir2fa?: boolean }) {
   const supabase = await createClient();
   const [{ data: userData }, { data: aal }] = await Promise.all([supabase.auth.getUser(), supabase.auth.mfa.getAuthenticatorAssuranceLevel()]);
   const user = userData.user;
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
+      {exigir2fa && aal?.nextLevel !== "aal2" && (
+        <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100 xl:col-span-2">
+          <b>A política do escritório exige autenticação em dois fatores.</b> Cadastre o aplicativo autenticador abaixo para liberar o acesso ao sistema.
+        </div>
+      )}
       <Card>
         <CardHeader title="Senha" description="Altere a senha de acesso ao GE EASY." icon={<KeyRound className="h-4 w-4" />} />
         <CardBody>
@@ -78,6 +84,8 @@ export async function SegurancaTab() {
           </div>
         </CardBody>
       </Card>
+
+      {isAdmin && <SegurancaEscritorio />}
     </div>
   );
 }

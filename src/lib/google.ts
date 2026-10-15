@@ -135,6 +135,10 @@ export interface CalendarEventInput {
   fim: string; // ISO
   dia_inteiro?: boolean;
   lembrete_minutos?: number | null;
+  /** Vários lembretes (minutos antes do início); tem precedência sobre lembrete_minutos. */
+  lembretes?: number[];
+  /** colorId do Google Agenda (ex.: "11" = vermelho). */
+  cor?: string;
 }
 
 function toGoogleEvent(e: CalendarEventInput) {
@@ -144,9 +148,12 @@ function toGoogleEvent(e: CalendarEventInput) {
     location: e.local ?? undefined,
     // marca de origem: só eventos criados pelo GE EASY podem ser apagados pelo sistema
     extendedProperties: { private: { geeasy: "1" } },
-    reminders: e.lembrete_minutos
-      ? { useDefault: false, overrides: [{ method: "popup", minutes: e.lembrete_minutos }] }
-      : { useDefault: true },
+    reminders: e.lembretes?.length
+      ? { useDefault: false, overrides: e.lembretes.slice(0, 5).map((minutes) => ({ method: "popup", minutes })) }
+      : e.lembrete_minutos
+        ? { useDefault: false, overrides: [{ method: "popup", minutes: e.lembrete_minutos }] }
+        : { useDefault: true },
+    ...(e.cor ? { colorId: e.cor } : {}),
   };
   if (e.dia_inteiro) {
     const start = e.inicio.slice(0, 10);
@@ -226,45 +233,78 @@ export async function listCalendarEvents(userId: string, timeMin: string, timeMa
 
 // ---------------------------------------------------------------- Drive
 
-async function driveFetch(token: string, url: string, init?: RequestInit) {
-  return fetch(url, { ...init, headers: { Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) } });
+const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
+export const FOLDER_MIME = "application/vnd.google-apps.folder";
+export const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
+
+export class DriveError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
 }
 
-async function ensureFolder(token: string, name: string, parentId?: string) {
-  const safe = name.replace(/'/g, "\\'");
-  const q = [`name = '${safe}'`, "mimeType = 'application/vnd.google-apps.folder'", "trashed = false", parentId ? `'${parentId}' in parents` : null]
-    .filter(Boolean)
-    .join(" and ");
-  const found = await driveFetch(token, `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`);
+async function driveFetch(token: string, url: string, init?: RequestInit) {
+  return fetch(url, { ...init, cache: "no-store", signal: AbortSignal.timeout(45_000), headers: { Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) } });
+}
+
+/** Escapa valores usados na linguagem de consulta do Drive ('...'). */
+export const driveQ = (v: string) => v.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+/** Nome de arquivo/pasta seguro para o Drive. */
+export const driveName = (v: string, max = 150) => v.replace(/[\u0000-\u001f/\\]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max) || "Sem nome";
+
+/** Procura a pasta pelo nome dentro do pai (somente as criadas pelo app, pelo escopo drive.file) ou cria. */
+export async function findOrCreateFolder(token: string, name: string, parentId?: string | null): Promise<string> {
+  const nome = driveName(name);
+  const q = [`name = '${driveQ(nome)}'`, `mimeType = '${FOLDER_MIME}'`, "trashed = false", parentId ? `'${driveQ(parentId)}' in parents` : null].filter(Boolean).join(" and ");
+  const found = await driveFetch(token, `${DRIVE_API}?q=${encodeURIComponent(q)}&fields=files(id)&pageSize=1`);
   if (found.ok) {
     const files = ((await found.json()) as { files: { id: string }[] }).files;
     if (files[0]) return files[0].id;
+  } else if (found.status === 401 || found.status === 403) {
+    throw new DriveError("Acesso ao Google Drive negado. Reconecte a conta Google do escritório.", found.status);
   }
-  const res = await driveFetch(token, "https://www.googleapis.com/drive/v3/files?fields=id", {
+  const res = await driveFetch(token, `${DRIVE_API}?fields=id`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, mimeType: "application/vnd.google-apps.folder", ...(parentId ? { parents: [parentId] } : {}) }),
+    body: JSON.stringify({ name: nome, mimeType: FOLDER_MIME, ...(parentId ? { parents: [parentId] } : {}) }),
   });
-  if (!res.ok) throw new Error("Falha ao criar pasta no Drive");
+  if (!res.ok) throw new DriveError(`Falha ao criar a pasta "${nome}" no Drive.`, res.status);
   return ((await res.json()) as { id: string }).id;
 }
 
-/**
- * Envia um arquivo para o Google Drive do usuário em "GE EASY/<pasta>".
- * Retorna { id, webViewLink } ou null se o Google não estiver conectado.
- */
-export async function uploadToDrive(userId: string, folderName: string, file: { name: string; type: string; data: ArrayBuffer }) {
-  const token = await getAccessToken(userId);
-  if (!token) return null;
-  const root = await ensureFolder(token, "GE EASY");
-  const folder = await ensureFolder(token, folderName.slice(0, 120), root);
+/** Confere se a pasta ainda existe e não está na lixeira. */
+export async function folderExists(token: string, id: string) {
+  const res = await driveFetch(token, `${DRIVE_API}/${encodeURIComponent(id)}?fields=id,trashed`);
+  if (!res.ok) return false;
+  return !((await res.json()) as { trashed?: boolean }).trashed;
+}
 
-  const boundary = "geeasy" + Math.random().toString(16).slice(2);
-  const meta = JSON.stringify({ name: file.name, parents: [folder] });
+/**
+ * Envia um arquivo para a pasta. Com `converterParaDocs`, o HTML enviado vira um Google Docs editável.
+ * Lança DriveError (status 404 = pasta de destino não existe mais).
+ */
+export async function uploadDriveFile(
+  token: string,
+  parentId: string,
+  file: { name: string; type: string; data: ArrayBuffer | Uint8Array; description?: string },
+  opts: { converterParaDocs?: boolean } = {},
+) {
+  const boundary = "geeasy" + crypto.randomUUID().replace(/-/g, "");
+  const meta = JSON.stringify({
+    name: driveName(file.name, 200),
+    parents: [parentId],
+    description: file.description?.slice(0, 1000),
+    ...(opts.converterParaDocs ? { mimeType: GOOGLE_DOC_MIME } : {}),
+  });
+  const bytes = file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data);
   const body = new Blob([
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n`,
     `--${boundary}\r\nContent-Type: ${file.type || "application/octet-stream"}\r\n\r\n`,
-    new Uint8Array(file.data),
+    bytes as BlobPart,
     `\r\n--${boundary}--`,
   ]);
   const res = await driveFetch(token, "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink", {
@@ -273,8 +313,11 @@ export async function uploadToDrive(userId: string, folderName: string, file: { 
     body,
   });
   if (!res.ok) {
-    console.error("[google.drive]", res.status, await res.text());
-    return null;
+    const txt = await res.text().catch(() => "");
+    console.error("[google.drive]", res.status, txt.slice(0, 300));
+    throw new DriveError(res.status === 404 ? "Pasta de destino não encontrada no Drive." : `Falha no envio ao Drive (${res.status}).`, res.status);
   }
   return (await res.json()) as { id: string; webViewLink: string };
 }
+
+export const driveFolderUrl = (id: string) => `https://drive.google.com/drive/folders/${encodeURIComponent(id)}`;

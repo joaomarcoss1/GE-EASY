@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AlarmClock, CheckCheck, Inbox, Link2Off, Newspaper } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { can } from "@/lib/rbac";
+import { can, isManagerRole } from "@/lib/rbac";
 import { getProfileMap, juridicoOptions, pageRange, processoOptions, searchTerm } from "@/lib/data";
 import { todayISO } from "@/lib/format";
 import {
@@ -14,6 +14,8 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination, SearchInput, SegmentTabs } from "@/components/ui/filters";
 import { ImportarPublicacoes } from "@/components/publicacoes/importar";
+import { BuscarDjenButton } from "@/components/integracoes/acao-botoes";
+import { buscarIntimacoesDjen } from "@/lib/actions/integracoes";
 import { PublicacoesLista, type PublicacaoView } from "@/components/publicacoes/publicacao-item";
 
 export const metadata: Metadata = { title: "Publicações" };
@@ -68,8 +70,13 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
       <PageHeader
         eyebrow="Jurídico"
         title="Publicações e intimações"
-        description="Caixa de entrada do Diário de Justiça: vincule ao processo, gere o prazo e dê baixa."
-        actions={can(profile.role, "processos.write") && <ImportarPublicacoes action={importarPublicacoes} />}
+        description="Intimações do DJEN capturadas automaticamente pelas OABs da equipe (3x ao dia) ou importadas: vincule ao processo, gere o prazo e dê baixa."
+        actions={
+          <>
+            <BuscarDjenButton action={buscarIntimacoesDjen} escopo={isManagerRole(profile.role) ? "de toda a equipe (perfis + lista do administrador)" : "do seu perfil"} />
+            {can(profile.role, "processos.write") && <ImportarPublicacoes action={importarPublicacoes} />}
+          </>
+        }
       />
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Publicações novas" value={novas.count ?? 0} icon={<Inbox className="h-5 w-5" />} tone={(novas.count ?? 0) > 0 ? "accent" : "green"} />

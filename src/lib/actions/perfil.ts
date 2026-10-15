@@ -49,6 +49,7 @@ export async function encerrarTodasSessoes(): Promise<ActionState> {
   const g = await guard();
   if ("denied" in g) return g.denied;
   const supabase = await createClient();
+  await supabase.rpc("registrar_acesso", { p_acao: "LOGOUT_GLOBAL", p_tabela: "auth", p_registro: g.session.userId, p_detalhes: null });
   const { error } = await supabase.auth.signOut({ scope: "global" });
   if (error) return { error: "Não foi possível encerrar as sessões. Tente novamente." };
   return { ok: true, message: "Todas as sessões foram encerradas. Entre novamente." };

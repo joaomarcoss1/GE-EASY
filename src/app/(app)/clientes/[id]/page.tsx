@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Mail, MapPin, MessageCircle, Phone, Landmark, ShieldCheck, KanbanSquare, CalendarDays, ListChecks, Plus, Briefcase, Cake, Wallet, Scale } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, MessageCircle, Phone, Landmark, ShieldCheck, KanbanSquare, CalendarDays, ListChecks, Plus, Briefcase, Cake, Wallet, Scale, FileJson, FolderOpen } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
@@ -16,6 +16,9 @@ import { Badge, StatusBadge, optionLabel } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
+import { DrivePastaButton } from "@/components/documentos/drive-pasta-button";
+import { getDriveEscritorioStatus } from "@/components/documentos/google-status";
+import { anonimizarCliente } from "@/lib/actions/lgpd";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { LinkTabs } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -48,7 +51,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
     ? await supabase.from("processos").select("id, titulo, numero_cnj, area, fase, status, parte_contraria, updated_at").eq("cliente_id", id).order("updated_at", { ascending: false })
     : { data: [] };
   const procs = processosData ?? [];
-  const [profiles, consultores] = await Promise.all([getProfileMap(), consultorOptions()]);
+  const [profiles, consultores, drive] = await Promise.all([getProfileMap(), consultorOptions(), getDriveEscritorioStatus()]);
   const consultor = cliente.consultor_id ? profiles.get(cliente.consultor_id) : null;
   const canWrite = can(profile.role, "clientes.write");
   const canTransfer = can(profile.role, "clientes.transfer");
@@ -88,14 +91,31 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
             {cliente.telefone && <a href={`tel:${cliente.telefone}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" aria-label="Ligar"><Phone className="h-4 w-4" /></a>}
             {cliente.email && <a href={`mailto:${cliente.email}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" aria-label="E-mail"><Mail className="h-4 w-4" /></a>}
             {canWrite && <FormDrawerButton action={updateCliente} fields={clienteFields(consultores, canTransfer)} values={{ ...cliente, tags: cliente.tags.join(", ") }} hidden={{ id }} title="Editar cliente" label="Editar" icon="edit" variant="secondary" />}
+            {drive.ativo && <DrivePastaButton tipo="cliente" id={id} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-fg hover:bg-surface-2 hover:no-underline dark:text-fg" />}
+            {can(profile.role, "lgpd.exportar") && (
+              <a href={`/api/lgpd/cliente/${id}`} download className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" title="Relatório de dados pessoais do titular (LGPD, art. 18)">
+                <FileJson className="h-4 w-4" /> Dados LGPD
+              </a>
+            )}
+            {can(profile.role, "lgpd.anonimizar") && (
+              <ConfirmAction
+                action={anonimizarCliente}
+                id={id}
+                title="Anonimizar dados pessoais do titular?"
+                message="Irreversível. Nome, CPF/CNPJ, contatos, endereço e observações serão apagados; atendimentos e anotações terão o conteúdo removido; arquivos do armazenamento serão excluídos. Bloqueado se houver processo ativo ou contrato vigente. Use apenas para atender pedido do titular sem dever legal de guarda."
+                confirmLabel="Anonimizar"
+                label="Anonimizar (LGPD)"
+                variant="secondary"
+              />
+            )}
             {can(profile.role, "clientes.delete") && <ConfirmAction action={deleteCliente} id={id} title="Excluir cliente?" message="O cliente e seu histórico serão removidos. Clientes com consórcios ou seguros não podem ser excluídos." redirectTo="/clientes" variant="secondary" />}
           </div>
         </div>
         <div className="grid grid-cols-2 border-t border-line sm:grid-cols-4">
           {[
-            { label: "Crédito em consórcio", value: brl(totalCredito), icon: Landmark },
-            { label: "Prêmios vigentes", value: brl(totalPremio), icon: ShieldCheck },
-            { label: "Oportunidades abertas", value: ops.filter((o) => !["ganho", "perdido"].includes(o.etapa)).length, icon: KanbanSquare },
+            ...(canProcessos ? [{ label: "Processos ativos", value: procs.filter((pr) => pr.status === "ativo" || pr.status === "suspenso").length, icon: Scale }] : []),
+            { label: "Documentos", value: docCount ?? 0, icon: FolderOpen },
+            ...(totalCredito || totalPremio ? [{ label: "Consórcio / seguros", value: brl(totalCredito + totalPremio), icon: Landmark }] : [{ label: "Oportunidades abertas", value: ops.filter((o) => !["ganho", "perdido"].includes(o.etapa)).length, icon: KanbanSquare }]),
             { label: "Cliente desde", value: date(cliente.created_at), icon: CalendarDays },
           ].map((k) => (
             <div key={k.label} className="flex items-center gap-3 border-line px-6 py-4 [&:not(:last-child)]:border-r">

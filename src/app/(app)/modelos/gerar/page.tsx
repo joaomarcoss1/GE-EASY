@@ -5,13 +5,13 @@ import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { clienteOptions, processoOptions } from "@/lib/data";
-import { renderModelo, renderTexto, type MergeContext } from "@/lib/juridico/merge";
-import type { Cliente, ContratoHonorarios, ModeloDocumento, Processo, Profile } from "@/lib/types";
+import { montarDocumentoModelo } from "@/lib/juridico/modelo-contexto";
 import { registrarDocumentoGerado } from "@/lib/actions/modelos";
+import { salvarModeloNoDrive } from "@/lib/actions/integracoes";
+import { getDriveEscritorioStatus } from "@/components/documentos/google-status";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { descricaoHonorarios } from "@/components/financeiro/fields";
 import { DocumentoToolbar } from "@/components/modelos/toolbar";
 
 export const metadata: Metadata = { title: "Gerar documento" };
@@ -33,30 +33,11 @@ export default async function GerarDocumentoPage({ searchParams }: { searchParam
     can(profile.role, "processos.view") ? processoOptions() : Promise.resolve([]),
   ]);
 
-  const { data: contrato } = contratoId ? await supabase.from("contratos_honorarios").select("*").eq("id", contratoId).maybeSingle<ContratoHonorarios>() : { data: null };
-  if (contrato) {
-    clienteId = clienteId ?? contrato.cliente_id;
-    processoId = processoId ?? contrato.processo_id;
-  }
-  const { data: processo } = processoId ? await supabase.from("processos").select("*").eq("id", processoId).maybeSingle<Processo>() : { data: null };
-  if (processo && !clienteId) clienteId = processo.cliente_id;
-
-  const [{ data: modelo }, { data: cliente }, { data: resp }, { data: empresaCfg }] = await Promise.all([
-    modeloId ? supabase.from("modelos_documentos").select("*").eq("id", modeloId).maybeSingle<ModeloDocumento>() : Promise.resolve({ data: null }),
-    clienteId ? supabase.from("clientes").select("*").eq("id", clienteId).maybeSingle<Cliente>() : Promise.resolve({ data: null }),
-    supabase.from("profiles").select("full_name, oab, email").eq("id", processo?.responsavel_id ?? contrato?.responsavel_id ?? profile.id).maybeSingle<Pick<Profile, "full_name" | "oab" | "email">>(),
-    supabase.from("configuracoes").select("valor").eq("chave", "empresa").maybeSingle(),
-  ]);
-  const empresa = (empresaCfg?.valor ?? {}) as Record<string, string | null>;
-
-  const ctx: MergeContext = {
-    cliente,
-    processo,
-    responsavel: resp ? { nome: resp.full_name, oab: resp.oab, email: resp.email } : null,
-    escritorio: { nome: empresa.nome, cnpj: empresa.cnpj, endereco: empresa.endereco, telefone: empresa.telefone, email: empresa.email },
-    contrato: contrato ? { descricao_honorarios: descricaoHonorarios(contrato), numero: contrato.numero, titulo: contrato.titulo } : null,
-  };
-  const rendered = modelo ? renderModelo(modelo.conteudo, ctx) : null;
+  const m = await montarDocumentoModelo(supabase, profile.id, { modeloId, clienteId, processoId, contratoId });
+  const { modelo, cliente, processo, empresa, rendered, texto } = m;
+  clienteId = m.clienteId;
+  processoId = m.processoId;
+  const drive = await getDriveEscritorioStatus();
 
   return (
     <>
@@ -102,8 +83,9 @@ export default async function GerarDocumentoPage({ searchParams }: { searchParam
             <DocumentoToolbar
               titulo={`${modelo.titulo}${cliente ? ` - ${cliente.nome}` : ""}`}
               html={rendered.html}
-              texto={renderTexto(modelo.conteudo, ctx)}
+              texto={texto}
               registrar={processo && can(profile.role, "processos.write") ? registrarDocumentoGerado.bind(null, processo.id, modelo.titulo) : undefined}
+              salvarDrive={drive.ativo && (clienteId || processoId) ? salvarModeloNoDrive.bind(null, { modeloId: modelo.id, clienteId, processoId, contratoId }) : undefined}
             />
             {rendered.faltando.length > 0 && (
               <p className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">

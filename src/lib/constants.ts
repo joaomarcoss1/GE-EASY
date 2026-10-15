@@ -156,11 +156,19 @@ export const PRIORIDADES: Option[] = [
 ];
 
 export const DOC_CATEGORIAS: Option[] = [
+  { value: "peticao", label: "Petições e manifestações" },
+  { value: "procuracao", label: "Procuração e substabelecimento" },
+  { value: "decisao", label: "Decisões, sentenças e acórdãos" },
+  { value: "prova", label: "Provas e anexos" },
+  { value: "laudo", label: "Laudos e perícias" },
+  { value: "intimacao", label: "Intimações e citações" },
+  { value: "contrato", label: "Contratos" },
+  { value: "gerado", label: "Documentos gerados" },
+  { value: "comprovante_pagamento", label: "Comprovantes de pagamento e custas" },
   { value: "rg_cnh", label: "RG / CNH" },
   { value: "cpf_cnpj", label: "CPF / CNPJ" },
   { value: "comprovante_residencia", label: "Comprovante de residência" },
   { value: "comprovante_renda", label: "Comprovante de renda" },
-  { value: "contrato", label: "Contrato" },
   { value: "proposta", label: "Proposta" },
   { value: "apolice", label: "Apólice" },
   { value: "boleto", label: "Boleto" },

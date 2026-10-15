@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { getGoogleStatus } from "@/components/documentos/google-status";
+import { IntegracoesEscritorio } from "./integracoes-escritorio";
 
 const FEEDBACK: Record<string, { ok: boolean; text: string }> = {
   "ok:google": { ok: true, text: "Conta Google conectada com sucesso. Agenda e Drive já estão disponíveis." },
@@ -14,7 +15,7 @@ const FEEDBACK: Record<string, { ok: boolean; text: string }> = {
   "erro:desconectar": { ok: false, text: "Falha ao desconectar a conta Google. Tente novamente." },
 };
 
-export async function IntegracoesTab({ ok, erro }: { ok?: string; erro?: string }) {
+export async function IntegracoesTab({ ok, erro, isAdmin = false }: { ok?: string; erro?: string; isAdmin?: boolean }) {
   const google = await getGoogleStatus();
   const fb = (ok && FEEDBACK[`ok:${ok}`]) || (erro && FEEDBACK[`erro:${erro}`]) || null;
   const redirectUri = `${env.siteUrl}/api/integracoes/google/callback`;
@@ -37,7 +38,7 @@ export async function IntegracoesTab({ ok, erro }: { ok?: string; erro?: string 
       <Card>
         <CardHeader
           title="Google Workspace"
-          description="Sincronize compromissos com o Google Agenda e envie documentos ao Google Drive."
+          description="Prazos, audiências e compromissos no seu Google Agenda; documentos arquivados no Drive do escritório."
           icon={<Plug className="h-4 w-4" />}
           action={google.connected ? <Badge tone="green" dot>Conectado</Badge> : <Badge tone="slate">Não conectado</Badge>}
         />
@@ -47,14 +48,14 @@ export async function IntegracoesTab({ ok, erro }: { ok?: string; erro?: string 
               <CalendarDays className="mt-0.5 h-5 w-5 text-brand-600" />
               <div>
                 <p className="text-sm font-semibold">Google Agenda</p>
-                <p className="text-xs text-muted">Eventos criados no GE EASY são enviados para a sua agenda, com lembretes.</p>
+                <p className="text-xs text-muted">Prazos (dia inteiro, com alerta 2 dias e 1 dia antes), audiências e compromissos dos quais você é responsável vão para a sua agenda automaticamente.</p>
               </div>
             </div>
             <div className="flex items-start gap-3 rounded-2xl border border-line p-4">
               <HardDrive className="mt-0.5 h-5 w-5 text-emerald-600" />
               <div>
                 <p className="text-sm font-semibold">Google Drive</p>
-                <p className="text-xs text-muted">Copie documentos de clientes para a pasta “GE EASY/&lt;cliente&gt;”. O app só acessa arquivos que ele mesmo criou.</p>
+                <p className="text-xs text-muted">Documentos enviados ao GE EASY são arquivados no Drive do escritório, em pastas por cliente, processo e categoria. O app só acessa arquivos que ele mesmo criou.</p>
               </div>
             </div>
           </div>
@@ -103,6 +104,8 @@ export async function IntegracoesTab({ ok, erro }: { ok?: string; erro?: string 
           )}
         </CardBody>
       </Card>
+
+      {isAdmin && <IntegracoesEscritorio googleConectado={google.connected} />}
 
       <Card>
         <CardHeader title="Assinar agenda (.ics)" description="Alternativa sem conectar o Google: leve seus compromissos para o Outlook, Apple Calendário ou Google Agenda." icon={<Rss className="h-4 w-4" />} />

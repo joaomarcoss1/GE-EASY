@@ -12,3 +12,12 @@ export const getGoogleStatus = cache(async () => {
   const row = (Array.isArray(data) ? data[0] : null) as { conectado?: boolean; google_email?: string | null; atualizado_em?: string | null } | null;
   return { configured, connected: Boolean(row?.conectado), email: row?.google_email ?? null, updatedAt: row?.atualizado_em ?? null };
 });
+
+/** Drive do escritório: configurado pelo administrador (conta Google que guarda o arquivo). */
+export const getDriveEscritorioStatus = cache(async () => {
+  if (!googleConfigured()) return { ativo: false, email: null as string | null };
+  const supabase = await createClient();
+  const { data } = await supabase.from("configuracoes").select("valor").eq("chave", "drive_escritorio").maybeSingle();
+  const v = data?.valor as { user_id?: string; email?: string | null } | null;
+  return { ativo: Boolean(v?.user_id), email: v?.email ?? null };
+});

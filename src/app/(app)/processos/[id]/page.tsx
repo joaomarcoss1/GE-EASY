@@ -28,6 +28,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { LinkTabs } from "@/components/ui/tabs";
 import { DocumentosPanel } from "@/components/documentos/documentos-panel";
+import { DrivePastaButton } from "@/components/documentos/drive-pasta-button";
+import { getDriveEscritorioStatus } from "@/components/documentos/google-status";
+import { DatajudPanel } from "@/components/processos/datajud-panel";
+import { podeConsultarDatajud } from "@/lib/juridico/datajud";
+import { alternarMonitoramentoDatajud, sincronizarDatajud } from "@/lib/actions/integracoes";
+import { registrarAcesso } from "@/lib/actions/utils";
 import { PrazosPanel } from "@/components/prazos/prazos-panel";
 import { AudienciasPanel } from "@/components/audiencias/audiencias-panel";
 import { QuickStatus } from "@/components/processos/quick-status";
@@ -63,7 +69,7 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
     deps,
   ] = await Promise.all([
     p.cliente_id ? supabase.from("clientes").select("id, nome, documento").eq("id", p.cliente_id).maybeSingle() : Promise.resolve({ data: null }),
-    supabase.from("processo_andamentos").select("*").eq("processo_id", id).order("data", { ascending: false }).order("created_at", { ascending: false }).limit(300),
+    supabase.from("processo_andamentos").select("*").eq("processo_id", id).order("data", { ascending: false }).order("data_hora", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).limit(500),
     supabase.from("processo_partes").select("*").eq("processo_id", id).order("tipo"),
     supabase.from("processo_lancamentos").select("*").eq("processo_id", id).order("data", { ascending: false }),
     supabase.from("tarefas").select("*").eq("processo_id", id).order("vencimento", { ascending: true }).limit(50),
@@ -71,7 +77,7 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
     supabase.from("audiencias").select("tipo, data_hora").eq("processo_id", id).eq("status", "agendada").gte("data_hora", new Date().toISOString()).order("data_hora").limit(1).maybeSingle(),
     supabase.from("prazos").select("id", { count: "exact", head: true }).eq("processo_id", id).eq("status", "pendente"),
     supabase.from("audiencias").select("id", { count: "exact", head: true }).eq("processo_id", id),
-    p.cliente_id ? supabase.from("documentos").select("id", { count: "exact", head: true }).eq("cliente_id", p.cliente_id) : Promise.resolve({ count: 0 }),
+    supabase.from("documentos").select("id", { count: "exact", head: true }).eq("processo_id", id),
     getProfileMap(),
     departamentoMap(),
   ]);
@@ -92,6 +98,8 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
 
   const [clientes, departamentos, juridico] = canWrite ? await Promise.all([clienteOptions(), departamentoOptions(), juridicoOptions()]) : [[], [], []];
   const prazoDias = proxPrazo ? daysUntil(proxPrazo.data_fim) : null;
+  const drive = await getDriveEscritorioStatus();
+  if (p.segredo_justica) await registrarAcesso("VISUALIZACAO_SIGILOSA", "processos", id, { aba: tab });
 
   return (
     <>
@@ -127,6 +135,7 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
                   <ExternalLink className="h-4 w-4" /> Autos
                 </a>
               )}
+              {drive.ativo && <DrivePastaButton tipo="processo" id={id} variant="hero" />}
               {can(profile.role, "modelos.view") && (
                 <Link href={`/modelos/gerar?processo_id=${id}`} className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">
                   <FileText className="h-4 w-4" /> Gerar documento
@@ -245,6 +254,22 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
       />
 
       {tab === "andamentos" && (
+        <DatajudPanel
+          processoId={id}
+          temCnj={!!p.numero_cnj}
+          consultavel={podeConsultarDatajud(p.numero_cnj)}
+          status={p.datajud_status ?? null}
+          erro={p.datajud_erro ?? null}
+          sincronizadoEm={p.datajud_sincronizado_em ?? null}
+          atualizadoEm={p.datajud_atualizado_em ?? null}
+          monitorar={p.datajud_monitorar ?? true}
+          podeEditar={canWrite}
+          importados={ands.filter((a) => a.origem === "datajud").length}
+          actions={{ sincronizar: sincronizarDatajud, monitorar: alternarMonitoramentoDatajud }}
+        />
+      )}
+
+      {tab === "andamentos" && (
         <Card>
           <CardHeader
             title="Linha do tempo processual"
@@ -271,6 +296,7 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                             <b className="text-sm font-semibold text-fg">{date(a.data)}</b>
                             <Badge tone={tipo?.tone ?? "slate"}>{tipo?.label ?? a.tipo}</Badge>
+                            {a.origem === "datajud" && <Badge tone="sky">DataJud</Badge>}
                             {a.autor_id && <span>{profiles.get(a.autor_id)?.full_name}</span>}
                             <span title={dateTime(a.created_at)}>· {relative(a.created_at)}</span>
                           </div>
@@ -434,16 +460,11 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
         </Card>
       )}
 
-      {tab === "documentos" &&
-        (p.cliente_id ? (
-          <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl bg-surface-2" />}>
-            <DocumentosPanel clienteId={p.cliente_id} />
-          </Suspense>
-        ) : (
-          <Card>
-            <EmptyState title="Vincule um cliente" description="Os documentos ficam na pasta do cliente. Edite o processo e selecione o cliente para anexar documentos." />
-          </Card>
-        ))}
+      {tab === "documentos" && (
+        <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl bg-surface-2" />}>
+          <DocumentosPanel processoId={id} podeEnviar={canWrite} />
+        </Suspense>
+      )}
 
       {tab === "dados" && (
         <div className="grid gap-6 lg:grid-cols-2">

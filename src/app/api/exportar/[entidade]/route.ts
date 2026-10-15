@@ -286,6 +286,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ enti
   }
 
   const supabase = await createClient(); // cliente do usuário: RLS aplicado
+  const { data: permitido } = await supabase.rpc("rate_limit", { p_acao: "exportar", p_max: 30, p_janela_seg: 3600 });
+  if (permitido !== true) return plain(429, "Muitas exportações em pouco tempo. Aguarde alguns minutos.");
+  await supabase.rpc("registrar_acesso", { p_acao: "EXPORTACAO", p_tabela: entity.table, p_registro: null, p_detalhes: { entidade, de, ate } });
   const backoffice = isBackofficeRole(session.profile.role);
 
   const rows = await fetchAll<Row>((from, to) => {

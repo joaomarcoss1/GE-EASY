@@ -68,12 +68,20 @@ export function DocumentosTable({
                       {d.nome}
                     </span>
                     <span className="flex items-center gap-1.5 text-xs text-muted">
-                      {formatBytes(d.tamanho)}
-                      {d.drive_url && (
+                      {d.tamanho ? formatBytes(d.tamanho) : d.mime_type === "application/vnd.google-apps.document" ? "Google Docs" : formatBytes(d.tamanho)}
+                      {d.drive_url ? (
                         <Badge tone="green" className="!px-1.5 !py-0 text-[10px]">
                           No Drive
                         </Badge>
-                      )}
+                      ) : d.drive_status === "erro" && googleReady ? (
+                        <Badge tone="red" className="!px-1.5 !py-0 text-[10px]">
+                          Falha no Drive
+                        </Badge>
+                      ) : d.drive_status === "pendente" && googleReady ? (
+                        <Badge tone="amber" className="!px-1.5 !py-0 text-[10px]">
+                          Arquivando…
+                        </Badge>
+                      ) : null}
                     </span>
                   </span>
                 </div>

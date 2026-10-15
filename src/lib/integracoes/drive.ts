@@ -1,0 +1,230 @@
+import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { DOC_CATEGORIAS } from "@/lib/constants";
+import { formatCNJ } from "@/lib/juridico/cnj";
+import { DriveError, findOrCreateFolder, folderExists, getAccessToken, uploadDriveFile } from "@/lib/google";
+
+/**
+ * Arquivo do escritório no Google Drive.
+ * Uma conta Google (definida pelo administrador) guarda todos os documentos, organizados assim:
+ *
+ *   GE EASY — Arquivo do escritório/
+ *     Clientes/<Nome do cliente (…1234)>/
+ *       Documentos do cliente/<Categoria>/arquivo
+ *       Processos/<0000000-00.0000.0.00.0000 — Título>/<Categoria>/arquivo
+ *     Processos sem cliente/<processo>/<Categoria>/
+ *     Documentos internos/<Categoria>/
+ *
+ * Os ids das pastas ficam em cache (tabela drive_pastas) e são recriados se apagados no Drive.
+ * Todas as funções recebem o cliente service role: só chame depois de autorizar o usuário.
+ */
+
+export const RAIZ_NOME = "GE EASY — Arquivo do escritório";
+
+export interface DriveEscritorio {
+  user_id: string;
+  email: string | null;
+  definido_em?: string;
+}
+
+export async function getDriveEscritorio(db: SupabaseClient): Promise<DriveEscritorio | null> {
+  const { data } = await db.from("configuracoes").select("valor").eq("chave", "drive_escritorio").maybeSingle();
+  const v = data?.valor as DriveEscritorio | null | undefined;
+  return v?.user_id ? v : null;
+}
+
+export async function tokenDoEscritorio(admin: SupabaseClient) {
+  const cfg = await getDriveEscritorio(admin);
+  if (!cfg) throw new DriveError("O Drive do escritório ainda não foi definido (Configurações › Integrações).", 412);
+  const token = await getAccessToken(cfg.user_id);
+  if (!token) throw new DriveError("A conta Google do Drive do escritório está desconectada. Reconecte em Configurações › Integrações.", 401);
+  return token;
+}
+
+const categoriaLabel = (c: string | null | undefined) => DOC_CATEGORIAS.find((o) => o.value === c)?.label ?? "Outros";
+
+class Pastas {
+  private usadas: string[] = [];
+  constructor(
+    private admin: SupabaseClient,
+    private token: string,
+  ) {}
+
+  /** Garante a subpasta `nome` em `pai`, usando/atualizando o cache pela chave lógica. */
+  async garantir(chave: string, nome: string, pai: string | null): Promise<string> {
+    this.usadas.push(chave);
+    const { data } = await this.admin.from("drive_pastas").select("folder_id").eq("chave", chave).maybeSingle();
+    if (data?.folder_id) return data.folder_id;
+    const id = await findOrCreateFolder(this.token, nome, pai);
+    await this.admin.from("drive_pastas").upsert({ chave, folder_id: id });
+    return id;
+  }
+
+  /** Remove do cache as pastas usadas nesta operação (ex.: alguém apagou a pasta no Drive). */
+  async invalidar() {
+    if (this.usadas.length) await this.admin.from("drive_pastas").delete().in("chave", this.usadas);
+    this.usadas = [];
+  }
+
+  async raiz() {
+    const id = await this.garantir("raiz", RAIZ_NOME, null);
+    return id;
+  }
+
+  async cliente(c: { id: string; nome: string; documento: string | null }) {
+    const raiz = await this.raiz();
+    const clientes = await this.garantir("clientes", "Clientes", raiz);
+    const sufixo = c.documento ? ` (…${c.documento.replace(/\D/g, "").slice(-4)})` : "";
+    const id = await this.garantir(`cliente:${c.id}`, `${c.nome}${sufixo}`, clientes);
+    await this.admin.from("clientes").update({ drive_folder_id: id }).eq("id", c.id);
+    return id;
+  }
+
+  async processo(p: { id: string; titulo: string; numero_cnj: string | null; numero_interno: string | null; cliente: { id: string; nome: string; documento: string | null } | null }) {
+    let pai: string;
+    if (p.cliente) {
+      const cli = await this.cliente(p.cliente);
+      pai = await this.garantir(`cliente:${p.cliente.id}:processos`, "Processos", cli);
+    } else {
+      pai = await this.garantir("processos-sem-cliente", "Processos sem cliente", await this.raiz());
+    }
+    const numero = p.numero_cnj ? formatCNJ(p.numero_cnj) : p.numero_interno || "Sem número";
+    const id = await this.garantir(`processo:${p.id}`, `${numero} — ${p.titulo}`, pai);
+    await this.admin.from("processos").update({ drive_folder_id: id }).eq("id", p.id);
+    return id;
+  }
+}
+
+interface DocRow {
+  id: string;
+  nome: string;
+  categoria: string | null;
+  mime_type: string | null;
+  storage_path: string | null;
+  cliente_id: string | null;
+  processo_id: string | null;
+  drive_file_id: string | null;
+  drive_tentativas: number;
+}
+
+async function pastaDestino(admin: SupabaseClient, pastas: Pastas, alvo: { cliente_id: string | null; processo_id: string | null; categoria: string | null }) {
+  const cat = categoriaLabel(alvo.categoria);
+  if (alvo.processo_id) {
+    const { data: p } = await admin.from("processos").select("id, titulo, numero_cnj, numero_interno, cliente_id, clientes(id, nome, documento)").eq("id", alvo.processo_id).maybeSingle();
+    if (p) {
+      const rel = (p as unknown as { clientes: { id: string; nome: string; documento: string | null } | { id: string; nome: string; documento: string | null }[] | null }).clientes;
+      const cliente = Array.isArray(rel) ? (rel[0] ?? null) : rel;
+      const proc = await pastas.processo({ ...(p as { id: string; titulo: string; numero_cnj: string | null; numero_interno: string | null }), cliente });
+      return pastas.garantir(`processo:${p.id}:cat:${alvo.categoria ?? "outros"}`, cat, proc);
+    }
+  }
+  if (alvo.cliente_id) {
+    const { data: c } = await admin.from("clientes").select("id, nome, documento").eq("id", alvo.cliente_id).maybeSingle();
+    if (c) {
+      const cli = await pastas.cliente(c);
+      const docs = await pastas.garantir(`cliente:${c.id}:docs`, "Documentos do cliente", cli);
+      return pastas.garantir(`cliente:${c.id}:docs:${alvo.categoria ?? "outros"}`, cat, docs);
+    }
+  }
+  const internos = await pastas.garantir("internos", "Documentos internos", await pastas.raiz());
+  return pastas.garantir(`internos:${alvo.categoria ?? "outros"}`, cat, internos);
+}
+
+/** Arquiva um documento do Storage no Drive do escritório, na pasta certa. Nunca lança. */
+export async function arquivarDocumentoNoDrive(admin: SupabaseClient, docId: string): Promise<{ ok: boolean; mensagem: string; url?: string }> {
+  const { data: doc } = await admin
+    .from("documentos")
+    .select("id, nome, categoria, mime_type, storage_path, cliente_id, processo_id, drive_file_id, drive_url, drive_tentativas")
+    .eq("id", docId)
+    .maybeSingle<DocRow & { drive_url: string | null }>();
+  if (!doc) return { ok: false, mensagem: "Documento não encontrado." };
+  if (doc.drive_file_id) return { ok: true, mensagem: "Documento já arquivado no Drive.", url: doc.drive_url ?? undefined };
+  if (!doc.storage_path) {
+    await admin.from("documentos").update({ drive_status: "ignorado" }).eq("id", doc.id);
+    return { ok: false, mensagem: "Documento sem arquivo no armazenamento." };
+  }
+  const falha = async (mensagem: string) => {
+    await admin
+      .from("documentos")
+      .update({ drive_status: "erro", drive_erro: mensagem.slice(0, 300), drive_tentativas: (doc.drive_tentativas ?? 0) + 1 })
+      .eq("id", doc.id);
+    return { ok: false, mensagem };
+  };
+  try {
+    const token = await tokenDoEscritorio(admin);
+    const { data: blob, error } = await admin.storage.from("documentos").download(doc.storage_path);
+    if (error || !blob) return falha("Não foi possível ler o arquivo no armazenamento.");
+    const data = await blob.arrayBuffer();
+    const pastas = new Pastas(admin, token);
+    let enviado: { id: string; webViewLink: string } | null = null;
+    for (let tentativa = 0; tentativa < 2 && !enviado; tentativa++) {
+      const pasta = await pastaDestino(admin, pastas, doc);
+      try {
+        enviado = await uploadDriveFile(token, pasta, { name: doc.nome, type: doc.mime_type ?? "application/octet-stream", data, description: "Arquivado pelo GE EASY" });
+      } catch (e) {
+        if (e instanceof DriveError && e.status === 404 && tentativa === 0) {
+          await pastas.invalidar(); // pasta apagada no Drive: recria a árvore
+          continue;
+        }
+        throw e;
+      }
+    }
+    if (!enviado) return falha("Não foi possível enviar ao Drive.");
+    await admin
+      .from("documentos")
+      .update({ drive_file_id: enviado.id, drive_url: enviado.webViewLink, drive_status: "sincronizado", drive_erro: null, drive_sincronizado_em: new Date().toISOString() })
+      .eq("id", doc.id);
+    return { ok: true, mensagem: "Documento arquivado no Drive do escritório.", url: enviado.webViewLink };
+  } catch (e) {
+    return falha(e instanceof DriveError ? e.message : "Falha inesperada ao enviar ao Drive.");
+  }
+}
+
+/** Salva um HTML como Google Docs na pasta do processo/cliente (documentos gerados por modelo). */
+export async function salvarGoogleDoc(
+  admin: SupabaseClient,
+  alvo: { cliente_id: string | null; processo_id: string | null },
+  titulo: string,
+  html: string,
+): Promise<{ id: string; webViewLink: string }> {
+  const token = await tokenDoEscritorio(admin);
+  const pastas = new Pastas(admin, token);
+  const doc = `<html><head><meta charset="utf-8"></head><body style="font-family:'Times New Roman',serif;font-size:12pt;white-space:pre-wrap">${html}</body></html>`;
+  const data = new TextEncoder().encode(doc);
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    const pasta = await pastaDestino(admin, pastas, { ...alvo, categoria: "gerado" });
+    try {
+      return await uploadDriveFile(token, pasta, { name: titulo, type: "text/html", data, description: "Gerado pelo GE EASY a partir de modelo" }, { converterParaDocs: true });
+    } catch (e) {
+      if (e instanceof DriveError && e.status === 404 && tentativa === 0) {
+        await pastas.invalidar();
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new DriveError("Não foi possível salvar no Drive.", 500);
+}
+
+/** Garante (e devolve) a pasta do processo ou do cliente — usada no botão "Abrir pasta no Drive". */
+export async function garantirPasta(admin: SupabaseClient, alvo: { cliente_id?: string | null; processo_id?: string | null }) {
+  const token = await tokenDoEscritorio(admin);
+  const pastas = new Pastas(admin, token);
+  if (alvo.processo_id) {
+    const { data: p } = await admin.from("processos").select("id, titulo, numero_cnj, numero_interno, drive_folder_id, clientes(id, nome, documento)").eq("id", alvo.processo_id).maybeSingle();
+    if (!p) throw new DriveError("Processo não encontrado.", 404);
+    if (p.drive_folder_id && (await folderExists(token, p.drive_folder_id))) return p.drive_folder_id as string;
+    await admin.from("drive_pastas").delete().eq("chave", `processo:${p.id}`);
+    const rel = (p as unknown as { clientes: { id: string; nome: string; documento: string | null } | { id: string; nome: string; documento: string | null }[] | null }).clientes;
+    return pastas.processo({ ...(p as { id: string; titulo: string; numero_cnj: string | null; numero_interno: string | null }), cliente: Array.isArray(rel) ? (rel[0] ?? null) : rel });
+  }
+  if (alvo.cliente_id) {
+    const { data: c } = await admin.from("clientes").select("id, nome, documento, drive_folder_id").eq("id", alvo.cliente_id).maybeSingle();
+    if (!c) throw new DriveError("Cliente não encontrado.", 404);
+    if (c.drive_folder_id && (await folderExists(token, c.drive_folder_id))) return c.drive_folder_id as string;
+    await admin.from("drive_pastas").delete().eq("chave", `cliente:${c.id}`);
+    await admin.from("clientes").update({ drive_folder_id: null }).eq("id", c.id);
+    return pastas.cliente(c);
+  }
+  return pastas.raiz();
+}

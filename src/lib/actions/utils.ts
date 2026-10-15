@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { getSession, type Session } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { can, type Permission } from "@/lib/rbac";
 import type { ActionState } from "./types";
 
@@ -95,3 +96,28 @@ export async function guard(permission?: Permission): Promise<{ session: Session
 }
 
 export const isUuid = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
+
+/**
+ * Limitador persistente por usuário (tabela rate_limits, vale entre instâncias do servidor).
+ * Retorna um ActionState de erro quando o limite foi atingido; null quando pode seguir.
+ */
+export async function limitar(acao: string, max: number, janelaSeg: number): Promise<ActionState | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("rate_limit", { p_acao: acao, p_max: max, p_janela_seg: janelaSeg });
+  if (error) {
+    console.error("[rate_limit]", error.message);
+    return { error: "Não foi possível validar a solicitação agora. Tente novamente em instantes." };
+  }
+  return data === true ? null : { error: "Muitas solicitações em pouco tempo. Aguarde alguns minutos e tente novamente." };
+}
+
+/** Registra na trilha de auditoria um acesso sensível (download, exportação, LGPD...). Nunca lança. */
+export async function registrarAcesso(acao: string, tabela: string, registro: string | null, detalhes?: Record<string, unknown>) {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("registrar_acesso", { p_acao: acao, p_tabela: tabela, p_registro: registro, p_detalhes: detalhes ?? null });
+    if (error) console.error("[registrar_acesso]", error.message);
+  } catch (e) {
+    console.error("[registrar_acesso]", e instanceof Error ? e.message : e);
+  }
+}

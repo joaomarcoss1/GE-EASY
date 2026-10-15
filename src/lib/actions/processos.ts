@@ -1,7 +1,10 @@
 "use server";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { podeConsultarDatajud } from "@/lib/juridico/datajud";
+import { sincronizarProcessoDatajud } from "@/lib/integracoes/datajud";
 import { cnjDigits, formatCNJ, isValidCNJ } from "@/lib/juridico/cnj";
 import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
@@ -81,7 +84,19 @@ export async function createProcesso(_: ActionState, formData: FormData): Promis
     return cnjDuplicate(error) ?? dbError(error);
   }
   revalidateProcesso(row.id, data.cliente_id);
-  return { ok: true, message: "Processo cadastrado.", id: row.id };
+  // Importa dados e movimentações do DataJud em segundo plano (não atrasa o cadastro)
+  if (podeConsultarDatajud(data.numero_cnj)) {
+    const processoId = row.id as string;
+    after(async () => {
+      try {
+        await sincronizarProcessoDatajud(supabase, processoId);
+        revalidatePath(`/processos/${processoId}`);
+      } catch (e) {
+        console.error("[processos.datajud]", e instanceof Error ? e.message : e);
+      }
+    });
+  }
+  return { ok: true, message: podeConsultarDatajud(data.numero_cnj) ? "Processo cadastrado. As movimentações do DataJud estão sendo importadas." : "Processo cadastrado.", id: row.id };
 }
 
 export async function updateProcesso(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -92,10 +107,21 @@ export async function updateProcesso(_: ActionState, formData: FormData): Promis
   const parsed = processoSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
   const supabase = await createClient();
+  const { data: antes } = await supabase.from("processos").select("numero_cnj").eq("id", id).maybeSingle();
   const { data: row, error } = await supabase.from("processos").update(parsed.data).eq("id", id).select("id").maybeSingle();
   if (error) return cnjDuplicate(error) ?? dbError(error);
   if (!row) return { error: "Você não tem permissão para editar este processo." };
   revalidateProcesso(id, parsed.data.cliente_id);
+  // Número CNJ informado/alterado: busca no DataJud em segundo plano
+  if (podeConsultarDatajud(parsed.data.numero_cnj) && antes?.numero_cnj !== parsed.data.numero_cnj) {
+    after(async () => {
+      try {
+        await sincronizarProcessoDatajud(supabase, id);
+      } catch (e) {
+        console.error("[processos.datajud]", e instanceof Error ? e.message : e);
+      }
+    });
+  }
   return { ok: true, message: "Processo atualizado.", id };
 }
 

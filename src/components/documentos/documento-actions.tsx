@@ -47,14 +47,14 @@ export function DocumentoActions({ id, nome, driveUrl, canDelete, googleReady }:
           type="button"
           variant="ghost"
           size="icon"
-          title="Enviar ao Google Drive"
-          aria-label={`Enviar ${nome} ao Google Drive`}
+          title="Arquivar no Drive do escritório"
+          aria-label={`Arquivar ${nome} no Drive do escritório`}
           disabled={sending}
           onClick={() =>
             startSend(async () => {
               const r = await sendToDrive(id);
               if (r.ok) {
-                toast(r.message ?? "Enviado ao Drive.");
+                toast(r.message ?? "Arquivado no Drive.");
                 router.refresh();
               } else toast(r.error ?? "Falha ao enviar ao Drive.", "error");
             })
@@ -63,7 +63,7 @@ export function DocumentoActions({ id, nome, driveUrl, canDelete, googleReady }:
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <HardDrive className="h-4 w-4" />}
         </Button>
       ) : (
-        <Link href="/configuracoes?tab=integracoes" title="Conecte o Google Drive em Configurações › Integrações" aria-label="Conectar Google Drive" className="grid h-9 w-9 place-items-center rounded-xl text-muted/60 hover:bg-surface-2 hover:text-fg">
+        <Link href="/configuracoes?tab=integracoes" title="Defina o Drive do escritório em Configurações › Integrações" aria-label="Configurar Drive do escritório" className="grid h-9 w-9 place-items-center rounded-xl text-muted/60 hover:bg-surface-2 hover:text-fg">
           <HardDrive className="h-4 w-4" />
         </Link>
       )}

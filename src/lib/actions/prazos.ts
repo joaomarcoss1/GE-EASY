@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { calcularPrazo } from "@/lib/juridico/prazos";
+import { removerPrazoGoogle, sincronizarPrazoGoogle } from "@/lib/integracoes/agenda";
 import { isValidYmd, parseFeriados } from "@/components/prazos/utils";
 import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
@@ -111,6 +112,7 @@ export async function createPrazo(_: ActionState, formData: FormData): Promise<A
     if (error.code === "42501") return { error: "Você não tem permissão para cadastrar prazos neste processo/departamento." };
     return dbError(error);
   }
+  await sincronizarPrazoGoogle(supabase, row.id);
   revalidate([row.processo_id]);
   return { ok: true, message: `Prazo cadastrado — ${dueMsg(row.data_fim)}.`, id: row.id };
 }
@@ -127,6 +129,7 @@ export async function updatePrazo(_: ActionState, formData: FormData): Promise<A
   const supabase = await createClient();
   const { data: before } = await supabase.from("prazos").select(ROW_COLS).eq("id", id).maybeSingle<PrazoRow>();
   if (!before) return { error: "Prazo não encontrado ou sem acesso." };
+  const { data: googleAntes } = await supabase.from("prazos").select("responsavel_id, google_event_id").eq("id", id).maybeSingle();
 
   const dataFim = resolveDataFim(v, before);
   // Sem o campo "processo_id" no formulário (ex.: aba do processo), mantém o vínculo atual.
@@ -137,6 +140,7 @@ export async function updatePrazo(_: ActionState, formData: FormData): Promise<A
   const { data: row, error } = await supabase.from("prazos").update(update).eq("id", id).select(ROW_COLS).maybeSingle<PrazoRow>();
   if (error) return dbError(error);
   if (!row) return { error: "Você não tem permissão para editar este prazo." };
+  await sincronizarPrazoGoogle(supabase, row.id, googleAntes);
   revalidate([before.processo_id, row.processo_id]);
   return { ok: true, message: `Prazo atualizado — ${dueMsg(row.data_fim)}.`, id: row.id };
 }
@@ -153,6 +157,7 @@ export async function setPrazoStatus(id: string, status: string): Promise<Action
   const { data: row, error } = await supabase.from("prazos").update({ status: parsed.data }).eq("id", id).select(ROW_COLS).maybeSingle<PrazoRow>();
   if (error) return dbError(error);
   if (!row) return { error: "Você não tem permissão para alterar este prazo." };
+  await sincronizarPrazoGoogle(supabase, row.id);
   revalidate([row.processo_id]);
   const message = {
     pendente: "Prazo reaberto.",
@@ -170,9 +175,11 @@ export async function deletePrazo(id: string): Promise<ActionState> {
   const supabase = await createClient();
   const { data: row } = await supabase.from("prazos").select(ROW_COLS).eq("id", id).maybeSingle<PrazoRow>();
   if (!row) return { error: "Prazo não encontrado ou sem acesso." };
+  const { data: googleAntes } = await supabase.from("prazos").select("responsavel_id, google_event_id").eq("id", id).maybeSingle();
   const { error, count } = await supabase.from("prazos").delete({ count: "exact" }).eq("id", id);
   if (error) return dbError(error);
   if (!count) return { error: "Somente quem cadastrou o prazo ou a gestão pode excluí-lo." };
+  await removerPrazoGoogle(googleAntes?.responsavel_id ?? null, googleAntes?.google_event_id ?? null);
   revalidate([row.processo_id]);
   return { ok: true, message: "Prazo excluído." };
 }

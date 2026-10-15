@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { sincronizarPrazoGoogle } from "@/lib/integracoes/agenda";
 import { calcularPrazo } from "@/lib/juridico/prazos";
 import { dividirPublicacoes } from "@/lib/juridico/publicacoes";
 import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
@@ -135,6 +136,7 @@ export async function gerarPrazoDaPublicacao(_: ActionState, formData: FormData)
     .single();
   if (error) return error.code === "42501" ? { error: "Sem permissão para criar prazos neste processo." } : dbError(error);
   await supabase.from("publicacoes").update({ prazo_id: prazo.id, status: "tratada" }).eq("id", pub.id);
+  await sincronizarPrazoGoogle(supabase, prazo.id);
   revalidatePath("/prazos");
   revalidar(pub.processo_id);
   const [y, m, d] = dataFim.split("-");
