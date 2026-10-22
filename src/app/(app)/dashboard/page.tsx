@@ -198,8 +198,8 @@ async function PainelJuridico({ alert, firstName, session }: { alert: React.Reac
     .sort((a, b) => b.vencidos - a.vencidos || b.processos - a.processos);
   const semDep = ativos.filter((p) => !p.departamento_id).length;
 
-  const canWrite = can(profile.role, "processos.write");
-  const comercial = can(profile.role, "comercial.view");
+  const canWrite = can(profile, "processos.write");
+  const comercial = can(profile, "comercial.view");
 
   return (
     <>
@@ -474,7 +474,7 @@ async function PainelJuridico({ alert, firstName, session }: { alert: React.Reac
 // =====================================================================================
 async function PainelGeral({ alert, firstName, session }: { alert: React.ReactNode; firstName: string; session: Session }) {
   const { profile, userId } = session;
-  const comercial = can(profile.role, "comercial.view");
+  const comercial = can(profile, "comercial.view");
   const financeiro = profile.role === "financeiro";
   return (
     <>

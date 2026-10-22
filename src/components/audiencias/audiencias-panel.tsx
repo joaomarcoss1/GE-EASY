@@ -15,8 +15,8 @@ import { toAudienciaItems } from "./load";
 /** Aba "Audiências" do processo: próximas (agendadas/redesignadas) e histórico. */
 export async function AudienciasPanel({ processoId }: { processoId: string }) {
   const session = await getSession();
-  if (!session || !can(session.profile.role, "processos.view")) return null;
-  const canWrite = can(session.profile.role, "processos.write");
+  if (!session || !can(session.profile, "processos.view")) return null;
+  const canWrite = can(session.profile, "processos.write");
 
   const supabase = await createClient();
   const [{ data }, juridico] = await Promise.all([

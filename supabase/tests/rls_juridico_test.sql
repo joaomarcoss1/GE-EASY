@@ -9,10 +9,10 @@ declare
   dep_cont uuid; dep_trab uuid; p1 uuid; pz uuid; n int; r text := ''; s text;
 begin
   insert into auth.users (id, instance_id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) values
-    (adv1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-adv1@test.local', '{"ge_role":"advogado","ge_active":true}', '{}', now(), now()),
-    (adv2, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-adv2@test.local', '{"ge_role":"advogado","ge_active":true}', '{}', now(), now()),
-    (com,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-com@test.local',  '{"ge_role":"consultor_externo","ge_active":true}', '{}', now(), now()),
-    (fin,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-fin@test.local',  '{"ge_role":"financeiro","ge_active":true}', '{}', now(), now());
+    (adv1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-adv1@test.local', jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'advogado', 'ge_active', true), '{}', now(), now()),
+    (adv2, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-adv2@test.local', jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'advogado', 'ge_active', true), '{}', now(), now()),
+    (com,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-com@test.local',  jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'consultor_externo', 'ge_active', true), '{}', now(), now()),
+    (fin,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-fin@test.local',  jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'financeiro', 'ge_active', true), '{}', now(), now());
   select id into dep_cont from public.departamentos where sigla = 'CONT';
   select id into dep_trab from public.departamentos where sigla = 'TRAB';
   insert into public.departamento_membros (departamento_id, user_id) values (dep_cont, adv1), (dep_trab, adv2);

@@ -57,7 +57,7 @@ export default async function ContratosPage({ searchParams }: { searchParams: Pr
         title="Contratos de honorários"
         description="Honorários fixos, mensais, de êxito e por hora — com parcelas no financeiro."
         actions={
-          can(profile.role, "contratos.write") && (
+          can(profile, "contratos.write") && (
             <FormDrawerButton
               action={saveContrato}
               fields={contratoFields({ clientes, processos, departamentos, juridico })}

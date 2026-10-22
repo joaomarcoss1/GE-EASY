@@ -43,9 +43,9 @@ export default async function CotaPage({ params }: { params: Promise<{ id: strin
   ]);
   const lances = (lancesData ?? []) as ConsorcioLance[];
 
-  const canWrite = can(profile.role, "negocios.write");
-  const canDelete = can(profile.role, "negocios.delete");
-  const canTransfer = can(profile.role, "clientes.transfer");
+  const canWrite = can(profile, "negocios.write");
+  const canDelete = can(profile, "negocios.delete");
+  const canTransfer = can(profile, "clientes.transfer");
   const [clientes, administradoras, produtos, consultores] = canWrite
     ? await Promise.all([clienteOptions(), parceiroOptions("administradora"), produtoOptions("consorcio"), canTransfer ? consultorOptions() : Promise.resolve([])])
     : [[], [], [], []];

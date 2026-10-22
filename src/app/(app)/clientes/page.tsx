@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { consultorOptions, getProfileMap, pageRange, searchTerm } from "@/lib/data";
-import { CLIENTE_STATUS } from "@/lib/constants";
+import { CADASTRO_STATUS, CLIENTE_STATUS } from "@/lib/constants";
 import { maskDocumento, maskPhone, date } from "@/lib/format";
 import type { Cliente } from "@/lib/types";
 import { createCliente } from "@/lib/actions/clientes";
@@ -34,13 +34,14 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
     query = query.or([`nome.ilike.%${q}%`, `email.ilike.%${q}%`, `cidade.ilike.%${q}%`, ...(digits.length >= 3 ? [`documento.ilike.%${digits}%`, `telefone.ilike.%${digits}%`] : [])].join(","));
   }
   if (sp.status) query = query.eq("status", sp.status);
+  if (sp.cadastro && CADASTRO_STATUS.some((o) => o.value === sp.cadastro)) query = query.eq("status_cadastro", sp.cadastro);
   if (sp.consultor) query = query.eq("consultor_id", sp.consultor);
   const { data, count } = await query;
   const clientes = (data ?? []) as Cliente[];
 
   const [profiles, consultores] = await Promise.all([getProfileMap(), consultorOptions()]);
-  const canTransfer = can(profile.role, "clientes.transfer");
-  const canWrite = can(profile.role, "clientes.write");
+  const canTransfer = can(profile, "clientes.transfer");
+  const canWrite = can(profile, "clientes.write");
 
   return (
     <>
@@ -50,12 +51,12 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
         description="Carteira completa de clientes e leads, com histórico e negócios vinculados."
         actions={
           <>
-            {can(profile.role, "relatorios.view") && (
+            {can(profile, "clientes.exportar") && (
               <LinkButton href="/api/exportar/clientes" variant="secondary" prefetch={false}>
                 Exportar CSV
               </LinkButton>
             )}
-            {canWrite && <FormDrawerButton action={createCliente} fields={clienteFields(consultores, canTransfer)} values={{ tipo_pessoa: "PF", status: "lead" }} title="Novo cliente" label="Novo cliente" variant="accent" redirectTo="/clientes/:id" defaultOpen={sp.novo === "1"} />}
+            {canWrite && <FormDrawerButton action={createCliente} fields={clienteFields(consultores, canTransfer, true)} values={{ tipo_pessoa: "PF", status: "lead", status_cadastro: "pre_cadastro" }} title="Novo cliente" label="Novo cliente" variant="accent" redirectTo="/clientes/:id" defaultOpen={sp.novo === "1"} />}
           </>
         }
       />
@@ -63,6 +64,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
         <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center">
           <SearchInput placeholder="Nome, CPF/CNPJ, e-mail, telefone…" />
           <FilterSelect param="status" options={CLIENTE_STATUS} allLabel="Todos os status" />
+          <FilterSelect param="cadastro" options={CADASTRO_STATUS} allLabel="Toda situação do cadastro" />
           {canTransfer && <FilterSelect param="consultor" options={consultores} allLabel="Todos os consultores" />}
         </div>
         {clientes.length === 0 ? (
@@ -102,7 +104,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
                       <td className="text-sm">{consultor?.full_name ?? <span className="text-muted">—</span>}</td>
                       <td>
                         <div className="flex flex-wrap items-center gap-1">
-                          <StatusBadge options={CLIENTE_STATUS} value={c.status} />
+                          <StatusBadge options={CADASTRO_STATUS} value={c.status_cadastro} />
                           {c.tags.slice(0, 2).map((t) => <Badge key={t} tone="brand">{t}</Badge>)}
                         </div>
                       </td>

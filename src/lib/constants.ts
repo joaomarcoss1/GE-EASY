@@ -1,4 +1,4 @@
-import type { AppRole } from "./types";
+import type { AppRole, Area } from "./types";
 
 export type Tone = "brand" | "accent" | "green" | "amber" | "red" | "slate" | "sky" | "violet";
 
@@ -16,10 +16,51 @@ export const ROLES: Option[] = [
   { value: "financeiro", label: "Financeiro", tone: "green" },
   { value: "advogado", label: "Advogado(a)", tone: "brand" },
   { value: "assistente_juridico", label: "Assistente jurídico", tone: "sky" },
+  { value: "administrativo", label: "Administrativo", tone: "slate" },
   { value: "consultor", label: "Consultor interno", tone: "sky" },
   { value: "consultor_externo", label: "Consultor externo", tone: "accent" },
 ];
 export const ROLE_LABEL: Record<AppRole, string> = Object.fromEntries(ROLES.map((r) => [r.value, r.label])) as Record<AppRole, string>;
+
+export const AREAS: (Option & { value: Area; href: string; descricao: string })[] = [
+  { value: "consultor", label: "Consultor", href: "/consultor", tone: "accent", descricao: "Carteira, pré-cadastro, documentos e visitas" },
+  { value: "administrativo", label: "Administrativo", href: "/administrativo", tone: "slate", descricao: "Documentação, base de clientes e encaminhamentos" },
+  { value: "juridico", label: "Jurídico", href: "/juridico", tone: "brand", descricao: "Processos, intimações e audiências" },
+  { value: "rh", label: "RH", href: "/rh", tone: "sky", descricao: "Funcionários, acessos e jornada" },
+  { value: "financeiro", label: "Financeiro", href: "/financeiro", tone: "green", descricao: "Contas, recebimentos e comissões" },
+];
+
+export const CADASTRO_STATUS: Option[] = [
+  { value: "pre_cadastro", label: "Pré-cadastro", tone: "slate" },
+  { value: "pendente_documentacao", label: "Documentação pendente", tone: "amber" },
+  { value: "documentacao_completa", label: "Documentação completa", tone: "sky" },
+  { value: "transferido_administrativo", label: "Transferido ao administrativo", tone: "red" },
+  { value: "ativo", label: "Ativo", tone: "green" },
+  { value: "perdido", label: "Perdido", tone: "slate" },
+  { value: "inativo", label: "Inativo", tone: "slate" },
+];
+
+export const CARTEIRAS: Option[] = [
+  { value: "consultor", label: "Consultor", tone: "accent" },
+  { value: "administrativo", label: "Administrativa", tone: "slate" },
+  { value: "juridico", label: "Jurídica", tone: "brand" },
+];
+
+export const DOC_ANALISE: Option[] = [
+  { value: "enviado", label: "Enviado", tone: "sky" },
+  { value: "em_analise", label: "Em análise", tone: "amber" },
+  { value: "aprovado", label: "Aprovado", tone: "green" },
+  { value: "recusado", label: "Recusado", tone: "red" },
+  { value: "vencido", label: "Vencido", tone: "red" },
+];
+
+export const ENCAMINHAMENTO_STATUS: Option[] = [
+  { value: "encaminhado", label: "Encaminhado", tone: "sky" },
+  { value: "em_analise", label: "Em análise", tone: "amber" },
+  { value: "ajuizado", label: "Ajuizado", tone: "green" },
+  { value: "cancelado", label: "Cancelado", tone: "slate" },
+  { value: "pendente_confirmacao", label: "Falta confirmação", tone: "red" },
+];
 
 export const CLIENTE_STATUS: Option[] = [
   { value: "lead", label: "Lead", tone: "amber" },

@@ -30,7 +30,7 @@ const addDays = (iso: string, n: number) => {
 export default async function HorasPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { profile, userId } = await requirePermission("horas.lancar");
   const sp = await searchParams;
-  const gerir = can(profile.role, "horas.gerir");
+  const gerir = can(profile, "horas.gerir");
   const aba = gerir && sp.aba === "equipe" ? "equipe" : "minhas";
   const hoje = todayISO();
   const dow = (new Date(`${hoje}T12:00:00Z`).getUTCDay() + 6) % 7; // segunda = 0

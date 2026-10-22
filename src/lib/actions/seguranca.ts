@@ -17,7 +17,7 @@ export async function salvarPoliticaSeguranca(_: ActionState, formData: FormData
   const parsed = politicaSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
   const supabase = await createClient();
-  const { error } = await supabase.from("configuracoes").upsert({ chave: "seguranca", valor: parsed.data });
+  const { error } = await supabase.from("configuracoes").upsert({ chave: "seguranca", valor: parsed.data }, { onConflict: "empresa_id,chave" });
   if (error) return dbError(error);
   revalidatePath("/", "layout");
   return { ok: true, message: "Política de segurança atualizada." };

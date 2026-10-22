@@ -16,13 +16,13 @@ begin
     raise notice 'Já existe admin: o usuário "a" deste teste não será admin; os itens 15-18 refletem isso.';
   end if;
   insert into auth.users (id, instance_id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-  values (a, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-admin@test.local', '{}', '{"full_name":"Admin Teste"}', now(), now());
+  values (a, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-admin@test.local', jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'admin', 'ge_admin_master', true), '{"full_name":"Admin Teste"}', now(), now());
   insert into auth.users (id, instance_id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-  values (e1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-e1@test.local', '{"ge_role":"consultor_externo","ge_active":true}', '{}', now(), now()),
-         (e2, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-e2@test.local', '{"ge_role":"consultor_externo","ge_active":true}', '{}', now(), now()),
+  values (e1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-e1@test.local', jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'consultor_externo', 'ge_active', true), '{}', now(), now()),
+         (e2, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-e2@test.local', jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'consultor_externo', 'ge_active', true), '{}', now(), now()),
          (ina, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-ina@test.local', '{}', '{}', now(), now());
   update public.profiles set comissao_percentual = 40 where id = e1;
-  insert into public.parceiros (tipo, nome, comissao_padrao) values ('administradora', 'Adm Teste RLS', 1) returning id into adm;
+  insert into public.parceiros (empresa_id, tipo, nome, comissao_padrao) values ((select id from public.empresas where slug = 'easy'), 'administradora', 'Adm Teste RLS', 1) returning id into adm;
   insert into public.produtos (parceiro_id, linha, categoria, nome, comissao_percentual) values (adm, 'consorcio', 'imovel', 'Imóvel Teste', 2) returning id into prod;
 
   perform set_config('request.jwt.claims', json_build_object('sub', e1, 'role', 'authenticated')::text, true);

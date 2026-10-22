@@ -1,0 +1,60 @@
+import type { Option } from "@/lib/constants";
+
+/** Rótulos das tabelas auditadas. */
+export const TABELAS_AUDITADAS: Record<string, string> = {
+  profiles: "Usuários",
+  empresas: "Empresa",
+  empresa_membros: "Vínculos com a empresa",
+  departamento_membros: "Membros de departamento",
+  departamento_niveis: "Níveis de acesso",
+  nivel_funcionalidades: "Funcionalidades dos níveis",
+  usuario_permissoes_extra: "Exceções de acesso",
+  parceiros: "Parceiros",
+  produtos: "Produtos",
+  clientes: "Clientes",
+  cliente_carteira_historico: "Carteira de clientes",
+  documento_tipos: "Documentos exigidos",
+  oportunidades: "Oportunidades",
+  consorcio_cotas: "Cotas de consórcio",
+  consorcio_lances: "Lances",
+  seguro_apolices: "Apólices",
+  seguro_sinistros: "Sinistros",
+  comissoes: "Comissões",
+  metas: "Metas",
+  documentos: "Documentos",
+  configuracoes: "Configurações",
+  processos: "Processos",
+  processo_partes: "Partes do processo",
+  prazos: "Prazos",
+  audiencias: "Audiências",
+  processo_lancamentos: "Lançamentos do processo",
+  publicacoes: "Publicações",
+  contratos_honorarios: "Contratos de honorários",
+  financeiro_lancamentos: "Financeiro",
+  horas_lancamentos: "Horas",
+  atendimentos: "Atendimentos",
+  modelos_documentos: "Modelos",
+  departamentos: "Departamentos",
+  auth: "Entrada e saída",
+  funcionalidades: "Funcionalidades",
+};
+
+/** Tabelas de controle de acesso (filtro "histórico de acessos"). */
+export const TABELAS_ACESSO = ["empresa_membros", "departamento_membros", "departamento_niveis", "nivel_funcionalidades", "usuario_permissoes_extra"];
+
+export const ACOES_AUDITORIA: Option[] = [
+  { value: "INSERT", label: "Inclusão" },
+  { value: "UPDATE", label: "Alteração" },
+  { value: "EXCLUSAO", label: "Exclusão (lixeira)" },
+  { value: "RESTAURACAO", label: "Restauração" },
+  { value: "DELETE", label: "Exclusão definitiva" },
+  { value: "LOGIN", label: "Entrada no sistema" },
+  { value: "LOGOUT", label: "Saída" },
+  { value: "ACESSO_NEGADO", label: "Acesso negado" },
+  { value: "DOWNLOAD", label: "Download" },
+  { value: "EXPORTACAO", label: "Exportação" },
+  { value: "VISUALIZACAO_SIGILOSA", label: "Dado sigiloso" },
+  { value: "TROCA_EMPRESA", label: "Troca de empresa" },
+  { value: "LGPD_EXPORTACAO", label: "LGPD: relatório" },
+  { value: "LGPD_ANONIMIZACAO", label: "LGPD: anonimização" },
+];

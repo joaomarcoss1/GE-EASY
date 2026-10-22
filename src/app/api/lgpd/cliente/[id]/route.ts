@@ -14,8 +14,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "Cliente inválido" }, { status: 400 });
   const session = await getSession();
   if (!session?.profile.active) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  if (!can(session.profile.role, "lgpd.exportar")) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
-  if ((await getSituacao2fa(session.profile.role)).bloqueado) return NextResponse.json({ error: "Conclua a autenticação em dois fatores." }, { status: 403 });
+  if (!can(session.profile, "lgpd.exportar")) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  if ((await getSituacao2fa(session.profile)).bloqueado) return NextResponse.json({ error: "Conclua a autenticação em dois fatores." }, { status: 403 });
 
   const supabase = await createClient();
   const { data: permitido } = await supabase.rpc("rate_limit", { p_acao: "lgpd-exportar", p_max: 20, p_janela_seg: 3600 });

@@ -88,7 +88,7 @@ export default async function MetasPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const mes = monthParam(sp.mes);
   const backoffice = isBackofficeRole(profile.role);
-  const manage = can(profile.role, "metas.manage");
+  const manage = can(profile, "metas.manage");
   const supabase = await createClient();
   const de = firstDay(mes);
   const ate = lastDay(mes);

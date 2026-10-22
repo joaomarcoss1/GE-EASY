@@ -30,7 +30,7 @@ export default async function GerarDocumentoPage({ searchParams }: { searchParam
   const [{ data: modelos }, clientes, processos] = await Promise.all([
     supabase.from("modelos_documentos").select("id, titulo, categoria").eq("ativo", true).order("titulo"),
     clienteOptions(),
-    can(profile.role, "processos.view") ? processoOptions() : Promise.resolve([]),
+    can(profile, "processos.view") ? processoOptions() : Promise.resolve([]),
   ]);
 
   const m = await montarDocumentoModelo(supabase, profile.id, { modeloId, clienteId, processoId, contratoId });
@@ -84,7 +84,7 @@ export default async function GerarDocumentoPage({ searchParams }: { searchParam
               titulo={`${modelo.titulo}${cliente ? ` - ${cliente.nome}` : ""}`}
               html={rendered.html}
               texto={texto}
-              registrar={processo && can(profile.role, "processos.write") ? registrarDocumentoGerado.bind(null, processo.id, modelo.titulo) : undefined}
+              registrar={processo && can(profile, "processos.write") ? registrarDocumentoGerado.bind(null, processo.id, modelo.titulo) : undefined}
               salvarDrive={drive.ativo && (clienteId || processoId) ? salvarModeloNoDrive.bind(null, { modeloId: modelo.id, clienteId, processoId, contratoId }) : undefined}
             />
             {rendered.faltando.length > 0 && (

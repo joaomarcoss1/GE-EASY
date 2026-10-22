@@ -90,14 +90,33 @@ export function dbError(error: { code?: string; message?: string } | null): Acti
 /** Garante sessão ativa + permissão dentro de uma Server Action. */
 export async function guard(permission?: Permission): Promise<{ session: Session } | { denied: ActionState }> {
   const session = await getSession();
-  if (!session || !session.profile.active) return { denied: { error: "Sessão expirada. Entre novamente." } };
-  const mfa = await getSituacao2fa(session.profile.role);
-  if (mfa.bloqueado) return { denied: { error: mfa.verificar ? "Confirme o código de verificação em duas etapas para continuar." : "A política do escritório exige autenticação em dois fatores. Cadastre-a em Configurações › Segurança." } };
-  if (permission && !can(session.profile.role, permission)) return { denied: { error: "Você não tem permissão para esta ação." } };
+  if (!session) return { denied: { error: "Sessão expirada. Entre novamente." } };
+  if (!session.empresa) return { denied: { error: "Selecione a empresa em que vai trabalhar (ou peça acesso ao administrador)." } };
+  if (!session.profile.active) return { denied: { error: "Seu acesso a esta empresa está desativado." } };
+  const mfa = await getSituacao2fa(session.profile);
+  if (mfa.bloqueado) return { denied: { error: mfa.verificar ? "Confirme o código de verificação em duas etapas para continuar." : "A política da empresa exige autenticação em dois fatores. Cadastre-a em Configurações › Segurança." } };
+  if (permission && !can(session.profile, permission)) {
+    await registrarAcesso("ACESSO_NEGADO", "funcionalidades", permission);
+    return { denied: { error: "Você não tem permissão para esta ação." } };
+  }
   return { session };
 }
 
 export const isUuid = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
+
+/**
+ * Exclusão lógica: o banco transforma o DELETE em lixeira (excluido_em/excluido_por) e o registro some
+ * das listas. Como o DELETE não "conta" linhas, o resultado é conferido relendo o registro.
+ */
+export async function excluirRegistro(tabela: "clientes" | "processos" | "oportunidades" | "documentos", id: string): Promise<ActionState | null> {
+  const supabase = await createClient();
+  const { data: antes } = await supabase.from(tabela).select("id").eq("id", id).maybeSingle();
+  if (!antes) return { error: "Registro não encontrado ou sem acesso." };
+  const { error } = await supabase.from(tabela).delete().eq("id", id);
+  if (error) return dbError(error);
+  const { data: depois } = await supabase.from(tabela).select("id").eq("id", id).maybeSingle();
+  return depois ? { error: "Sem permissão para excluir este registro." } : null;
+}
 
 /**
  * Limitador persistente por usuário (tabela rate_limits, vale entre instâncias do servidor).

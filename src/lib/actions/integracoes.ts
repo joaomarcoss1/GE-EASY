@@ -66,8 +66,9 @@ export async function buscarIntimacoesDjen(_: ActionState, formData: FormData): 
 
   const supabase = await createClient();
   let oabs: OabMonitorada[];
+  const empresaId = g.session.empresa!.id;
   if (isManagerRole(g.session.profile.role)) {
-    oabs = await oabsMonitoradas(supabase);
+    oabs = await oabsMonitoradas(supabase, empresaId);
   } else {
     const propria = parseOab(g.session.profile.oab);
     oabs = propria ? [{ ...propria, responsavelId: g.session.userId, rotulo: `${propria.numero}/${propria.uf}` }] : [];
@@ -83,7 +84,7 @@ export async function buscarIntimacoesDjen(_: ActionState, formData: FormData): 
     const { itens, erro } = await buscarComunicacoesDjen(oab, inicio, fim);
     encontradas += itens.length;
     if (erro) erros.push(`${oab.rotulo}: ${erro}`);
-    const imp = await importarComunicacoes(supabase, itens, oab);
+    const imp = await importarComunicacoes(supabase, itens, oab, empresaId);
     novas += imp.novas;
     if (imp.erro) erros.push(`${oab.rotulo}: ${imp.erro}`);
   }
@@ -107,7 +108,7 @@ export async function salvarOabsDjen(_: ActionState, formData: FormData): Promis
   if (invalidas.length) return { error: `OAB inválida: ${invalidas.slice(0, 3).join(", ")}`, fieldErrors: { oabs: "Use o formato 123456/SP, uma por linha" } };
   const oabs = [...new Set(linhas.map((l) => { const o = parseOab(l)!; return `${o.numero}/${o.uf}`; }))].slice(0, 50);
   const supabase = await createClient();
-  const { error } = await supabase.from("configuracoes").upsert({ chave: "djen", valor: { oabs } });
+  const { error } = await supabase.from("configuracoes").upsert({ chave: "djen", valor: { oabs } }, { onConflict: "empresa_id,chave" });
   if (error) return dbError(error);
   revalidatePath("/configuracoes");
   return { ok: true, message: `${oabs.length} OAB(s) adicional(is) salva(s).` };
@@ -147,15 +148,16 @@ export async function definirDriveEscritorio(): Promise<ActionState> {
   try {
     const raiz = await findOrCreateFolder(token, RAIZ_NOME, null);
     const admin = createAdminClient();
-    // nova conta => nova árvore de pastas
-    await admin.from("drive_pastas").delete().neq("chave", "");
-    await admin.from("drive_pastas").upsert({ chave: "raiz", folder_id: raiz });
-    await admin.from("processos").update({ drive_folder_id: null }).not("drive_folder_id", "is", null);
-    await admin.from("clientes").update({ drive_folder_id: null }).not("drive_folder_id", "is", null);
+    const empresaId = g.session.empresa!.id;
+    // nova conta => nova árvore de pastas (só desta empresa: o service role ignora o isolamento)
+    await admin.from("drive_pastas").delete().eq("empresa_id", empresaId);
+    await admin.from("drive_pastas").upsert({ empresa_id: empresaId, chave: "raiz", folder_id: raiz }, { onConflict: "empresa_id,chave" });
+    await admin.from("processos").update({ drive_folder_id: null }).eq("empresa_id", empresaId).not("drive_folder_id", "is", null);
+    await admin.from("clientes").update({ drive_folder_id: null }).eq("empresa_id", empresaId).not("drive_folder_id", "is", null);
   } catch (e) {
     return { error: e instanceof DriveError ? e.message : "Não foi possível criar a pasta do escritório no Drive." };
   }
-  const { error } = await supabase.from("configuracoes").upsert({ chave: "drive_escritorio", valor: { user_id: g.session.userId, email, definido_em: new Date().toISOString() } });
+  const { error } = await supabase.from("configuracoes").upsert({ chave: "drive_escritorio", valor: { user_id: g.session.userId, email, definido_em: new Date().toISOString() } }, { onConflict: "empresa_id,chave" });
   if (error) return dbError(error);
   await log("drive", "ok", `Drive do escritório definido (${email ?? "conta Google"})`);
   revalidatePath("/configuracoes");
@@ -183,7 +185,7 @@ export async function arquivarDocumentoDrive(id: string): Promise<Resultado> {
   if (!doc) return { error: "Documento não encontrado ou sem acesso." };
   const bloqueio = await limitar("drive", 60, 600);
   if (bloqueio) return bloqueio;
-  const r = await arquivarDocumentoNoDrive(createAdminClient(), id);
+  const r = await arquivarDocumentoNoDrive(createAdminClient(), id, g.session.empresa!.id);
   revalidatePath("/documentos");
   if (doc.cliente_id) revalidatePath(`/clientes/${doc.cliente_id}`);
   if (doc.processo_id) revalidatePath(`/processos/${doc.processo_id}`);
@@ -196,14 +198,15 @@ export async function arquivarPendentesDrive(): Promise<ActionState> {
   if ("denied" in g) return g.denied;
   if (!hasServiceRole()) return { error: SEM_SERVICE_ROLE };
   const admin = createAdminClient();
-  if (!(await getDriveEscritorio(admin))) return { error: "Defina primeiro o Drive do escritório." };
-  const { data } = await admin.from("documentos").select("id").in("drive_status", ["pendente", "erro"]).not("storage_path", "is", null).order("created_at").limit(15);
+  const empresaId = g.session.empresa!.id;
+  if (!(await getDriveEscritorio(admin, empresaId))) return { error: "Defina primeiro o Drive da empresa." };
+  const { data } = await admin.from("documentos").select("id").eq("empresa_id", empresaId).in("drive_status", ["pendente", "erro"]).not("storage_path", "is", null).order("created_at").limit(15);
   let ok = 0;
   let falhas = 0;
   const limite = Date.now() + 45_000;
   for (const d of data ?? []) {
     if (Date.now() > limite) break;
-    const r = await arquivarDocumentoNoDrive(admin, d.id);
+    const r = await arquivarDocumentoNoDrive(admin, d.id, empresaId);
     if (r.ok) ok++;
     else falhas++;
   }
@@ -223,7 +226,7 @@ export async function abrirPastaDrive(tipo: "processo" | "cliente", id: string):
   const { data: visivel } = await supabase.from(tipo === "processo" ? "processos" : "clientes").select("id").eq("id", id).maybeSingle();
   if (!visivel) return { error: "Registro não encontrado ou sem acesso." };
   try {
-    const pasta = await garantirPasta(createAdminClient(), tipo === "processo" ? { processo_id: id } : { cliente_id: id });
+    const pasta = await garantirPasta(createAdminClient(), g.session.empresa!.id, tipo === "processo" ? { processo_id: id } : { cliente_id: id });
     return { ok: true, url: driveFolderUrl(pasta) };
   } catch (e) {
     return { error: e instanceof DriveError ? e.message : "Não foi possível abrir a pasta no Drive." };
@@ -246,7 +249,7 @@ export async function salvarModeloNoDrive(ids: { modeloId: string; clienteId?: s
   const processoId = m.processo?.id ?? null;
   const clienteId = processoId ? null : (m.cliente?.id ?? null);
   if (!processoId && !clienteId) return { error: "Selecione o cliente ou o processo para arquivar o documento na pasta certa." };
-  if (processoId && !can(g.session.profile.role, "processos.write")) return { error: "Você não tem permissão para arquivar documentos neste processo." };
+  if (processoId && !can(g.session.profile, "processos.write")) return { error: "Você não tem permissão para arquivar documentos neste processo." };
   const titulo = `${m.modelo.titulo}${m.cliente ? ` - ${m.cliente.nome}` : ""} (${new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })})`;
 
   // 1º o registro com a sessão do usuário: o RLS confirma que ele pode anexar documentos ao processo/cliente
@@ -260,7 +263,7 @@ export async function salvarModeloNoDrive(ids: { modeloId: string; clienteId?: s
   const admin = createAdminClient();
   let arquivo: { id: string; webViewLink: string };
   try {
-    arquivo = await salvarGoogleDoc(admin, { cliente_id: clienteId, processo_id: processoId }, titulo, m.rendered.html);
+    arquivo = await salvarGoogleDoc(admin, g.session.empresa!.id, { cliente_id: clienteId, processo_id: processoId }, titulo, m.rendered.html);
   } catch (e) {
     await supabase.from("documentos").delete().eq("id", registro.id);
     return { error: e instanceof DriveError ? e.message : "Não foi possível salvar no Drive." };

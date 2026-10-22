@@ -50,8 +50,8 @@ export async function saveLancamento(_: ActionState, formData: FormData): Promis
   const parsed = lancSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
   const { repetir, ...v } = parsed.data;
-  const fin = can(g.session.profile.role, "financeiro.view");
-  if (!fin && !(v.tipo === "despesa" && v.processo_id && can(g.session.profile.role, "processos.write"))) {
+  const fin = can(g.session.profile, "financeiro.view");
+  if (!fin && !(v.tipo === "despesa" && v.processo_id && can(g.session.profile, "processos.write"))) {
     return { error: "Você só pode lançar despesas vinculadas a processos." };
   }
   const id = formData.get("id");

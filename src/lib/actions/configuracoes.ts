@@ -31,7 +31,7 @@ async function saveConfig(chave: "empresa" | "comercial", patch: Record<string, 
   const supabase = await createClient();
   const { data: current } = await supabase.from("configuracoes").select("valor").eq("chave", chave).maybeSingle();
   const valor = { ...((current?.valor as Record<string, unknown> | null) ?? {}), ...patch };
-  const { error } = await supabase.from("configuracoes").upsert({ chave, valor, updated_by: userId }, { onConflict: "chave" });
+  const { error } = await supabase.from("configuracoes").upsert({ chave, valor, updated_by: userId }, { onConflict: "empresa_id,chave" });
   if (error) return dbError(error);
   revalidatePath("/", "layout");
   return { ok: true, message: "Configurações salvas." };

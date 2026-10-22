@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { podeConsultarDatajud } from "@/lib/juridico/datajud";
 import { sincronizarProcessoDatajud } from "@/lib/integracoes/datajud";
 import { cnjDigits, formatCNJ, isValidCNJ } from "@/lib/juridico/cnj";
-import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
+import { dbError, excluirRegistro, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
 const AREAS = ["civel", "consumidor", "trabalhista", "tributario", "previdenciario", "familia", "criminal", "administrativo", "empresarial", "bancario", "outro"] as const;
@@ -131,12 +131,10 @@ export async function deleteProcesso(id: string): Promise<ActionState> {
   const g = await guard("processos.delete");
   if ("denied" in g) return g.denied;
   if (!isUuid(id)) return { error: "Processo inválido." };
-  const supabase = await createClient();
-  const { error, count } = await supabase.from("processos").delete({ count: "exact" }).eq("id", id);
-  if (error) return dbError(error);
-  if (!count) return { error: "Sem permissão para excluir este processo." };
+  const falha = await excluirRegistro("processos", id);
+  if (falha) return falha;
   revalidateProcesso();
-  return { ok: true, message: "Processo excluído." };
+  return { ok: true, message: "Processo movido para a lixeira." };
 }
 
 /** Atualização rápida de fase/situação a partir do cabeçalho do processo. */

@@ -17,8 +17,8 @@ import { diffDays } from "./utils";
 /** Aba "Prazos" do processo: pendentes primeiro (vencidos em destaque), depois o histórico. */
 export async function PrazosPanel({ processoId }: { processoId: string }) {
   const session = await getSession();
-  if (!session || !can(session.profile.role, "processos.view")) return null;
-  const canWrite = can(session.profile.role, "processos.write");
+  if (!session || !can(session.profile, "processos.view")) return null;
+  const canWrite = can(session.profile, "processos.write");
   const today = todayISO();
 
   const supabase = await createClient();

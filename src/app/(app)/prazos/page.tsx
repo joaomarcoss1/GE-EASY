@@ -39,7 +39,7 @@ export default async function PrazosPage({ searchParams }: { searchParams: Promi
   const { profile } = session;
   const sp = await searchParams;
   const manager = isManagerRole(profile.role);
-  const canWrite = can(profile.role, "processos.write");
+  const canWrite = can(profile, "processos.write");
   const today = todayISO();
   const resp = manager && sp.resp && UUID.test(sp.resp) ? sp.resp : undefined;
   const dep = sp.dep && UUID.test(sp.dep) ? sp.dep : undefined;

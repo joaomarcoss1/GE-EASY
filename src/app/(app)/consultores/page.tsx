@@ -43,7 +43,7 @@ export default async function ConsultoresPage({ searchParams }: { searchParams: 
         title="Consultores"
         description="Equipe interna e consultores externos: carteira, produção do mês, comissões e visitas de campo."
         actions={
-          can(profile.role, "usuarios.manage") && (
+          can(profile, "usuarios.manage") && (
             <FormDrawerButton action={inviteUsuario} fields={inviteFields} values={{ role: "consultor_externo" }} title="Convidar consultor" label="Convidar consultor" variant="accent" submitLabel="Enviar convite" />
           )
         }

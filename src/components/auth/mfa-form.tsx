@@ -27,7 +27,7 @@ export function MfaForm() {
     setLoading(false);
     if (error) return setError("Código inválido. Tente novamente.");
     const next = sp.get("next");
-    router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
+    router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/inicio");
     router.refresh();
   };
 

@@ -60,7 +60,7 @@ export default async function AtendimentosPage({ searchParams }: { searchParams:
   ];
   const converterFields: FieldDef[] = [
     { name: "documento", label: "CPF / CNPJ do cliente", type: "documento", span: 6, help: "Se já existir cliente com este documento, ele é reaproveitado." },
-    ...(can(profile.role, "processos.write")
+    ...(can(profile, "processos.write")
       ? ([
           { name: "criar_processo", label: "Abrir processo / caso", type: "checkbox", span: 6 },
           { name: "titulo_processo", label: "Título do processo", span: 6 },
@@ -68,7 +68,7 @@ export default async function AtendimentosPage({ searchParams }: { searchParams:
           { name: "responsavel_id", label: "Advogado responsável", type: "select", options: juridico, emptyOption: "Do atendimento", span: 3 },
         ] as FieldDef[])
       : []),
-    ...(can(profile.role, "contratos.write")
+    ...(can(profile, "contratos.write")
       ? ([
           { name: "criar_contrato", label: "Criar contrato de honorários", type: "checkbox", span: 6, section: "Honorários" },
           { name: "tipo_contrato", label: "Modalidade", type: "select", options: CONTRATO_TIPOS, emptyOption: false, span: 2 },

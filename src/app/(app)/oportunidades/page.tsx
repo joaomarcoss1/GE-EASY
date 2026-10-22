@@ -79,8 +79,8 @@ export default async function OportunidadesPage({ searchParams }: { searchParams
   const fechadas = items.filter((o) => o.etapa === "ganho" || o.etapa === "perdido");
   const conversao = fechadas.length ? (fechadas.filter((o) => o.etapa === "ganho").length / fechadas.length) * 100 : 0;
 
-  const canWrite = can(profile.role, "negocios.write");
-  const canTransfer = can(profile.role, "clientes.transfer");
+  const canWrite = can(profile, "negocios.write");
+  const canTransfer = can(profile, "clientes.transfer");
   const produtos = [...produtosConsorcio, ...produtosSeguro];
   const fields = oportunidadeFields(clientes, produtos, consultores, canTransfer);
 
@@ -122,7 +122,7 @@ export default async function OportunidadesPage({ searchParams }: { searchParams
           items={items}
           today={todayISO()}
           canWrite={canWrite}
-          canDelete={can(profile.role, "negocios.delete")}
+          canDelete={can(profile, "negocios.delete")}
           showConsultor={canTransfer}
           editFields={fields}
           actions={{ move: moveOportunidade, update: updateOportunidade, remove: deleteOportunidade }}

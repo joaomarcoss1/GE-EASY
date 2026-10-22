@@ -113,7 +113,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   });
 
   // Prazos processuais pendentes do período (dia inteiro, somente leitura; vermelho se fatais)
-  if (can(profile.role, "processos.view")) {
+  if (can(profile, "processos.view")) {
     let pq = supabase
       .from("prazos")
       .select("id, descricao, data_fim, fatal, processo_id, responsavel_id")

@@ -50,7 +50,7 @@ export default async function ComissoesPage({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const mes = monthParam(sp.mes);
   const backoffice = isBackofficeRole(profile.role);
-  const canManage = can(profile.role, "comissoes.manage");
+  const canManage = can(profile, "comissoes.manage");
   const status = sp.status && STATUS_VALUES.includes(sp.status) ? sp.status : null;
   const linha = sp.linha && LINHA_VALUES.includes(sp.linha) ? sp.linha : null;
   const consultor = backoffice && sp.consultor && /^[0-9a-f-]{36}$/i.test(sp.consultor) ? sp.consultor : null;

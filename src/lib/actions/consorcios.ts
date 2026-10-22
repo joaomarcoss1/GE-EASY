@@ -75,7 +75,7 @@ export async function createCota(_: ActionState, formData: FormData): Promise<Ac
   const { data: cliente } = await supabase.from("clientes").select("id, consultor_id").eq("id", parsed.data.cliente_id).maybeSingle();
   if (!cliente) return { error: "Verifique os campos destacados.", fieldErrors: { cliente_id: "Cliente não encontrado ou sem acesso" } };
 
-  const canTransfer = can(g.session.profile.role, "clientes.transfer");
+  const canTransfer = can(g.session.profile, "clientes.transfer");
   const consultor_id = (canTransfer ? parsed.data.consultor_id : null) ?? (cliente.consultor_id as string | null) ?? g.session.userId;
   const { data: row, error } = await supabase
     .from("consorcio_cotas")
@@ -98,7 +98,7 @@ export async function updateCota(_: ActionState, formData: FormData): Promise<Ac
   const { consultor_id, ...rest } = parsed.data;
   const payload: Record<string, unknown> = { ...rest };
   // Somente a gestão transfere a carteira; vazio = mantém o responsável atual
-  if (can(g.session.profile.role, "clientes.transfer") && consultor_id) payload.consultor_id = consultor_id;
+  if (can(g.session.profile, "clientes.transfer") && consultor_id) payload.consultor_id = consultor_id;
 
   const supabase = await createClient();
   const { data, error } = await supabase.from("consorcio_cotas").update(payload).eq("id", id).select("id").maybeSingle();

@@ -49,7 +49,7 @@ export async function DocumentosPanel({ clienteId, processoId, podeEnviar = true
             }
           />
           <CardBody>
-            <DocumentUploader clienteId={processoId ? null : clienteId} processoId={processoId} />
+            <DocumentUploader empresaId={session.empresa!.id} clienteId={processoId ? null : clienteId} processoId={processoId} />
           </CardBody>
         </Card>
       )}

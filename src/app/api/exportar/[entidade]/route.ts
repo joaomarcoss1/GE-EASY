@@ -63,9 +63,28 @@ interface Entity {
 }
 
 const ENTITIES: Record<string, Entity> = {
+  auditoria: {
+    table: "audit_logs",
+    permission: "auditoria.view",
+    select: "id, created_at, actor_email, acao, tabela, registro_id, campos_alterados, area, origem, ip, user_agent, hash",
+    dateCol: "created_at",
+    dateKind: "timestamp",
+    columns: () => [
+      ["Data e hora", (r) => (r.created_at ? new Date(String(r.created_at)).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "")],
+      ["Usuário", (r) => str(r, "actor_email")],
+      ["Ação", (r) => str(r, "acao")],
+      ["Tabela", (r) => str(r, "tabela")],
+      ["Registro", (r) => str(r, "registro_id")],
+      ["Campos alterados", (r) => (Array.isArray(r.campos_alterados) ? (r.campos_alterados as string[]).join(", ") : "")],
+      ["Área", (r) => str(r, "area")],
+      ["Origem", (r) => str(r, "origem")],
+      ["IP", (r) => str(r, "ip")],
+      ["Selo (hash)", (r) => str(r, "hash")],
+    ],
+  },
   clientes: {
     table: "clientes",
-    permission: "relatorios.view",
+    permission: "clientes.exportar",
     select: "id, nome, tipo_pessoa, documento, email, telefone, whatsapp, cidade, uf, profissao, origem, status, tags, consultor_id, created_at",
     dateCol: "created_at",
     dateKind: "timestamp",
@@ -267,7 +286,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ enti
   const session = await getSession();
   if (!session) return plain(401, "Sessão expirada. Entre novamente.");
   if (!session.profile.active) return plain(403, "Acesso pendente de liberação.");
-  if (!can(session.profile.role, entity.permission)) return plain(403, "Você não tem permissão para esta exportação.");
+  if (!can(session.profile, entity.permission)) return plain(403, "Você não tem permissão para esta exportação.");
 
   // Período opcional: ?mes=YYYY-MM  ou  ?de=YYYY-MM-DD&ate=YYYY-MM-DD
   const sp = req.nextUrl.searchParams;

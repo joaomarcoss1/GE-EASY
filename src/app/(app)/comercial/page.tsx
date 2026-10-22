@@ -224,8 +224,8 @@ export default async function ComercialPage({ searchParams }: { searchParams: Pr
   const atrasadas = tarefas.filter((t) => t.vencimento && t.vencimento < today).length;
 
   const hoje = new Date().toLocaleDateString("pt-BR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  const canNegocio = can(profile.role, "negocios.write");
-  const canCliente = can(profile.role, "clientes.write");
+  const canNegocio = can(profile, "negocios.write");
+  const canCliente = can(profile, "clientes.write");
 
   return (
     <>

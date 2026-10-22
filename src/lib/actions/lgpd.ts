@@ -17,17 +17,17 @@ export async function anonimizarCliente(id: string, confirmacao?: string): Promi
   const bloqueio = await limitar("lgpd-anonimizar", 10, 3600);
   if (bloqueio) return bloqueio;
   const supabase = await createClient();
-  const { data: docs } = await supabase.from("documentos").select("id, storage_path").eq("cliente_id", id);
-  const { data: rotulo, error } = await supabase.rpc("anonimizar_cliente", { p_cliente: id });
+  // a função apaga definitivamente os registros dos documentos (inclusive os da lixeira) e devolve os caminhos
+  const { data, error } = await supabase.rpc("anonimizar_cliente", { p_cliente: id });
   if (error) return error.code === "P0001" ? { error: error.message } : dbError(error);
-  const caminhos = (docs ?? []).map((d) => d.storage_path).filter((p): p is string => !!p);
+  const r = (data ?? {}) as { rotulo?: string; caminhos?: string[] };
+  const caminhos = (r.caminhos ?? []).filter((p): p is string => !!p);
   if (caminhos.length) {
     const { error: rmErr } = await supabase.storage.from("documentos").remove(caminhos);
     if (rmErr) console.error("[lgpd] arquivos não removidos", rmErr.message);
   }
-  if (docs?.length) await supabase.from("documentos").delete().eq("cliente_id", id);
-  await registrarAcesso("LGPD_ANONIMIZACAO", "clientes", id, { documentos_removidos: docs?.length ?? 0 });
+  await registrarAcesso("LGPD_ANONIMIZACAO", "clientes", id, { documentos_removidos: caminhos.length });
   revalidatePath(`/clientes/${id}`);
   revalidatePath("/clientes");
-  return { ok: true, message: `Dados pessoais anonimizados (${String(rotulo)}). Arquivos do armazenamento removidos; cópias no Drive devem ser apagadas manualmente.` };
+  return { ok: true, message: `Dados pessoais anonimizados (${r.rotulo ?? "titular"}). Arquivos do armazenamento removidos; cópias no Drive devem ser apagadas manualmente.` };
 }

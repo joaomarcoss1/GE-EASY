@@ -56,3 +56,8 @@ Cada usuário conecta a própria conta em *Configurações › Integrações*.
 6. **Agendamentos** (`cron.job`): `geeasy-datajud` (:15 de cada hora), `geeasy-djen` (10h/15h/21h UTC),
    `geeasy-drive-agenda` (:40 de cada hora) e `geeasy-limpeza` (6h30 UTC). URL e segredo ficam no Vault
    (`geeasy_site_url`, `geeasy_cron_secret`).
+
+## 6. ERP multiempresa (migrações 20261022*)
+Ordem, homologação, variáveis novas e reversão: ver `docs/ERP-MULTIEMPRESA.md` §6. Resumo: backup/PITR →
+aplicar migrações e publicar o app **na mesma janela** → revisar *Acessos* como administrador master.
+Testes do banco: `scripts/db-test.sh` (PostgreSQL local) ou os arquivos de `supabase/tests/` no SQL Editor.

@@ -50,9 +50,9 @@ export default async function ApolicePage({ params }: { params: Promise<{ id: st
   const sinistros = (sinistrosData ?? []) as SeguroSinistro[];
   const proxima = ((proximas ?? []) as Link_[])[0] ?? null;
 
-  const canWrite = can(profile.role, "negocios.write");
-  const canDelete = can(profile.role, "negocios.delete");
-  const canTransfer = can(profile.role, "clientes.transfer");
+  const canWrite = can(profile, "negocios.write");
+  const canDelete = can(profile, "negocios.delete");
+  const canTransfer = can(profile, "clientes.transfer");
   const [clientes, seguradoras, produtos, consultores] = canWrite
     ? await Promise.all([clienteOptions(), parceiroOptions("seguradora"), produtoOptions("seguro"), canTransfer ? consultorOptions() : Promise.resolve([])])
     : [[], [], [], []];

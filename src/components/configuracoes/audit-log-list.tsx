@@ -21,8 +21,13 @@ export interface AuditItem {
 const ACAO: Record<string, { label: string; tone: Tone }> = {
   INSERT: { label: "Criação", tone: "green" },
   UPDATE: { label: "Alteração", tone: "sky" },
-  DELETE: { label: "Exclusão", tone: "red" },
+  DELETE: { label: "Exclusão definitiva", tone: "red" },
+  EXCLUSAO: { label: "Exclusão (lixeira)", tone: "red" },
+  RESTAURACAO: { label: "Restauração", tone: "violet" },
+  ACESSO_NEGADO: { label: "Acesso negado", tone: "amber" },
+  TROCA_EMPRESA: { label: "Troca de empresa", tone: "slate" },
 };
+const COMO_ALTERACAO = new Set(["UPDATE", "EXCLUSAO", "RESTAURACAO"]);
 
 const NOISE = new Set(["updated_at"]);
 
@@ -39,7 +44,7 @@ function diff(item: AuditItem) {
   const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter((k) => !NOISE.has(k));
   return keys
     .filter((k) => {
-      if (item.acao === "UPDATE") return JSON.stringify(before[k] ?? null) !== JSON.stringify(after[k] ?? null);
+      if (COMO_ALTERACAO.has(item.acao)) return JSON.stringify(before[k] ?? null) !== JSON.stringify(after[k] ?? null);
       const v = item.acao === "DELETE" ? before[k] : after[k];
       return v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0);
     })

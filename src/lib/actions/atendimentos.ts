@@ -97,9 +97,8 @@ export async function converterAtendimento(_: ActionState, formData: FormData): 
   const parsed = converterSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
   const v = parsed.data;
-  const role = g.session.profile.role;
-  if (v.criar_processo && !can(role, "processos.write")) return { error: "Você não tem permissão para criar processos." };
-  if (v.criar_contrato && !can(role, "contratos.write")) return { error: "Você não tem permissão para criar contratos." };
+  if (v.criar_processo && !can(g.session.profile, "processos.write")) return { error: "Você não tem permissão para criar processos." };
+  if (v.criar_contrato && !can(g.session.profile, "contratos.write")) return { error: "Você não tem permissão para criar contratos." };
 
   const supabase = await createClient();
   const { data: a } = await supabase.from("atendimentos").select("*").eq("id", v.id).maybeSingle();

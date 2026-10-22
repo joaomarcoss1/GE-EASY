@@ -88,8 +88,8 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
   const tfs = (tarefas ?? []) as Tarefa[];
   const dep = p.departamento_id ? deps.get(p.departamento_id) : null;
   const resp = p.responsavel_id ? profiles.get(p.responsavel_id) : null;
-  const canWrite = can(profile.role, "processos.write");
-  const canFin = can(profile.role, "processos.financeiro");
+  const canWrite = can(profile, "processos.write");
+  const canFin = can(profile, "processos.financeiro");
   const cnjInfo = p.numero_cnj ? parseCNJ(p.numero_cnj) : null;
 
   const ativos = lcs.filter((l) => l.status !== "cancelado");
@@ -136,17 +136,17 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
                 </a>
               )}
               {drive.ativo && <DrivePastaButton tipo="processo" id={id} variant="hero" />}
-              {can(profile.role, "modelos.view") && (
+              {can(profile, "modelos.view") && (
                 <Link href={`/modelos/gerar?processo_id=${id}`} className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">
                   <FileText className="h-4 w-4" /> Gerar documento
                 </Link>
               )}
-              {can(profile.role, "horas.lancar") && (
+              {can(profile, "horas.lancar") && (
                 <Link href={`/horas?novo=1&processo_id=${id}`} className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">
                   <Timer className="h-4 w-4" /> Lançar horas
                 </Link>
               )}
-              {can(profile.role, "contratos.write") && (
+              {can(profile, "contratos.write") && (
                 <Link href={`/contratos?novo=1&processo_id=${id}${p.cliente_id ? `&cliente_id=${p.cliente_id}` : ""}`} className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">
                   <FileSignature className="h-4 w-4" /> Novo contrato
                 </Link>
@@ -164,7 +164,7 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
                   width="max-w-3xl"
                 />
               )}
-              {can(profile.role, "processos.delete") && (
+              {can(profile, "processos.delete") && (
                 <ConfirmAction action={deleteProcesso} id={id} title="Excluir processo?" message="Andamentos, partes, prazos, audiências e lançamentos deste processo também serão excluídos." redirectTo="/processos" variant="secondary" />
               )}
             </div>
@@ -302,7 +302,7 @@ export default async function ProcessoPage({ params, searchParams }: { params: P
                           </div>
                           <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{a.descricao}</p>
                         </div>
-                        {canWrite && (a.autor_id === profile.id || can(profile.role, "processos.delete")) && <ConfirmAction action={deleteAndamento} id={a.id} title="Remover andamento?" />}
+                        {canWrite && (a.autor_id === profile.id || can(profile, "processos.delete")) && <ConfirmAction action={deleteAndamento} id={a.id} title="Remover andamento?" />}
                       </div>
                     </li>
                   );

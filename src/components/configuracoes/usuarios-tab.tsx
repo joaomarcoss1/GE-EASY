@@ -15,7 +15,7 @@ import { editUsuarioFields, inviteFields } from "./usuario-fields";
 
 export async function UsuariosTab({ currentUserId }: { currentUserId: string }) {
   const supabase = await createClient();
-  const { data } = await supabase.from("profiles").select("*").order("full_name");
+  const { data } = await supabase.from("membros").select("*").order("full_name");
   const users = ((data ?? []) as Profile[]).sort((a, b) => Number(a.active) - Number(b.active));
   const pending = users.filter((u) => !u.active).length;
   const serviceRole = hasServiceRole();
@@ -75,7 +75,7 @@ export async function UsuariosTab({ currentUserId }: { currentUserId: string }) 
                     <td>
                       <div className="flex flex-wrap items-center gap-1">
                         <StatusBadge options={ROLES} value={u.role} />
-                        {u.is_master && <Badge tone="accent">Master</Badge>}
+                        {(u.admin_master || u.is_master) && <Badge tone="accent">Master</Badge>}
                       </div>
                     </td>
                     <td>{u.active ? <Badge tone="green" dot>Ativo</Badge> : <Badge tone="amber" dot>Aguardando aprovação</Badge>}</td>

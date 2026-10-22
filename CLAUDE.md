@@ -1,9 +1,24 @@
 # GE EASY — Gestão Especializada EASY
 
-Sistema de **gestão jurídica** da EASY: o foco principal são **processos, prazos, audiências e a gestão por
-departamentos** (equipes, demandas e indicadores). Módulos de apoio: clientes, agenda (Google Agenda),
-documentos (Storage + Google Drive), tarefas/demandas e administração. O **comercial** (consórcios, seguros,
-funil, comissões, metas, visitas de consultores externos) é um módulo secundário agrupado em "Comercial".
+**ERP multiempresa (SaaS)** de gestão, análise e controle: áreas Consultor, Administrativo, Jurídico, RH e
+Financeiro, com auditoria completa. O jurídico (processos, prazos, audiências, intimações) é um departamento
+entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e `docs/adr/`.
+
+## Multiempresa (leia antes de mexer em dados)
+- Toda tabela de negócio tem `empresa_id` + política RLS **restritiva** `empresa_id = (select empresa_atual())`.
+  Tabela nova de negócio: adicione `empresa_id ... default public.empresa_atual()`, a política restritiva e o
+  gatilho `zz_empresa_vinculos` (ver `20261022000200_multiempresa.sql`).
+- A empresa ativa vai no cabeçalho `x-empresa-id` (cookie `ge_empresa`, `src/lib/tenant.ts`); o banco confere o vínculo.
+- **Service role ignora o isolamento**: sempre filtre/grave `empresa_id` da sessão (`session.empresa.id`).
+- Papel/ativo são por vínculo (`empresa_membros`); `profiles.role` é legado. Listas de usuários: visão `membros`.
+- Políticas novas: funções sem dependência da linha dentro de `(select ...)` (ADR-0003).
+- DELETE em clientes/processos/documentos/oportunidades é lógico (lixeira); use `excluirRegistro()`.
+- Testes do banco: `wsl -d Ubuntu -u postgres -- bash /mnt/c/Users/joaom/Projetos/GE-EASY/scripts/db-test.sh`.
+
+## Permissões
+- `can(profile, "chave")` com as funcionalidades efetivas da sessão (`src/lib/rbac.ts` = catálogo de
+  `public.funcionalidades`; o teste `rbac.test.ts` confere os dois). Níveis/exceções: tela `/acessos` (admin master).
+- `requirePermission()`, `requireArea()`, `requireMaster()`, `requirePlataforma()` em `@/lib/auth`.
 
 ## Stack
 - Next.js 15 (App Router, Server Components, Server Actions) + React 19 + TypeScript estrito
@@ -23,8 +38,8 @@ funil, comissões, metas, visitas de consultores externos) é um módulo secund�
 5. Saída CSV deve neutralizar fórmulas (prefixar `'` em valores iniciados por `= + - @`).
 6. Redirecionamentos com `next` só aceitam caminhos relativos (`/x`, nunca `//x`).
 
-## Papéis (enum `app_role`)
-`admin`, `gestor`, `financeiro`, `advogado`, `assistente_juridico`, `consultor` (interno), `consultor_externo`.
+## Papéis (enum `app_role`) — definem o ESCOPO dos dados, por empresa
+`admin`, `gestor`, `financeiro`, `advogado`, `assistente_juridico`, `administrativo`, `consultor` (interno), `consultor_externo`.
 - admin/gestor: veem e editam tudo; financeiro: lê processos, lança custas/honorários e gere comissões;
 - advogado/assistente jurídico: processos do(s) seu(s) departamento(s), dos quais são responsáveis ou equipe;
 - consultores (comercial): só a própria carteira e sem acesso a processos.

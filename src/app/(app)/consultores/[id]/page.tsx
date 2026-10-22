@@ -25,7 +25,7 @@ export default async function ConsultorPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const supabase = await createClient();
-  const { data: c } = await supabase.from("profiles").select("*").eq("id", id).maybeSingle<Profile>();
+  const { data: c } = await supabase.from("membros").select("*").eq("id", id).maybeSingle<Profile>();
   if (!c) notFound();
   const { ini } = mesAtual();
 

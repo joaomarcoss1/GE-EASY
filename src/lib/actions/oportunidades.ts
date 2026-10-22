@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { isManagerRole } from "@/lib/rbac";
-import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
+import { dbError, excluirRegistro, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
 const ETAPAS = ["novo", "contato", "qualificacao", "proposta", "negociacao", "ganho", "perdido"] as const;
@@ -106,9 +106,9 @@ export async function deleteOportunidade(id: string): Promise<ActionState> {
   if ("denied" in g) return g.denied;
   if (!isUuid(id)) return { error: "Oportunidade inválida." };
   const supabase = await createClient();
-  const { data, error } = await supabase.from("oportunidades").delete().eq("id", id).select("id, cliente_id").maybeSingle();
-  if (error) return dbError(error);
-  if (!data) return { error: "Sem permissão para excluir esta oportunidade." };
-  revalidate([data.cliente_id as string]);
-  return { ok: true, message: "Oportunidade excluída." };
+  const { data } = await supabase.from("oportunidades").select("cliente_id").eq("id", id).maybeSingle();
+  const falha = await excluirRegistro("oportunidades", id);
+  if (falha) return falha;
+  revalidate([data?.cliente_id as string]);
+  return { ok: true, message: "Oportunidade movida para a lixeira." };
 }

@@ -74,8 +74,8 @@ export default async function SegurosPage({ searchParams }: { searchParams: Prom
   const backoffice = isBackofficeRole(profile.role);
   const comissaoPrevista = (comissoes ?? []).reduce((s, c) => s + Number(backoffice ? c.valor_corretora : c.valor_consultor), 0);
 
-  const canWrite = can(profile.role, "negocios.write");
-  const canTransfer = can(profile.role, "clientes.transfer");
+  const canWrite = can(profile, "negocios.write");
+  const canTransfer = can(profile, "clientes.transfer");
   const [clientes, produtos, consultores] = canWrite ? await Promise.all([clienteOptions(), produtoOptions("seguro"), canTransfer ? consultorOptions() : Promise.resolve([])]) : [[], [], []];
   const filtered = Boolean(sp.q || sp.status || sp.ramo || sp.seguradora);
 

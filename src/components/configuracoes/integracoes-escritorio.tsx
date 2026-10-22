@@ -18,7 +18,7 @@ export async function IntegracoesEscritorio({ googleConectado }: { googleConecta
   const supabase = await createClient();
   const [{ data: cfgs }, { data: perfis }, { data: logs }, { count: pendentes }, { count: comErro }, { count: monitorados }, { count: erroDatajud }] = await Promise.all([
     supabase.from("configuracoes").select("chave, valor").in("chave", ["drive_escritorio", "djen"]),
-    supabase.from("profiles").select("full_name, oab, active").not("oab", "is", null),
+    supabase.from("membros").select("full_name, oab, active").not("oab", "is", null),
     supabase.from("integracoes_log").select("id, tipo, status, mensagem, created_at").order("created_at", { ascending: false }).limit(15),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("drive_status", "pendente").not("storage_path", "is", null),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("drive_status", "erro"),

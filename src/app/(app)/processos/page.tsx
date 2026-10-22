@@ -71,7 +71,7 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
   ]);
   const rows = (data ?? []) as unknown as Row[];
   const provisionado = (provRes.data ?? []).reduce((a, r) => a + Number(r.valor_provisionado ?? 0), 0);
-  const canWrite = can(profile.role, "processos.write");
+  const canWrite = can(profile, "processos.write");
   const filtered = Boolean(sp.q || sp.area || sp.fase || sp.risco || sp.dep || sp.resp);
 
   return (
@@ -82,7 +82,7 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
         description="Carteira processual completa: partes, andamentos, prazos, audiências e financeiro de cada caso."
         actions={
           <>
-            {can(profile.role, "relatorios.view") && (
+            {can(profile, "relatorios.view") && (
               <LinkButton href="/api/exportar/processos" variant="secondary" prefetch={false}>
                 Exportar CSV
               </LinkButton>

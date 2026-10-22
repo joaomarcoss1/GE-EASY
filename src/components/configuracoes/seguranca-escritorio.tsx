@@ -25,7 +25,7 @@ export async function SegurancaEscritorio() {
   const [{ data: cfg }, { data: acessos }, { data: perfis }] = await Promise.all([
     supabase.from("configuracoes").select("valor").eq("chave", "seguranca").maybeSingle(),
     supabase.from("audit_logs").select("id, actor_email, acao, tabela, registro_id, dados_novos, created_at").in("acao", Object.keys(ACESSOS)).order("created_at", { ascending: false }).limit(25),
-    supabase.from("profiles").select("id, full_name, email, role, active"),
+    supabase.from("membros").select("id, full_name, email, role, active"),
   ]);
   const politica = (cfg?.valor ?? {}) as { inatividade_min?: number; exigir_2fa?: string };
 

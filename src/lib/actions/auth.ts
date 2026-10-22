@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import type { ActionState } from "./types";
 
-const safeNext = (v: unknown) => (typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : "/dashboard");
+const safeNext = (v: unknown) => (typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : "/inicio");
 
 /**
  * Limitador de tentativas de login persistido no banco (vale entre instâncias do servidor).

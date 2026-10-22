@@ -31,7 +31,7 @@ export default async function ModelosPage({ searchParams }: { searchParams: Prom
   if (q) query = query.or(`titulo.ilike.%${q}%,descricao.ilike.%${q}%`);
   const [{ data }, profiles] = await Promise.all([query, getProfileMap()]);
   const modelos = (data ?? []) as ModeloDocumento[];
-  const canWrite = can(profile.role, "modelos.write");
+  const canWrite = can(profile, "modelos.write");
   const manager = isManagerRole(profile.role);
   const qs = [sp.cliente_id && `cliente_id=${sp.cliente_id}`, sp.processo_id && `processo_id=${sp.processo_id}`, sp.contrato_id && `contrato_id=${sp.contrato_id}`].filter(Boolean).join("&");
 

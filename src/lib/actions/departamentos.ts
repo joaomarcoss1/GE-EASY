@@ -14,6 +14,7 @@ const departamentoSchema = z.object({
   sigla: zs.text(12).transform((v) => (v ? v.toUpperCase() : v)),
   descricao: zs.text(1000),
   cor: zs.enumOf([...CORES], "Selecione uma cor"),
+  tipo: zs.enumOf(["consultor", "administrativo", "juridico", "rh", "financeiro", "personalizado"], "Selecione a área"),
   responsavel_id: zs.uuid(),
 });
 

@@ -8,7 +8,8 @@ import type { Profile } from "@/lib/types";
 
 export const getProfiles = cache(async () => {
   const supabase = await createClient();
-  const { data } = await supabase.from("profiles").select("id, full_name, email, role, active, avatar_url, territorio, comissao_percentual").order("full_name");
+  // membros = usuários da empresa ativa, com papel e situação do vínculo
+  const { data } = await supabase.from("membros").select("id, full_name, email, role, active, avatar_url, territorio, comissao_percentual").order("full_name");
   return (data ?? []) as Pick<Profile, "id" | "full_name" | "email" | "role" | "active" | "avatar_url" | "territorio" | "comissao_percentual">[];
 });
 

@@ -74,7 +74,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
         actions={
           <>
             <BuscarDjenButton action={buscarIntimacoesDjen} escopo={isManagerRole(profile.role) ? "de toda a equipe (perfis + lista do administrador)" : "do seu perfil"} />
-            {can(profile.role, "processos.write") && <ImportarPublicacoes action={importarPublicacoes} />}
+            {can(profile, "processos.write") && <ImportarPublicacoes action={importarPublicacoes} />}
           </>
         }
       />
@@ -109,7 +109,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
             items={items}
             processos={processos}
             responsaveis={responsaveis}
-            canDelete={can(profile.role, "processos.delete")}
+            canDelete={can(profile, "processos.delete")}
             lote={marcarTratadasEmLote}
             actions={{ vincular: vincularPublicacao, status: setPublicacaoStatus, gerarPrazo: gerarPrazoDaPublicacao, remove: deletePublicacao }}
           />

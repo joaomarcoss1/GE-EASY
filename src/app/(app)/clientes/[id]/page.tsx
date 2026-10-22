@@ -24,6 +24,7 @@ import { LinkTabs } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DocumentosPanel } from "@/components/documentos/documentos-panel";
 import { clienteFields } from "../fields";
+import { CicloCard } from "@/components/clientes/ciclo-card";
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -46,15 +47,15 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
     supabase.from("tarefas").select("*").eq("cliente_id", id).order("vencimento", { ascending: true }).limit(50),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("cliente_id", id),
   ]);
-  const canProcessos = can(profile.role, "processos.view");
+  const canProcessos = can(profile, "processos.view");
   const { data: processosData } = canProcessos
     ? await supabase.from("processos").select("id, titulo, numero_cnj, area, fase, status, parte_contraria, updated_at").eq("cliente_id", id).order("updated_at", { ascending: false })
     : { data: [] };
   const procs = processosData ?? [];
   const [profiles, consultores, drive] = await Promise.all([getProfileMap(), consultorOptions(), getDriveEscritorioStatus()]);
   const consultor = cliente.consultor_id ? profiles.get(cliente.consultor_id) : null;
-  const canWrite = can(profile.role, "clientes.write");
-  const canTransfer = can(profile.role, "clientes.transfer");
+  const canWrite = can(profile, "clientes.write");
+  const canTransfer = can(profile, "clientes.transfer");
   const ops = (oportunidades ?? []) as Oportunidade[];
   const cts = (cotas ?? []) as ConsorcioCota[];
   const aps = (apolices ?? []) as SeguroApolice[];
@@ -92,12 +93,12 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
             {cliente.email && <a href={`mailto:${cliente.email}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" aria-label="E-mail"><Mail className="h-4 w-4" /></a>}
             {canWrite && <FormDrawerButton action={updateCliente} fields={clienteFields(consultores, canTransfer)} values={{ ...cliente, tags: cliente.tags.join(", ") }} hidden={{ id }} title="Editar cliente" label="Editar" icon="edit" variant="secondary" />}
             {drive.ativo && <DrivePastaButton tipo="cliente" id={id} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-fg hover:bg-surface-2 hover:no-underline dark:text-fg" />}
-            {can(profile.role, "lgpd.exportar") && (
+            {can(profile, "lgpd.exportar") && (
               <a href={`/api/lgpd/cliente/${id}`} download className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" title="Relatório de dados pessoais do titular (LGPD, art. 18)">
                 <FileJson className="h-4 w-4" /> Dados LGPD
               </a>
             )}
-            {can(profile.role, "lgpd.anonimizar") && (
+            {can(profile, "lgpd.anonimizar") && (
               <ConfirmAction
                 action={anonimizarCliente}
                 id={id}
@@ -108,7 +109,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
                 variant="secondary"
               />
             )}
-            {can(profile.role, "clientes.delete") && <ConfirmAction action={deleteCliente} id={id} title="Excluir cliente?" message="O cliente e seu histórico serão removidos. Clientes com consórcios ou seguros não podem ser excluídos." redirectTo="/clientes" variant="secondary" />}
+            {can(profile, "clientes.delete") && <ConfirmAction action={deleteCliente} id={id} title="Excluir cliente?" message="O cliente vai para a lixeira (o administrador pode restaurar). O histórico é preservado." redirectTo="/clientes" variant="secondary" />}
           </div>
         </div>
         <div className="grid grid-cols-2 border-t border-line sm:grid-cols-4">
@@ -137,6 +138,8 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
           { key: "documentos", label: "Documentos", count: docCount ?? 0 },
         ]}
       />
+
+      {tab === "geral" && <CicloCard cliente={cliente} profile={profile} consultores={consultores} nomes={profiles} />}
 
       {tab === "geral" && (
         <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
@@ -186,7 +189,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
                           </div>
                           <p className="mt-1.5 whitespace-pre-wrap text-sm">{h.descricao}</p>
                         </div>
-                        {h.tipo !== "sistema" && (h.autor_id === profile.id || can(profile.role, "clientes.delete")) && <ConfirmAction action={deleteInteracao} id={h.id} title="Remover registro?" />}
+                        {h.tipo !== "sistema" && (h.autor_id === profile.id || can(profile, "clientes.delete")) && <ConfirmAction action={deleteInteracao} id={h.id} title="Remover registro?" />}
                       </div>
                     </li>
                   ))}
@@ -202,7 +205,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
           <CardHeader
             title="Processos do cliente"
             icon={<Scale className="h-4 w-4" />}
-            action={can(profile.role, "processos.write") && <LinkButton href={`/processos?novo=1&cliente_id=${id}`} size="sm" variant="secondary"><Plus className="h-4 w-4" />Novo processo</LinkButton>}
+            action={can(profile, "processos.write") && <LinkButton href={`/processos?novo=1&cliente_id=${id}`} size="sm" variant="secondary"><Plus className="h-4 w-4" />Novo processo</LinkButton>}
           />
           {procs.length === 0 ? <EmptyState title="Nenhum processo vinculado" /> : (
             <div className="overflow-x-auto"><table className="table-base"><thead><tr><th>Processo</th><th>Área</th><th>Fase</th><th>Situação</th><th>Atualizado</th></tr></thead><tbody>

@@ -53,6 +53,7 @@ interface ProcRow {
   datajud_atualizado_em: string | null;
   responsavel_id: string | null;
   equipe: string[] | null;
+  empresa_id: string;
 }
 
 /**
@@ -63,7 +64,7 @@ interface ProcRow {
 export async function sincronizarProcessoDatajud(db: SupabaseClient, processoId: string, opts: { notificarDireto?: boolean } = {}): Promise<ResultadoDatajud> {
   const { data: p } = await db
     .from("processos")
-    .select("id, titulo, numero_cnj, classe, assunto, orgao, tribunal, data_distribuicao, datajud_sincronizado_em, datajud_atualizado_em, responsavel_id, equipe")
+    .select("id, titulo, numero_cnj, classe, assunto, orgao, tribunal, data_distribuicao, datajud_sincronizado_em, datajud_atualizado_em, responsavel_id, equipe, empresa_id")
     .eq("id", processoId)
     .maybeSingle<ProcRow>();
   if (!p) return { status: "erro", novos: 0, mensagem: "Processo não encontrado ou sem acesso." };
@@ -129,6 +130,7 @@ export async function sincronizarProcessoDatajud(db: SupabaseClient, processoId:
       if (destinos.length)
         await db.from("notificacoes").insert(
           destinos.map((user_id) => ({
+            empresa_id: p.empresa_id,
             user_id,
             titulo: "Novas movimentações no processo",
             mensagem: `${gravados} movimentação(ões) do DataJud em ${p.titulo}`.slice(0, 300),

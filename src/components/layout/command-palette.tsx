@@ -3,14 +3,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, User, Landmark, ShieldCheck, CornerDownLeft, Loader2, ArrowRight, Scale } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { NAV } from "@/lib/nav";
-import { can } from "@/lib/rbac";
-import type { AppRole } from "@/lib/types";
+import { menuDaArea } from "@/lib/nav";
+import type { Area, Profile } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 interface Result { tipo: string; id: string; titulo: string; subtitulo: string; link: string }
 
-export function CommandPalette({ role, open, setOpen }: { role: AppRole; open: boolean; setOpen: (v: boolean) => void }) {
+export function CommandPalette({
+  profile,
+  areas,
+  plataformaAdmin,
+  open,
+  setOpen,
+}: {
+  profile: Pick<Profile, "permissoes" | "admin_master">;
+  areas: Area[];
+  plataformaAdmin: boolean;
+  open: boolean;
+  setOpen: (v: boolean) => void;
+}) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Result[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,8 +65,8 @@ export function CommandPalette({ role, open, setOpen }: { role: AppRole; open: b
     return () => clearTimeout(t);
   }, [q, supabase]);
 
-  const pages = NAV.flatMap((g) => g.items)
-    .filter((i) => !i.permission || can(role, i.permission))
+  const pages = menuDaArea(profile, areas, null, plataformaAdmin)
+    .flatMap((g) => g.items)
     .filter((i) => !q || i.label.toLowerCase().includes(q.toLowerCase()))
     .slice(0, q ? 4 : 6)
     .map((i) => ({ tipo: "pagina", id: i.href, titulo: i.label, subtitulo: "Ir para página", link: i.href }));

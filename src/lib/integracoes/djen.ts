@@ -7,12 +7,17 @@ export interface OabMonitorada extends Oab {
   rotulo: string;
 }
 
-/** OABs monitoradas: as cadastradas nos perfis ativos + as adicionais definidas pelo administrador. */
-export async function oabsMonitoradas(db: SupabaseClient): Promise<OabMonitorada[]> {
-  const [{ data: perfis }, { data: cfg }] = await Promise.all([
-    db.from("profiles").select("id, oab, active").not("oab", "is", null),
-    db.from("configuracoes").select("valor").eq("chave", "djen").maybeSingle(),
+/**
+ * OABs monitoradas da empresa: as dos membros ativos + as adicionais definidas pelo administrador.
+ * Filtra explicitamente pela empresa (funciona com a sessão do usuário e com o service role da rotina).
+ */
+export async function oabsMonitoradas(db: SupabaseClient, empresaId: string): Promise<OabMonitorada[]> {
+  const [{ data: membros }, { data: cfg }] = await Promise.all([
+    db.from("empresa_membros").select("user_id").eq("empresa_id", empresaId).eq("ativo", true),
+    db.from("configuracoes").select("valor").eq("empresa_id", empresaId).eq("chave", "djen").maybeSingle(),
   ]);
+  const ids = (membros ?? []).map((m) => m.user_id as string);
+  const { data: perfis } = ids.length ? await db.from("profiles").select("id, oab, active").in("id", ids).not("oab", "is", null) : { data: [] };
   const mapa = new Map<string, OabMonitorada>();
   for (const p of perfis ?? []) {
     if (!p.active) continue;
@@ -58,10 +63,11 @@ export async function buscarComunicacoesDjen(oab: Oab, inicio: string, fim: stri
   return { itens };
 }
 
-/** Grava as comunicações como publicações (sem duplicar: hash único). Retorna quantas são novas. */
-export async function importarComunicacoes(db: SupabaseClient, itens: ComunicacaoDjen[], oab: OabMonitorada): Promise<{ novas: number; erro?: string }> {
+/** Grava as comunicações como publicações da empresa (sem duplicar: hash único por empresa). Retorna quantas são novas. */
+export async function importarComunicacoes(db: SupabaseClient, itens: ComunicacaoDjen[], oab: OabMonitorada, empresaId: string): Promise<{ novas: number; erro?: string }> {
   if (!itens.length) return { novas: 0 };
   const rows = itens.map((c) => ({
+    empresa_id: empresaId,
     hash: `djen:${c.hash}`.slice(0, 200),
     origem: "djen",
     fonte: `DJEN${c.tribunal ? ` · ${c.tribunal}` : ""}`,
@@ -78,7 +84,7 @@ export async function importarComunicacoes(db: SupabaseClient, itens: Comunicaca
   }));
   let novas = 0;
   for (let i = 0; i < rows.length; i += 100) {
-    const { data, error } = await db.from("publicacoes").upsert(rows.slice(i, i + 100), { onConflict: "hash", ignoreDuplicates: true }).select("id");
+    const { data, error } = await db.from("publicacoes").upsert(rows.slice(i, i + 100), { onConflict: "empresa_id,hash", ignoreDuplicates: true }).select("id");
     if (error) return { novas, erro: error.code === "42501" ? "Sem permissão para registrar publicações." : "Falha ao gravar publicações." };
     novas += data?.length ?? 0;
   }

@@ -32,7 +32,7 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
   const { data: c } = await supabase.from("contratos_honorarios").select("*").eq("id", id).maybeSingle<ContratoHonorarios>();
   if (!c) notFound();
 
-  const fin = can(profile.role, "financeiro.view");
+  const fin = can(profile, "financeiro.view");
   const [{ data: cliente }, { data: processo }, { data: parcelas }, { data: horas }, profiles] = await Promise.all([
     supabase.from("clientes").select("id, nome, documento").eq("id", c.cliente_id).maybeSingle(),
     c.processo_id ? supabase.from("processos").select("id, titulo, numero_cnj, valor_causa").eq("id", c.processo_id).maybeSingle() : Promise.resolve({ data: null }),
@@ -48,7 +48,7 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
   const minTot = hs.reduce((a, h) => a + h.minutos, 0);
   const pendIds = hs.filter((h) => h.faturavel && !h.faturado).map((h) => h.id);
 
-  const canWrite = can(profile.role, "contratos.write");
+  const canWrite = can(profile, "contratos.write");
   const [clientes, processos, departamentos, juridico] = canWrite || fin ? await Promise.all([clienteOptions(), processoOptions(), departamentoOptions(), juridicoOptions()]) : [[], [], [], []];
   const opts = { clientes, processos, departamentos };
   const rows: LancRow[] = lancs.map((l) => ({
@@ -76,7 +76,7 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
               {canWrite && (
                 <FormDrawerButton action={saveContrato} fields={contratoFields({ clientes, processos, departamentos, juridico })} values={{ ...c }} hidden={{ id }} title="Editar contrato" label="Editar" icon="edit" variant="secondary" width="max-w-3xl" />
               )}
-              {can(profile.role, "processos.delete") && <ConfirmAction action={deleteContrato} id={id} title="Excluir contrato?" message="As parcelas geradas no financeiro também serão excluídas." redirectTo="/contratos" variant="secondary" />}
+              {can(profile, "processos.delete") && <ConfirmAction action={deleteContrato} id={id} title="Excluir contrato?" message="As parcelas geradas no financeiro também serão excluídas." redirectTo="/contratos" variant="secondary" />}
             </div>
           </div>
         </div>

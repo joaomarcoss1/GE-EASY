@@ -29,7 +29,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
   const resp = manager && sp.resp && UUID.test(sp.resp) ? sp.resp : undefined;
   const prioridade = sp.prioridade && PRIO_VALUES.includes(sp.prioridade) ? sp.prioridade : undefined;
   const dep = sp.dep && UUID.test(sp.dep) ? sp.dep : undefined;
-  const canProcessos = can(profile.role, "processos.view");
+  const canProcessos = can(profile, "processos.view");
   const today = todayISO();
   const weekStart = addDays(today, -((weekday(today) + 6) % 7)); // segunda-feira
 

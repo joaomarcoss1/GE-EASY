@@ -47,7 +47,8 @@ export async function registerDocumento(input: { cliente_id?: string | null; pro
   let clienteId = parsed.data.cliente_id?.toLowerCase() ?? null;
   if (!processoId && !clienteId) return { error: "Informe o cliente ou o processo do documento." };
   const path = parsed.data.storage_path;
-  const pasta = processoId ? `processos/${processoId}` : `clientes/${clienteId}`;
+  // arquivos novos ficam sob a pasta da empresa (empresas/<empresa_id>/...)
+  const pasta = `empresas/${g.session.empresa!.id}/${processoId ? `processos/${processoId}` : `clientes/${clienteId}`}`;
   const prefix = `${pasta}/`;
   const fileKey = path.slice(prefix.length);
   if (!path.startsWith(prefix) || path.includes("..") || !FILE_KEY.test(fileKey)) return { error: "Caminho do arquivo inválido." };
@@ -111,10 +112,11 @@ export async function registerDocumento(input: { cliente_id?: string | null; pro
   // Arquivamento automático no Drive do escritório (não atrasa a resposta)
   if (googleConfigured() && hasServiceRole()) {
     const docId = row.id as string;
+    const empresaId = g.session.empresa!.id;
     after(async () => {
       try {
         const admin = createAdminClient();
-        if (await getDriveEscritorio(admin)) await arquivarDocumentoNoDrive(admin, docId);
+        if (await getDriveEscritorio(admin, empresaId)) await arquivarDocumentoNoDrive(admin, docId, empresaId);
       } catch (e) {
         console.error("[documentos] drive automático", e instanceof Error ? e.message : e);
       }
@@ -145,21 +147,23 @@ export async function getDownloadUrl(id: string): Promise<ActionState & { url?: 
   return { ok: true, url: data.signedUrl };
 }
 
-/** Exclui o registro (RLS: gestão ou quem enviou) e depois o objeto no Storage. */
+/**
+ * Exclui o documento (RLS: gestão ou quem enviou). A exclusão é lógica: o registro vai para a lixeira e o
+ * arquivo permanece no Storage (privado) para restauração; a remoção definitiva é da rotina de retenção/LGPD.
+ */
 export async function deleteDocumento(id: string): Promise<ActionState> {
   const g = await guard();
   if ("denied" in g) return g.denied;
   if (!isUuid(id)) return { error: "Documento inválido." };
   const supabase = await createClient();
-  const { data: doc, error } = await supabase.from("documentos").delete().eq("id", id).select("cliente_id, processo_id, storage_path").maybeSingle();
+  const { data: doc } = await supabase.from("documentos").select("cliente_id, processo_id").eq("id", id).maybeSingle();
+  if (!doc) return { error: "Documento não encontrado ou sem acesso." };
+  const { error } = await supabase.from("documentos").delete().eq("id", id);
   if (error) return dbError(error);
-  if (!doc) return { error: "Sem permissão para excluir este documento." };
-  if (doc.storage_path) {
-    const { error: rmError } = await supabase.storage.from(BUCKET).remove([doc.storage_path]);
-    if (rmError) console.error("[documentos] objeto não removido", doc.storage_path, rmError.message);
-  }
+  const { data: ainda } = await supabase.from("documentos").select("id").eq("id", id).maybeSingle();
+  if (ainda) return { error: "Sem permissão para excluir este documento." };
   revalidateDocs(doc.cliente_id, doc.processo_id);
-  return { ok: true, message: "Documento excluído." };
+  return { ok: true, message: "Documento movido para a lixeira." };
 }
 
 /** Arquiva o documento no Drive do escritório (pasta do cliente/processo). */

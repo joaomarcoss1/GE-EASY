@@ -29,7 +29,7 @@ const STATUS_LABEL: Record<Status, string> = {
 };
 
 /** Área de envio (arrastar e soltar) — o arquivo vai direto do navegador ao Storage (RLS) e depois é registrado. */
-export function DocumentUploader({ clienteId, processoId }: { clienteId?: string | null; processoId?: string | null }) {
+export function DocumentUploader({ empresaId, clienteId, processoId }: { empresaId: string; clienteId?: string | null; processoId?: string | null }) {
   const [items, setItems] = useState<Item[]>([]);
   const [categoria, setCategoria] = useState(processoId ? "peticao" : "outros");
   const [dragging, setDragging] = useState(false);
@@ -67,7 +67,7 @@ export function DocumentUploader({ clienteId, processoId }: { clienteId?: string
     for (const [n, item] of queue.entries()) {
       setProgress({ done: n, total: queue.length });
       const mime = resolveMime(item.file.name, item.file.type) ?? "application/octet-stream";
-      const pasta = processoId ? `processos/${processoId}` : `clientes/${clienteId}`;
+      const pasta = `empresas/${empresaId}/${processoId ? `processos/${processoId}` : `clientes/${clienteId}`}`;
       const path = `${pasta}/${crypto.randomUUID()}-${sanitizeFileName(item.file.name)}`;
       update(item.key, { status: "enviando", error: undefined });
       const { error: upError } = await supabase.storage.from("documentos").upload(path, item.file, { contentType: mime, upsert: false, cacheControl: "3600" });

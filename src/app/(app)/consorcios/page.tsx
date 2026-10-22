@@ -61,8 +61,8 @@ export default async function ConsorciosPage({ searchParams }: { searchParams: P
   const contempladasAno = all.filter((c) => c.contemplada_em && c.contemplada_em.startsWith(ano)).length;
   const propostas = all.filter((c) => c.status === "proposta");
 
-  const canWrite = can(profile.role, "negocios.write");
-  const canTransfer = can(profile.role, "clientes.transfer");
+  const canWrite = can(profile, "negocios.write");
+  const canTransfer = can(profile, "clientes.transfer");
   const novo = sp.novo === "1";
   const [clientes, produtos, consultores] = canWrite ? await Promise.all([clienteOptions(), produtoOptions("consorcio"), canTransfer ? consultorOptions() : Promise.resolve([])]) : [[], [], []];
   const filtered = Boolean(sp.q || sp.status || sp.categoria || sp.administradora);

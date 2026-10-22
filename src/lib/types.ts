@@ -1,12 +1,16 @@
-export type AppRole = "admin" | "gestor" | "financeiro" | "advogado" | "assistente_juridico" | "consultor" | "consultor_externo";
+export type AppRole = "admin" | "gestor" | "financeiro" | "advogado" | "assistente_juridico" | "administrativo" | "consultor" | "consultor_externo";
 export type LinhaNegocio = "consorcio" | "seguro";
+/** Áreas de trabalho (entrada por departamento) */
+export type Area = "consultor" | "administrativo" | "juridico" | "rh" | "financeiro";
 
 export interface Profile {
   id: string;
   full_name: string;
   email: string;
   phone: string | null;
+  /** Na sessão: papel do vínculo com a empresa ativa (escopo dos dados) */
   role: AppRole;
+  /** Na sessão: conta ativa E vínculo ativo na empresa */
   active: boolean;
   avatar_url: string | null;
   cargo: string | null;
@@ -15,7 +19,23 @@ export interface Profile {
   is_master: boolean;
   oab: string | null;
   created_at: string;
+  /** Somente na sessão: funcionalidades efetivas na empresa ativa */
+  permissoes?: string[];
+  admin_master?: boolean;
 }
+
+export interface EmpresaResumo {
+  id: string;
+  nome: string;
+  slug: string;
+  status: "trial" | "ativa" | "suspensa" | "cancelada";
+  marca?: { cor?: string; logo_url?: string } | null;
+  fuso?: string;
+  modulos?: string[];
+}
+
+export type CadastroStatus = "pre_cadastro" | "pendente_documentacao" | "documentacao_completa" | "transferido_administrativo" | "ativo" | "perdido" | "inativo";
+export type Carteira = "consultor" | "administrativo" | "juridico";
 
 export interface Parceiro {
   id: string;
@@ -69,6 +89,17 @@ export interface Cliente {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  carteira: Carteira;
+  status_cadastro: CadastroStatus;
+  pendente_desde: string | null;
+  prazo_documentacao: string | null;
+  prorrogacoes: number;
+  transferido_em: string | null;
+  consultor_original_id: string | null;
+  responsavel_admin_id: string | null;
+  motivo_perda: string | null;
+  lgpd_consentimento_em: string | null;
+  lgpd_termo_versao: string | null;
 }
 
 export interface Interacao {
@@ -275,6 +306,11 @@ export interface Documento {
   processo_id?: string | null;
   enviado_por: string | null;
   created_at: string;
+  analise_status?: "enviado" | "em_analise" | "aprovado" | "recusado" | "vencido";
+  analise_motivo?: string | null;
+  analisado_por?: string | null;
+  analisado_em?: string | null;
+  validade?: string | null;
 }
 
 export interface Notificacao {

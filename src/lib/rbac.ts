@@ -1,55 +1,64 @@
-import type { AppRole } from "./types";
-
 /**
- * Matriz de permissões da interface. A autorização REAL é aplicada no banco
- * (RLS + triggers); estas regras apenas escondem ações que o usuário não pode
- * executar e validam as Server Actions antes de chegar ao banco.
+ * Funcionalidades do sistema (catálogo em public.funcionalidades). Cada usuário recebe as suas pelos
+ * níveis dos departamentos + exceções individuais, definidas pelo administrador master (tela Acessos).
+ * A autorização REAL é aplicada no banco (RLS com tem_permissao() + regras de escopo); aqui as mesmas
+ * chaves escondem o que o usuário não pode fazer e validam as Server Actions antes de chegar ao banco.
  */
-export const PERMISSIONS = {
-  "dashboard.view": ["admin", "gestor", "financeiro", "advogado", "assistente_juridico", "consultor", "consultor_externo"],
-  "clientes.view": ["admin", "gestor", "financeiro", "advogado", "assistente_juridico", "consultor", "consultor_externo"],
-  "clientes.write": ["admin", "gestor", "advogado", "assistente_juridico", "consultor", "consultor_externo"],
-  "processos.view": ["admin", "gestor", "financeiro", "advogado", "assistente_juridico"],
-  "processos.write": ["admin", "gestor", "advogado", "assistente_juridico"],
-  "processos.delete": ["admin", "gestor"],
-  "processos.financeiro": ["admin", "gestor", "financeiro", "advogado"],
-  "departamentos.view": ["admin", "gestor", "financeiro", "advogado", "assistente_juridico", "consultor", "consultor_externo"],
-  "departamentos.manage": ["admin", "gestor"],
-  "comercial.view": ["admin", "gestor", "financeiro", "consultor", "consultor_externo"],
-  "financeiro.view": ["admin", "gestor", "financeiro"],
-  "contratos.view": ["admin", "gestor", "financeiro", "advogado", "assistente_juridico"],
-  "contratos.write": ["admin", "gestor", "financeiro", "advogado"],
-  "horas.lancar": ["admin", "gestor", "financeiro", "advogado", "assistente_juridico"],
-  "horas.gerir": ["admin", "gestor", "financeiro"],
-  "atendimentos.view": ["admin", "gestor", "advogado", "assistente_juridico", "consultor", "consultor_externo"],
-  "publicacoes.view": ["admin", "gestor", "advogado", "assistente_juridico"],
-  "modelos.view": ["admin", "gestor", "financeiro", "advogado", "assistente_juridico", "consultor", "consultor_externo"],
-  "modelos.write": ["admin", "gestor", "financeiro", "advogado", "assistente_juridico"],
-  "clientes.delete": ["admin", "gestor"],
-  "clientes.transfer": ["admin", "gestor"],
-  "negocios.write": ["admin", "gestor", "consultor", "consultor_externo"],
-  "negocios.delete": ["admin", "gestor"],
-  "comissoes.view": ["admin", "gestor", "financeiro", "consultor", "consultor_externo"],
-  "comissoes.manage": ["admin", "gestor", "financeiro"],
-  "metas.manage": ["admin", "gestor"],
-  "consultores.manage": ["admin", "gestor"],
-  "relatorios.view": ["admin", "gestor", "financeiro"],
-  "cadastros.manage": ["admin", "gestor"],
-  "usuarios.manage": ["admin"],
-  "auditoria.view": ["admin"],
-  "integracoes.manage": ["admin"],
-  "lgpd.exportar": ["admin", "gestor"],
-  "lgpd.anonimizar": ["admin"],
-  "visitas.checkin": ["consultor", "consultor_externo", "gestor", "admin"],
-} as const satisfies Record<string, readonly AppRole[]>;
+export const FUNCIONALIDADES = [
+  "dashboard.view",
+  "clientes.view",
+  "clientes.write",
+  "clientes.delete",
+  "clientes.ver_todos",
+  "clientes.transfer",
+  "clientes.exportar",
+  "documentacao.analisar",
+  "documentacao.prorrogar",
+  "juridico.encaminhar",
+  "cadastros.manage",
+  "lgpd.exportar",
+  "comercial.view",
+  "negocios.write",
+  "negocios.delete",
+  "visitas.checkin",
+  "comissoes.view",
+  "metas.manage",
+  "consultores.manage",
+  "processos.view",
+  "processos.write",
+  "processos.delete",
+  "publicacoes.view",
+  "atendimentos.view",
+  "contratos.view",
+  "contratos.write",
+  "horas.lancar",
+  "modelos.view",
+  "modelos.write",
+  "departamentos.view",
+  "departamentos.manage",
+  "financeiro.view",
+  "processos.financeiro",
+  "comissoes.manage",
+  "horas.gerir",
+  "relatorios.view",
+  "rh.funcionarios.ver",
+  "usuarios.manage",
+  "auditoria.view",
+  "lixeira.gerir",
+  "integracoes.manage",
+  "lgpd.anonimizar",
+] as const;
 
-export type Permission = keyof typeof PERMISSIONS;
+export type Permission = (typeof FUNCIONALIDADES)[number];
 
-export function can(role: AppRole | null | undefined, permission: Permission): boolean {
-  if (!role) return false;
-  return (PERMISSIONS[permission] as readonly AppRole[]).includes(role);
+/** O sujeito é o perfil da sessão (com as permissões efetivas da empresa ativa). Sem permissões = nada. */
+export function can(subject: { permissoes?: readonly string[] } | null | undefined, permission: Permission): boolean {
+  return !!subject?.permissoes?.includes(permission);
 }
 
-export const isJuridicoRole = (role: AppRole) => ["admin", "gestor", "advogado", "assistente_juridico"].includes(role);
-export const isManagerRole = (role: AppRole) => role === "admin" || role === "gestor";
-export const isBackofficeRole = (role: AppRole) => role === "admin" || role === "gestor" || role === "financeiro";
+export const isPermission = (v: string): v is Permission => (FUNCIONALIDADES as readonly string[]).includes(v);
+
+// Perfis de escopo (app_role): definem QUAIS registros a pessoa enxerga, não o que ela pode fazer
+export const isJuridicoRole = (role: string) => ["admin", "gestor", "advogado", "assistente_juridico"].includes(role);
+export const isManagerRole = (role: string) => role === "admin" || role === "gestor";
+export const isBackofficeRole = (role: string) => role === "admin" || role === "gestor" || role === "financeiro";

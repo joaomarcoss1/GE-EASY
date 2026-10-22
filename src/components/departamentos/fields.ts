@@ -1,5 +1,5 @@
 import type { FieldDef } from "@/components/ui/form";
-import { DEPARTAMENTO_CORES, PRIORIDADES, TAREFA_STATUS, type Option } from "@/lib/constants";
+import { AREAS, DEPARTAMENTO_CORES, PRIORIDADES, TAREFA_STATUS, type Option } from "@/lib/constants";
 
 /** Formulário de demanda (tarefa vinculada ao departamento). */
 export function demandaFields(o: { processos: Option[]; membros: Option[]; canAssign: boolean; withStatus: boolean }): FieldDef[] {
@@ -26,6 +26,7 @@ export function departamentoFields(users: Option[]): FieldDef[] {
     { name: "nome", label: "Nome do departamento", required: true, placeholder: "Ex.: Jurídico Contencioso", span: 4 },
     { name: "sigla", label: "Sigla", placeholder: "Ex.: CONT", span: 2, help: "Até 12 caracteres" },
     { name: "cor", label: "Cor", type: "select", options: DEPARTAMENTO_CORES, emptyOption: false, span: 2 },
+    { name: "tipo", label: "Área (entrada por departamento)", type: "select", options: [...AREAS.map((a) => ({ value: a.value, label: a.label })), { value: "personalizado", label: "Personalizado" }], emptyOption: false, span: 2, help: "Define os níveis padrão e a área de trabalho." },
     { name: "responsavel_id", label: "Responsável", type: "select", options: users, emptyOption: "Sem responsável", span: 4, help: "Coordena a equipe e distribui as demandas." },
     { name: "descricao", label: "Descrição / atribuições", type: "textarea", rows: 3, span: 6 },
   ];
