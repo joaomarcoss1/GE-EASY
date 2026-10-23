@@ -217,7 +217,7 @@ export async function desligarFuncionario(_: ActionState, formData: FormData): P
   const v = parsed.data;
   if (v.user_id === g.session.userId) return { error: "Você não pode desligar a si mesmo." };
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("desligar_membro", { p_user: v.user_id, p_destino: v.destino ?? null, p_motivo: v.motivo });
+  const { data, error } = await supabase.rpc("desligar_membro_destino", { p_user: v.user_id, p_destino: v.destino ?? null, p_motivo: v.motivo });
   if (error) return erro(error);
   const r = (data ?? {}) as { clientes?: number; tarefas?: number; negocios?: number; dispositivos?: number };
   revalidatePath("/consultor");
