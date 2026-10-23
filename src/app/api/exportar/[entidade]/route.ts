@@ -8,6 +8,7 @@ import {
   PROCESSO_AREAS, PROCESSO_FASES, PROCESSO_POLO, PROCESSO_RISCO, PROCESSO_STATUS, RAMOS_SEGURO, type Option,
 } from "@/lib/constants";
 import { date as dateBR, maskDocumento, maskPhone, todayISO } from "@/lib/format";
+import { toCsv as csvTexto } from "@/lib/csv";
 import { fetchAll } from "@/components/dashboard/fetch-all";
 import { addDays, firstDay, isISODate, isMonth, lastDay, spStartOf } from "@/components/dashboard/periods";
 
@@ -35,18 +36,7 @@ const embedded = (r: Row, k: string, field = "nome") => {
 };
 const yesNo = (r: Row, k: string) => (r[k] === true ? "Sim" : r[k] === false ? "Não" : "");
 
-/** Aspas sempre; neutraliza injeção de fórmula (= + - @ TAB CR) prefixando apóstrofo. */
-function csvCell(v: Cell): string {
-  let s = v == null ? "" : String(v);
-  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
-  return `"${s.replace(/"/g, '""')}"`;
-}
-
-function toCsv(columns: Column[], rows: Row[]): string {
-  const lines = [columns.map(([h]) => csvCell(h)).join(";")];
-  for (const r of rows) lines.push(columns.map(([, fn]) => csvCell(fn(r))).join(";"));
-  return "﻿" + lines.join("\r\n") + "\r\n";
-}
+const toCsv = (columns: Column[], rows: Row[]) => csvTexto(columns.map(([h]) => h), rows.map((r) => columns.map(([, fn]) => fn(r))));
 
 // ----------------------------------------------------------------- entidades
 type DateKind = "date" | "timestamp" | "month";

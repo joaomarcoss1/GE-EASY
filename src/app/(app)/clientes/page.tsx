@@ -27,7 +27,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
   const { page, size, from, to } = pageRange(sp.page);
   const supabase = await createClient();
 
-  let query = supabase.from("clientes").select("*", { count: "exact" }).order("created_at", { ascending: false }).range(from, to);
+  let query = supabase.from("clientes").select("*", { count: "estimated" }).order("created_at", { ascending: false }).range(from, to);
   const q = searchTerm(sp.q);
   if (q) {
     const digits = q.replace(/\D/g, "");

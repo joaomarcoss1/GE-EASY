@@ -23,7 +23,7 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
   const supabase = await createClient();
   let q = supabase
     .from("clientes")
-    .select("id, nome, documento, cidade, uf, carteira, status_cadastro, consultor_id, responsavel_admin_id, prazo_documentacao, origem", { count: "exact" })
+    .select("id, nome, documento, cidade, uf, carteira, status_cadastro, consultor_id, responsavel_admin_id, prazo_documentacao, origem", { count: "estimated" })
     .order("updated_at", { ascending: false })
     .range(from, to);
   const termo = searchTerm(sp.q);

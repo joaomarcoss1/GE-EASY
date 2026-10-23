@@ -31,7 +31,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
 
   let query = supabase
     .from("publicacoes")
-    .select("id, data_publicacao, fonte, numero_processo, conteudo, status, prazo_id, responsavel_id, processos(id, titulo, numero_cnj)", { count: "exact" })
+    .select("id, data_publicacao, fonte, numero_processo, conteudo, status, prazo_id, responsavel_id, processos(id, titulo, numero_cnj)", { count: "estimated" })
     .order("data_publicacao", { ascending: false })
     .order("created_at", { ascending: false })
     .range(from, to);

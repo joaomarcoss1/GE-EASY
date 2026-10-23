@@ -30,6 +30,11 @@ create table auth.users (
   updated_at timestamptz default now(),
   last_sign_in_at timestamptz
 );
+create table auth.sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz default now()
+);
 create function auth.jwt() returns jsonb language sql stable as $$
   select coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb)
 $$;

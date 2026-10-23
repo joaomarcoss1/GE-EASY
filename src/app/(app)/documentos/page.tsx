@@ -24,7 +24,7 @@ export default async function DocumentosPage({ searchParams }: { searchParams: P
   const { page, size, from, to } = pageRange(sp.page, 25);
   const supabase = await createClient();
 
-  let query = supabase.from("documentos").select("*, clientes(nome)", { count: "exact" }).order("created_at", { ascending: false }).range(from, to);
+  let query = supabase.from("documentos").select("*, clientes(nome)", { count: "estimated" }).order("created_at", { ascending: false }).range(from, to);
   const q = searchTerm(sp.q);
   if (q) query = query.ilike("nome", `%${q}%`);
   const categoria = DOC_CATEGORIAS.some((c) => c.value === sp.categoria) ? sp.categoria : undefined;

@@ -4,6 +4,7 @@ import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 import type { ActionState } from "./types";
 
@@ -18,6 +19,17 @@ const safeNext = (v: unknown) => (typeof v === "string" && v.startsWith("/") && 
 function chaveLogin(...partes: string[]) {
   const segredo = process.env.APP_ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "geeasy-login";
   return createHmac("sha256", segredo).update(partes.join("|")).digest("hex");
+}
+
+/** Falha de login na auditoria das empresas da conta (alerta de força bruta). Pelo servidor; nunca lança. */
+async function registrarFalhaLogin(email: string, ip: string) {
+  if (!hasServiceRole()) return;
+  try {
+    const ua = (await headers()).get("user-agent")?.slice(0, 300) ?? null;
+    await createAdminClient().rpc("auditoria_falha_login", { p_email: email, p_ip: ip, p_ua: ua });
+  } catch (e) {
+    console.error("[falha_login]", e instanceof Error ? e.message : e);
+  }
 }
 
 /** IP do cliente. Na Vercel, x-real-ip / x-forwarded-for são definidos pela própria plataforma. */
@@ -43,6 +55,7 @@ export async function signIn(_: ActionState, formData: FormData): Promise<Action
   if (porIp.data === false || porEmail.data === false) return { error: "Muitas tentativas. Aguarde 15 minutos e tente novamente." };
 
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+  if (error) await registrarFalhaLogin(parsed.data.email, ip);
   if (error) return { error: error.message.includes("Email not confirmed") ? "Confirme seu e-mail antes de entrar." : "E-mail ou senha incorretos." };
   await Promise.all([supabase.rpc("limpar_rate_limit_login", { p_hash: chaveIp }), supabase.rpc("limpar_rate_limit_login", { p_hash: chaveEmail })]);
   // Registro de acesso (Marco Civil da Internet, art. 15: guarda dos registros de acesso a aplicações)

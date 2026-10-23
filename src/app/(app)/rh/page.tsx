@@ -13,12 +13,14 @@ import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/button";
+import { FormDrawerButton } from "@/components/ui/form-drawer";
+import { desligarFuncionario } from "@/lib/actions/acessos";
 
 export const metadata: Metadata = { title: "RH — Funcionários e acessos" };
 
 /** Entrada do RH: equipe da empresa com departamentos, níveis e situação do acesso (somente leitura). */
 export default async function RhPage() {
-  const { profile } = await requireArea("rh");
+  const { profile, userId } = await requireArea("rh");
   const supabase = await createClient();
   const [{ data: membros }, { data: vinculos }, { data: deps }, { data: niveis }] = await Promise.all([
     supabase.from("membros").select("*").order("full_name"),
@@ -37,6 +39,8 @@ export default async function RhPage() {
     porUsuario.set(v.user_id, l);
   }
   const ativos = pessoas.filter((p) => p.active).length;
+  const podeDesligar = profile.admin_master || can(profile, "usuarios.manage");
+  const destinos = pessoas.filter((p) => p.active).map((p) => ({ value: p.id, label: p.full_name || p.email }));
 
   return (
     <>
@@ -57,11 +61,11 @@ export default async function RhPage() {
         <StatCard label="Departamentos" value={(deps ?? []).length} icon={<IdCard className="h-5 w-5" />} />
       </div>
       <Card>
-        <CardHeader title="Equipe" description="Ponto, jornada e pré-folha chegam na fase 7 do roadmap" />
+        <CardHeader title="Equipe" description="Desligar transfere carteira, tarefas e negócios, revoga os aparelhos e encerra o acesso — tudo registrado na auditoria." />
         {pessoas.length === 0 ? <EmptyState title="Nenhum usuário" /> : (
           <div className="overflow-x-auto">
             <table className="table-base">
-              <thead><tr><th>Funcionário</th><th>Perfil</th><th>Departamentos e níveis</th><th>Situação</th><th>Desde</th></tr></thead>
+              <thead><tr><th>Funcionário</th><th>Perfil</th><th>Departamentos e níveis</th><th>Situação</th><th>Desde</th><th /></tr></thead>
               <tbody>
                 {pessoas.map((p) => (
                   <tr key={p.id}>
@@ -70,6 +74,16 @@ export default async function RhPage() {
                     <td><div className="flex flex-wrap gap-1">{(porUsuario.get(p.id) ?? []).map((v, i) => <Badge key={i} tone={v.ativo ? "brand" : "slate"}>{v.dep}{v.nivel ? ` · ${v.nivel}` : ""}</Badge>)}{!porUsuario.get(p.id)?.length && <span className="text-xs text-muted">—</span>}</div></td>
                     <td>{p.active ? <Badge tone="green">Ativo</Badge> : <Badge tone="amber">Desativado</Badge>}</td>
                     <td className="text-xs text-muted">{date(p.created_at)}</td>
+                    <td className="text-right">
+                      {podeDesligar && p.active && p.id !== userId && !p.is_master && (
+                        <FormDrawerButton action={desligarFuncionario} hidden={{ user_id: p.id }} title={`Desligar ${p.full_name || p.email}`} label="Desligar" icon="none" size="sm" variant="ghost" width="max-w-md" submitLabel="Confirmar desligamento"
+                          description="O acesso termina na hora. Clientes, tarefas e negócios abertos vão para quem você escolher (ou para a base administrativa)."
+                          fields={[
+                            { name: "destino", label: "Transferir para", type: "select", options: destinos.filter((d) => d.value !== p.id), emptyOption: "Base administrativa (sem consultor)", span: 6 },
+                            { name: "motivo", label: "Motivo", type: "textarea", rows: 3, required: true, span: 6 },
+                          ]} />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

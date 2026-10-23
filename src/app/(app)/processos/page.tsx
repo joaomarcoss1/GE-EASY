@@ -35,7 +35,7 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
 
   let query = supabase
     .from("processos")
-    .select("id, titulo, numero_cnj, numero_interno, area, fase, status, risco, tribunal, comarca, uf, valor_causa, departamento_id, responsavel_id, parte_contraria, updated_at, segredo_justica, clientes(nome)", { count: "exact" })
+    .select("id, titulo, numero_cnj, numero_interno, area, fase, status, risco, tribunal, comarca, uf, valor_causa, departamento_id, responsavel_id, parte_contraria, updated_at, segredo_justica, clientes(nome)", { count: "estimated" })
     .order("updated_at", { ascending: false })
     .range(from, to);
 

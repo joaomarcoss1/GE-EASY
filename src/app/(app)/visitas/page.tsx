@@ -33,7 +33,7 @@ export default async function VisitasPage({ searchParams }: { searchParams: Prom
   const dayEnd = `${today}T23:59:59.999${BRT}`;
   const monthStart = `${today.slice(0, 7)}-01T00:00:00${BRT}`;
 
-  let hist = supabase.from("visitas").select("*", { count: "exact" }).order("checkin_em", { ascending: false }).range(from, to);
+  let hist = supabase.from("visitas").select("*", { count: "estimated" }).order("checkin_em", { ascending: false }).range(from, to);
   const consultorFilter = isManager && sp.consultor && /^[0-9a-f-]{36}$/i.test(sp.consultor) ? sp.consultor : null;
   if (!isManager) hist = hist.eq("consultor_id", userId);
   else if (consultorFilter) hist = hist.eq("consultor_id", consultorFilter);

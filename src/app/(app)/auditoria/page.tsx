@@ -13,6 +13,7 @@ import { LinkTabs } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterSelect, Pagination } from "@/components/ui/filters";
 import { LinkButton } from "@/components/ui/button";
+import { PrintButton } from "@/components/ui/print-button";
 import { AuditLogList, type AuditItem } from "@/components/configuracoes/audit-log-list";
 import { DateRangeFilter } from "@/components/configuracoes/audit-filters";
 
@@ -45,7 +46,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
         eyebrow="Sistema"
         title="Auditoria"
         description="Trilha imutável de inclusões, alterações, exclusões e acessos sensíveis — com o valor anterior de cada campo."
-        actions={<LinkButton href={exportar} variant="secondary" prefetch={false}>Exportar CSV do período</LinkButton>}
+        actions={<><PrintButton /><LinkButton href={exportar} variant="secondary" prefetch={false}>Exportar CSV (Excel)</LinkButton></>}
       />
       <LinkTabs base="/auditoria" active={tab} tabs={[{ key: "eventos", label: "Eventos" }, { key: "funcionarios", label: "Por funcionário" }, { key: "integridade", label: "Integridade" }]} />
       {tab === "eventos" && <Eventos sp={sp} p={p} />}
@@ -58,7 +59,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
 async function Eventos({ sp, p }: { sp: Record<string, string | undefined>; p: ReturnType<typeof periodo> }) {
   const supabase = await createClient();
   const { page, size, from, to } = pageRange(sp.page, 30);
-  let query = supabase.from("audit_logs").select("*", { count: "exact" }).gte("created_at", p.inicio).lt("created_at", p.fim).order("created_at", { ascending: false }).range(from, to);
+  let query = supabase.from("audit_logs").select("*", { count: "estimated" }).gte("created_at", p.inicio).lt("created_at", p.fim).order("created_at", { ascending: false }).range(from, to);
   if (sp.grupo === "acessos") query = query.in("tabela", TABELAS_ACESSO);
   else if (sp.tabela && TABELAS_AUDITADAS[sp.tabela]) query = query.eq("tabela", sp.tabela);
   if (sp.registro && UUID.test(sp.registro)) query = query.eq("registro_id", sp.registro);

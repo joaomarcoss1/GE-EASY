@@ -23,12 +23,20 @@ describe("permissões por funcionalidade", () => {
 });
 
 describe("catálogo do app = catálogo do banco", () => {
-  it("as chaves de FUNCIONALIDADES são as mesmas da migração", async () => {
-    const { readFileSync } = await import("node:fs");
+  it("as chaves de FUNCIONALIDADES são as mesmas das migrações", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
     const { join } = await import("node:path");
-    const sql = readFileSync(join(process.cwd(), "supabase/migrations/20261022000300_acessos_departamentos.sql"), "utf8");
-    const bloco = sql.slice(sql.indexOf("insert into public.funcionalidades ("), sql.indexOf("-- Funcionalidades padrão"));
-    const chaves = [...bloco.matchAll(/\('([a-z_.]+)', '/g)].map((m) => m[1]).sort();
-    expect(chaves).toEqual([...FUNCIONALIDADES].sort());
+    const dir = join(process.cwd(), "supabase/migrations");
+    const chaves: string[] = [];
+    for (const arq of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
+      const sql = readFileSync(join(dir, arq), "utf8");
+      let i = sql.indexOf("insert into public.funcionalidades (");
+      while (i >= 0) {
+        const fim = sql.indexOf(";", i);
+        chaves.push(...[...sql.slice(i, fim).matchAll(/\('([a-z_.]+)', '/g)].map((m) => m[1]));
+        i = sql.indexOf("insert into public.funcionalidades (", fim);
+      }
+    }
+    expect(chaves.sort()).toEqual([...FUNCIONALIDADES].sort());
   });
 });

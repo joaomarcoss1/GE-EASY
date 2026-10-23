@@ -2,6 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { coordValida, distanciaM } from "@/lib/geo";
+import { parametrosRotas } from "@/lib/parametros";
 import { VISITA_RESULTADOS, VISITA_RESULTADO_VALUES } from "@/components/visitas/options";
 import { dbError, guard, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
@@ -40,19 +42,34 @@ export async function checkIn(input: { cliente_id?: string | null; evento_id?: s
     clienteId = clienteId ?? ev.cliente_id;
     eventoId = ev.id;
   }
+  // Raio: compara com a posição cadastrada do cliente (quando houver)
+  let distancia: number | null = null;
+  let foraDoRaio = false;
   if (clienteId) {
-    const { data: cli } = await supabase.from("clientes").select("id").eq("id", clienteId).maybeSingle();
+    const { data: cli } = await supabase.from("clientes").select("id, latitude, longitude").eq("id", clienteId).maybeSingle();
     if (!cli) return { error: "Cliente não encontrado ou fora da sua carteira." };
+    const alvo = { lat: Number(cli.latitude), lng: Number(cli.longitude) };
+    if (cli.latitude != null && cli.longitude != null && coordValida(alvo)) {
+      const p = await parametrosRotas();
+      distancia = Math.round(distanciaM({ lat: v.lat, lng: v.lng }, alvo));
+      foraDoRaio = distancia > p.raio_m;
+      if (foraDoRaio && p.fora_do_raio === "bloquear") return { error: `Você está a ${distancia} m do cliente (raio de ${p.raio_m} m). Check-in fora do raio não é permitido.` };
+      if (foraDoRaio && !v.observacoes)
+        return { error: `Você está a ${distancia} m do cliente (raio de ${p.raio_m} m). Escreva nas observações o motivo para registrar fora do raio.`, fieldErrors: { observacoes: "Justificativa obrigatória fora do raio" } };
+    }
   }
 
   const { data: row, error } = await supabase
     .from("visitas")
-    .insert({ consultor_id: me, cliente_id: clienteId, evento_id: eventoId, checkin_lat: v.lat, checkin_lng: v.lng, checkin_precisao: v.precisao ?? null, observacoes: v.observacoes })
+    .insert({
+      consultor_id: me, cliente_id: clienteId, evento_id: eventoId, checkin_lat: v.lat, checkin_lng: v.lng, checkin_precisao: v.precisao ?? null, observacoes: v.observacoes,
+      distancia_m: distancia, fora_do_raio: foraDoRaio, justificativa: foraDoRaio ? v.observacoes : null,
+    })
     .select("id")
     .single();
   if (error) return dbError(error);
   revalidatePath("/visitas");
-  return { ok: true, message: "Check-in realizado. Boa visita!", id: row.id };
+  return { ok: true, message: foraDoRaio ? "Check-in registrado fora do raio (vai para revisão do supervisor)." : "Check-in realizado. Boa visita!", id: row.id };
 }
 
 const checkOutSchema = z.object({
