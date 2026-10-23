@@ -17,8 +17,14 @@ export const isArea = (v: string | null | undefined): v is Area => !!v && (AREAS
 const limpo = (v: string | null | undefined, max: number) => (v ?? "").replace(/[^\x20-\x7e]/g, "").slice(0, max);
 
 /** Cabeçalhos enviados ao Supabase a cada requisição do servidor. */
-export function cabecalhosBanco(empresa: string | undefined, area: string | undefined, req?: { get(name: string): string | null }) {
-  const h: Record<string, string> = { "x-geeasy-origem": "web" };
+export function cabecalhosBanco(
+  empresa: string | undefined,
+  area: string | undefined,
+  req?: { get(name: string): string | null },
+  /** Origem da auditoria (web | app) e identificação extra (ex.: aparelho do app de campo) */
+  contexto?: { origem?: "web" | "app"; requestId?: string },
+) {
+  const h: Record<string, string> = { "x-geeasy-origem": contexto?.origem ?? "web" };
   if (isEmpresaId(empresa)) h["x-empresa-id"] = empresa;
   if (isArea(area)) h["x-geeasy-area"] = area;
   if (req) {
@@ -29,6 +35,8 @@ export function cabecalhosBanco(empresa: string | undefined, area: string | unde
     if (ua) h["x-geeasy-ua"] = ua;
     if (rid) h["x-geeasy-request-id"] = rid;
   }
+  const extra = limpo(contexto?.requestId, 100);
+  if (extra) h["x-geeasy-request-id"] = extra;
   return h;
 }
 

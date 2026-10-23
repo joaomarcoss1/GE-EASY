@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlarmClock, ArrowRightLeft, BadgePercent, MapPin, UserPlus, Users } from "lucide-react";
+import { AlarmClock, ArrowRightLeft, BadgePercent, MapPin, UserPlus, Users, Smartphone } from "lucide-react";
 import { requireArea } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
@@ -42,6 +42,7 @@ export default async function ConsultorPage() {
         description="Sua carteira, a documentação pendente e o que fazer hoje."
         actions={
           <>
+            {(can(profile, "rotas.executar") || can(profile, "clientes.write")) && <LinkButton href="/campo" variant="primary"><Smartphone className="h-4 w-4" />App de campo</LinkButton>}
             {can(profile, "visitas.checkin") && <LinkButton href="/visitas" variant="secondary"><MapPin className="h-4 w-4" />Check-in</LinkButton>}
             {can(profile, "clientes.write") && <LinkButton href="/clientes?novo=1" variant="accent"><UserPlus className="h-4 w-4" />Pré-cadastro</LinkButton>}
           </>

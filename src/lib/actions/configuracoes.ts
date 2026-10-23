@@ -27,7 +27,7 @@ const comercialSchema = z.object({
   dias_alerta_renovacao: zs.number(1, 180).refine((v) => v !== null && Number.isInteger(v), "Informe um número inteiro de dias"),
 });
 
-async function saveConfig(chave: "empresa" | "comercial", patch: Record<string, unknown>, userId: string): Promise<ActionState> {
+async function saveConfig(chave: "empresa" | "comercial" | "app" | "ocr" | "lgpd_termo", patch: Record<string, unknown>, userId: string): Promise<ActionState> {
   const supabase = await createClient();
   const { data: current } = await supabase.from("configuracoes").select("valor").eq("chave", chave).maybeSingle();
   const valor = { ...((current?.valor as Record<string, unknown> | null) ?? {}), ...patch };
@@ -65,4 +65,25 @@ export async function updateComercial(_: ActionState, formData: FormData): Promi
   const parsed = comercialSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
   return saveConfig("comercial", { dias_alerta_renovacao: parsed.data.dias_alerta_renovacao }, g.session.userId);
+}
+
+const appSchema = z.object({
+  versao_minima: zs.text(20).refine((v) => !v || /^\d+\.\d+\.\d+$/.test(v), "Use o formato 1.0.0"),
+  ocr_ativo: zs.bool(),
+  termo_versao: zs.required("Versão do termo", 30),
+  termo_texto: zs.required("Texto do termo", 4000),
+});
+
+/** App de campo: versão mínima, leitura automática de documentos (OCR, com custo por página) e termo LGPD do pré-cadastro. */
+export async function salvarConfigApp(_: ActionState, formData: FormData): Promise<ActionState> {
+  const g = await guard("usuarios.manage");
+  if ("denied" in g) return g.denied;
+  const parsed = appSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return zodErrors(parsed.error);
+  const v = parsed.data;
+  for (const [chave, patch] of [["app", { versao_minima: v.versao_minima }], ["ocr", { ativo: v.ocr_ativo }], ["lgpd_termo", { versao: v.termo_versao, texto: v.termo_texto }]] as const) {
+    const r = await saveConfig(chave, patch, g.session.userId);
+    if (!r.ok) return r;
+  }
+  return { ok: true, message: "Configurações do app salvas." };
 }

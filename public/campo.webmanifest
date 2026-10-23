@@ -1,0 +1,23 @@
+{
+  "name": "GE EASY Campo",
+  "short_name": "EASY Campo",
+  "description": "App do consultor: rota do dia, check-in com GPS, pré-cadastro e scanner de documentos — funciona sem internet.",
+  "id": "/campo",
+  "start_url": "/campo",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#11113A",
+  "theme_color": "#2D2D83",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/brand/logo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/logo-circle.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/logo-circle.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Pré-cadastro", "url": "/campo?tela=cadastro" },
+    { "name": "Scanner", "url": "/campo?tela=scanner" },
+    { "name": "Rota do dia", "url": "/campo?tela=rota" }
+  ]
+}

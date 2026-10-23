@@ -6,10 +6,11 @@ import { sincronizarProcessoDatajud } from "@/lib/integracoes/datajud";
 import { buscarComunicacoesDjen, importarComunicacoes, isoDiasAtras, oabsMonitoradas } from "@/lib/integracoes/djen";
 import { arquivarDocumentoNoDrive, getDriveEscritorio } from "@/lib/integracoes/drive";
 import { sincronizarPendentesAgenda } from "@/lib/integracoes/agenda";
+import { enviarPushPendentes } from "@/lib/integracoes/push";
 
 /**
  * Rotina de sincronização (chamada pelo pg_cron do Supabase via pg_net, com o segredo CRON_SECRET).
- * ?tarefa=datajud | djen | drive | agenda | limpeza (várias separadas por vírgula).
+ * ?tarefa=datajud | djen | drive | agenda | limpeza | push (várias separadas por vírgula).
  * Usa o service role porque roda sem usuário: autorização = segredo compartilhado (comparação em tempo constante).
  * Multiempresa: DJEN e Drive rodam empresa por empresa (configurações e OABs de cada uma); o DataJud usa a
  * fila única de processos (o andamento herda a empresa do processo); os registros levam o empresa_id.
@@ -18,7 +19,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const TAREFAS = new Set(["datajud", "djen", "drive", "agenda", "limpeza"]);
+const TAREFAS = new Set(["datajud", "djen", "drive", "agenda", "limpeza", "push"]);
 
 function autorizado(req: NextRequest) {
   const secret = process.env.CRON_SECRET ?? "";
@@ -152,6 +153,11 @@ async function executar(req: NextRequest) {
     await admin.from("integracoes_log").delete().lt("created_at", dias(180));
     await admin.from("notificacoes").delete().eq("lida", true).lt("created_at", dias(180));
     resumo.limpeza = "ok";
+  }
+
+  // ---------------------------------------------------------- Push do app de campo (a cada minuto)
+  if (tarefas.includes("push")) {
+    resumo.push = await enviarPushPendentes(admin, fim - 5_000);
   }
 
   return NextResponse.json({ ok: true, resumo });

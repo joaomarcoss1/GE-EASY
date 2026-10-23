@@ -2,7 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { AREA_COOKIE, EMPRESA_COOKIE, alvoDoHost, areaDoCaminho } from "@/lib/tenant";
 
-const PUBLIC_PATHS = ["/login", "/esqueci-senha", "/redefinir-senha", "/auth", "/acesso-pendente", "/privacidade", "/.well-known", "/empresa-nao-encontrada"];
+const PUBLIC_PATHS = ["/login", "/esqueci-senha", "/redefinir-senha", "/auth", "/acesso-pendente", "/privacidade", "/.well-known", "/empresa-nao-encontrada", "/f", "/cadastro"];
+/** Webhooks (assinatura verificada na rota) e endpoints públicos (limite por IP + anti-robô) não usam sessão. */
+const SEM_SESSAO = ["/api/cron/", "/api/webhooks/", "/api/publico/"];
 const COOKIE_OPTS = { path: "/", sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 180 };
 
 const hostPrincipal = () => {
@@ -14,8 +16,8 @@ const hostPrincipal = () => {
 };
 
 export async function updateSession(request: NextRequest) {
-  // Rotina agendada: autenticada pelo segredo CRON_SECRET dentro da própria rota (sem sessão)
-  if (request.nextUrl.pathname.startsWith("/api/cron/")) return NextResponse.next();
+  // Rotina agendada (CRON_SECRET), webhooks e endpoints públicos: autenticados dentro da própria rota
+  if (SEM_SESSAO.some((p) => request.nextUrl.pathname.startsWith(p))) return NextResponse.next();
   // Caminho atual para o layout (ex.: exigir 2FA sem bloquear a tela de segurança)
   request.headers.set("x-geeasy-path", request.nextUrl.pathname + request.nextUrl.search);
   const path = request.nextUrl.pathname;

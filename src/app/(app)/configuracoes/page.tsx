@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { Building2, Smartphone } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
-import { updateComercial, updateEmpresa } from "@/lib/actions/configuracoes";
+import { salvarConfigApp, updateComercial, updateEmpresa } from "@/lib/actions/configuracoes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { LinkTabs } from "@/components/ui/tabs";
@@ -57,9 +57,12 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
 
 async function EmpresaTab() {
   const supabase = await createClient();
-  const { data } = await supabase.from("configuracoes").select("chave, valor").in("chave", ["empresa", "comercial"]);
+  const { data } = await supabase.from("configuracoes").select("chave, valor").in("chave", ["empresa", "comercial", "app", "ocr", "lgpd_termo"]);
   const empresa = (data?.find((c) => c.chave === "empresa")?.valor ?? {}) as Record<string, string | null>;
   const comercial = (data?.find((c) => c.chave === "comercial")?.valor ?? {}) as Record<string, number | null>;
+  const app = (data?.find((c) => c.chave === "app")?.valor ?? {}) as { versao_minima?: string };
+  const ocr = (data?.find((c) => c.chave === "ocr")?.valor ?? {}) as { ativo?: boolean };
+  const termo = (data?.find((c) => c.chave === "lgpd_termo")?.valor ?? {}) as { versao?: string; texto?: string };
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
       <Card>
@@ -86,6 +89,24 @@ async function EmpresaTab() {
             action={updateComercial}
             values={{ dias_alerta_renovacao: comercial.dias_alerta_renovacao ?? 30 }}
             fields={[{ name: "dias_alerta_renovacao", label: "Avisar renovações com antecedência de (dias)", type: "number", min: 1, max: 180, required: true }]}
+          />
+        </CardBody>
+      </Card>
+      <Card className="xl:col-span-2">
+        <CardHeader title="App de campo" description="Termo LGPD do pré-cadastro, leitura automática de documentos e versão mínima do app." icon={<Smartphone className="h-4 w-4" />} />
+        <CardBody>
+          <SettingsForm
+            action={salvarConfigApp}
+            values={{
+              versao_minima: app.versao_minima ?? "", ocr_ativo: !!ocr.ativo, termo_versao: termo.versao ?? "1.0",
+              termo_texto: termo.texto ?? `Autorizo ${empresa.nome ?? "a empresa"} a tratar meus dados pessoais (nome, contato, documentos e localização do atendimento) para cadastro, análise de proposta e contato comercial, conforme a LGPD. Posso pedir acesso, correção ou exclusão a qualquer momento.`,
+            }}
+            fields={[
+              { name: "termo_versao", label: "Versão do termo", required: true, span: 2, help: "Mude a versão ao alterar o texto" },
+              { name: "versao_minima", label: "Versão mínima do app", span: 2, placeholder: "1.0.0" },
+              { name: "ocr_ativo", label: "Ler documentos automaticamente (OCR — custo por página)", type: "checkbox", span: 2 },
+              { name: "termo_texto", label: "Termo de consentimento (mostrado ao cliente)", type: "textarea", rows: 4, required: true, span: 6 },
+            ]}
           />
         </CardBody>
       </Card>
