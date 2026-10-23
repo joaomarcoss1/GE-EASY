@@ -4,15 +4,15 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseHost = supabaseUrl ? new URL(supabaseUrl).host : "*.supabase.co";
 const isDev = process.env.NODE_ENV !== "production";
 
-// Content Security Policy restritiva: apenas o próprio domínio, Supabase e Google (OAuth/APIs)
+// Content Security Policy restritiva: apenas o próprio domínio, Supabase, Google (OAuth/APIs) e Cloudflare Turnstile (formulário público)
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: https://${supabaseHost} https://*.googleusercontent.com`,
   "font-src 'self' data:",
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://viacep.com.br`,
-  "frame-src 'self' https://drive.google.com https://docs.google.com",
+  "frame-src 'self' https://drive.google.com https://docs.google.com https://challenges.cloudflare.com",
   "frame-ancestors 'none'",
   "form-action 'self' https://accounts.google.com",
   "base-uri 'self'",

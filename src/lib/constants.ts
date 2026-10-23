@@ -495,3 +495,56 @@ export const DESPESA_STATUS: Option[] = [
   { value: "recusada", label: "Recusada", tone: "red" },
   { value: "reembolsada", label: "Reembolsada", tone: "brand" },
 ];
+
+// ---------------------------------------------------------------- Leads e WhatsApp (fase 6)
+export const LEAD_STATUS: Option[] = [
+  { value: "novo", label: "Novo", tone: "accent" },
+  { value: "em_contato", label: "Em contato", tone: "sky" },
+  { value: "qualificado", label: "Qualificado", tone: "brand" },
+  { value: "convertido", label: "Convertido", tone: "green" },
+  { value: "descartado", label: "Descartado", tone: "slate" },
+];
+export const LEAD_ORIGENS: Option[] = [
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "site", label: "Site / formulário" },
+  { value: "lead_ads", label: "Facebook / Instagram" },
+  { value: "indicacao", label: "Indicação" },
+  { value: "consultor", label: "Consultor" },
+  { value: "importacao", label: "Importação" },
+  { value: "outro", label: "Outro" },
+];
+export const DISTRIBUICAO_CRITERIOS: Option[] = [
+  { value: "qualquer", label: "Qualquer lead/conversa" },
+  { value: "cidade", label: "Cidade" },
+  { value: "ddd", label: "DDD do telefone" },
+  { value: "origem", label: "Origem" },
+  { value: "interesse", label: "Interesse contém" },
+  { value: "campanha", label: "Campanha contém" },
+];
+export const WA_CONVERSA_STATUS: Option[] = [
+  { value: "aberta", label: "Aberta", tone: "slate" },
+  { value: "aguardando_atendente", label: "Aguardando atendente", tone: "amber" },
+  { value: "aguardando_cliente", label: "Aguardando cliente", tone: "sky" },
+  { value: "resolvida", label: "Resolvida", tone: "green" },
+  { value: "arquivada", label: "Arquivada", tone: "slate" },
+];
+export const WA_RESULTADOS: Option[] = [
+  { value: "venda", label: "Venda / proposta" },
+  { value: "duvida", label: "Dúvida respondida" },
+  { value: "documento_recebido", label: "Documento recebido" },
+  { value: "suporte", label: "Suporte" },
+  { value: "sem_retorno", label: "Sem retorno do cliente" },
+  { value: "outro", label: "Outro" },
+];
+export const WA_CAMPANHA_STATUS: Option[] = [
+  { value: "rascunho", label: "Rascunho", tone: "slate" },
+  { value: "agendada", label: "Agendada", tone: "accent" },
+  { value: "enviando", label: "Enviando", tone: "sky" },
+  { value: "concluida", label: "Concluída", tone: "green" },
+  { value: "cancelada", label: "Cancelada", tone: "red" },
+];
+export const WA_MODELO_CATEGORIAS: Option[] = [
+  { value: "utility", label: "Utilidade (avisos, documentos)" },
+  { value: "marketing", label: "Marketing (exige opt-in)" },
+  { value: "authentication", label: "Autenticação" },
+];

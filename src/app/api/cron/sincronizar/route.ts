@@ -7,10 +7,11 @@ import { buscarComunicacoesDjen, importarComunicacoes, isoDiasAtras, oabsMonitor
 import { arquivarDocumentoNoDrive, getDriveEscritorio } from "@/lib/integracoes/drive";
 import { sincronizarPendentesAgenda } from "@/lib/integracoes/agenda";
 import { enviarPushPendentes } from "@/lib/integracoes/push";
+import { enviarPendentes, processarCampanhas, processarFila } from "@/lib/integracoes/whatsapp";
 
 /**
  * Rotina de sincronização (chamada pelo pg_cron do Supabase via pg_net, com o segredo CRON_SECRET).
- * ?tarefa=datajud | djen | drive | agenda | limpeza | push (várias separadas por vírgula).
+ * ?tarefa=datajud | djen | drive | agenda | limpeza | push | whatsapp (várias separadas por vírgula).
  * Usa o service role porque roda sem usuário: autorização = segredo compartilhado (comparação em tempo constante).
  * Multiempresa: DJEN e Drive rodam empresa por empresa (configurações e OABs de cada uma); o DataJud usa a
  * fila única de processos (o andamento herda a empresa do processo); os registros levam o empresa_id.
@@ -19,7 +20,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const TAREFAS = new Set(["datajud", "djen", "drive", "agenda", "limpeza", "push"]);
+const TAREFAS = new Set(["datajud", "djen", "drive", "agenda", "limpeza", "push", "whatsapp"]);
 
 function autorizado(req: NextRequest) {
   const secret = process.env.CRON_SECRET ?? "";
@@ -152,12 +153,21 @@ async function executar(req: NextRequest) {
     await admin.from("rate_limits").delete().lt("janela_inicio", dias(2));
     await admin.from("integracoes_log").delete().lt("created_at", dias(180));
     await admin.from("notificacoes").delete().eq("lida", true).lt("created_at", dias(180));
+    await admin.from("webhook_eventos").delete().in("status", ["processado", "ignorado"]).lt("created_at", dias(30));
     resumo.limpeza = "ok";
   }
 
   // ---------------------------------------------------------- Push do app de campo (a cada minuto)
   if (tarefas.includes("push")) {
     resumo.push = await enviarPushPendentes(admin, fim - 5_000);
+  }
+
+  // ---------------------------------------------------------- WhatsApp e Lead Ads (a cada minuto): fila de webhooks, envios e campanhas
+  if (tarefas.includes("whatsapp")) {
+    const fila = await processarFila(admin, fim - 15_000);
+    const envios = await enviarPendentes(admin, fim - 8_000);
+    const campanhas = await processarCampanhas(admin, fim - 3_000);
+    resumo.whatsapp = { fila, envios, campanhas };
   }
 
   return NextResponse.json({ ok: true, resumo });
