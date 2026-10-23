@@ -24,6 +24,8 @@ const oportunidadeSchema = z
     previsao_fechamento: zs.date(),
     motivo_perda: zs.text(500),
     consultor_id: zs.uuid(),
+    situacao_venda: zs.text(30).refine((v) => !v || ["em_negociacao", "enviada", "aprovada", "cancelada", "pendente_confirmacao"].includes(v), "Situação inválida"),
+    campanha: zs.text(200),
     observacoes: zs.text(5000),
   })
   .superRefine((v, ctx) => {

@@ -590,3 +590,19 @@ export const FOLHA_STATUS: Option[] = [
   { value: "exportada", label: "Exportada", tone: "brand" },
   { value: "cancelada", label: "Cancelada", tone: "slate" },
 ];
+
+// ---------------------------------------------------------------- Vendas e relatórios (fase 9)
+export const SITUACOES_VENDA: Option[] = [
+  { value: "em_negociacao", label: "Em negociação", tone: "slate" },
+  { value: "enviada", label: "Proposta enviada", tone: "sky" },
+  { value: "aprovada", label: "Aprovada", tone: "green" },
+  { value: "cancelada", label: "Cancelada", tone: "red" },
+  { value: "pendente_confirmacao", label: "Pendente de confirmação", tone: "amber" },
+];
+export const SITUACOES_ENCAMINHAMENTO: Option[] = [
+  { value: "encaminhado", label: "Encaminhado", tone: "sky" },
+  { value: "em_analise", label: "Em análise", tone: "violet" },
+  { value: "ajuizado", label: "Ajuizado", tone: "green" },
+  { value: "cancelado", label: "Cancelado", tone: "red" },
+  { value: "pendente_confirmacao", label: "Falta confirmação", tone: "amber" },
+];

@@ -116,6 +116,8 @@ const ALL_NAV: NavGroup[] = [
       { href: "/comissoes", label: "Comissões", icon: "BadgePercent", permission: "comissoes.view" },
       { href: "/horas", label: "Controle de horas", icon: "Timer", permission: "horas.lancar" },
       { href: "/relatorios", label: "Relatórios", icon: "BarChart3", permission: "relatorios.view" },
+      { href: "/relatorios/mensal", label: "Relatório mensal", icon: "FileBarChart", permission: "relatorios.view" },
+      { href: "/relatorios/operacional", label: "Relatório operacional", icon: "PieChart", permission: "relatorios.view" },
     ],
   },
   {

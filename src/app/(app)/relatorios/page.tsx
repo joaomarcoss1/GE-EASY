@@ -85,7 +85,13 @@ export default async function RelatoriosPage({ searchParams }: { searchParams: P
         eyebrow="Gestão"
         title="Relatórios gerenciais"
         description={`${secao === "juridico" ? "Jurídico" : "Comercial"} · período: ${date(de)} a ${date(ate)}`}
-        actions={<PrintButton />}
+        actions={
+          <>
+            <LinkButton href="/relatorios/mensal" variant="accent">Relatório mensal</LinkButton>
+            <LinkButton href="/relatorios/operacional" variant="secondary">Operacional (campo, leads, WhatsApp)</LinkButton>
+            <PrintButton />
+          </>
+        }
       />
 
       <div className="no-print mb-4">

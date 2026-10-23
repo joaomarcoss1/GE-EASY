@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { clienteOptions, consultorOptions, getProfileMap, produtoOptions, searchTerm } from "@/lib/data";
-import { ETAPAS, LINHAS, type Option } from "@/lib/constants";
+import { ETAPAS, LINHAS, SITUACOES_VENDA, type Option } from "@/lib/constants";
 import { brlShort, pct, todayISO } from "@/lib/format";
 import { createOportunidade, deleteOportunidade, moveOportunidade, updateOportunidade } from "@/lib/actions/oportunidades";
 import type { FieldDef } from "@/components/ui/form";
@@ -28,6 +28,8 @@ function oportunidadeFields(clientes: Option[], produtos: Option[], consultores:
     { name: "etapa", label: "Etapa", type: "select", options: ETAPAS, emptyOption: false, span: 3 },
     { name: "probabilidade", label: "Probabilidade", type: "number", min: 0, max: 100, help: "Em branco = padrão da etapa", span: 3 },
     { name: "previsao_fechamento", label: "Previsão de fechamento", type: "date", span: 3 },
+    { name: "situacao_venda", label: "Situação da venda", type: "select", options: SITUACOES_VENDA, emptyOption: "Pela etapa do funil", span: 3, help: "Use \"pendente de confirmação\" quando faltar o aceite do cliente ou da administradora" },
+    { name: "campanha", label: "Campanha", span: 3 },
     ...(canTransfer ? [{ name: "consultor_id", label: "Consultor", type: "select", options: consultores, emptyOption: "Eu mesmo", span: 6 } as FieldDef] : []),
     { name: "observacoes", label: "Observações", type: "textarea", rows: 3, span: 6 },
   ];
