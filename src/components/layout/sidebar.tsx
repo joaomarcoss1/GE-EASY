@@ -31,6 +31,7 @@ export function Sidebar({
   areaInicial,
   plataformaAdmin,
   empresaNome,
+  logoUrl,
   open,
   onClose,
 }: {
@@ -39,6 +40,8 @@ export function Sidebar({
   areaInicial: Area | null;
   plataformaAdmin: boolean;
   empresaNome: string;
+  /** Logo da empresa (white-label); sem logo, a marca GE EASY */
+  logoUrl?: string | null;
   open: boolean;
   onClose: () => void;
 }) {
@@ -63,7 +66,12 @@ export function Sidebar({
       >
         <div className="flex items-center justify-between px-5 pb-4 pt-5">
           <Link href="/inicio" className="block" onClick={onClose}>
-            <Image src="/brand/logo-wordmark-transparent.png" alt="GE EASY" width={170} height={62} priority className="h-auto w-[168px]" />
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt={empresaNome} className="h-12 w-auto max-w-[168px] object-contain" />
+            ) : (
+              <Image src="/brand/logo-wordmark-transparent.png" alt="GE EASY" width={170} height={62} priority className="h-auto w-[168px]" />
+            )}
           </Link>
           <button className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 lg:hidden" onClick={onClose} aria-label="Fechar menu">
             <X className="h-5 w-5" />

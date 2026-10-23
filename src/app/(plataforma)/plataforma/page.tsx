@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { date, num } from "@/lib/format";
 import { atualizarEmpresa, criarEmpresa } from "@/lib/actions/plataforma";
+import { solicitarSuporte } from "@/lib/actions/conta";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -102,6 +103,9 @@ export default async function PlataformaPage() {
                           { name: "dominio", label: "Domínio próprio", placeholder: "sistema.empresa.com.br", span: 3 },
                           { name: "modulos", label: "Módulos contratados", type: "multiselect", options: MODULOS, span: 6 },
                         ]} />
+                      <FormDrawerButton action={solicitarSuporte} hidden={{ empresa_id: u.empresa_id }} title={`Pedir acesso de suporte: ${u.nome}`} label="Suporte" icon="none" size="sm" variant="ghost" width="max-w-md" submitLabel="Enviar pedido"
+                        description="O administrador master da empresa precisa autorizar. O acesso é temporário (até 72 h) e tudo fica na auditoria da empresa."
+                        fields={[{ name: "motivo", label: "Motivo", type: "textarea", rows: 3, required: true, span: 6 }]} />
                     </td>
                   </tr>
                 );

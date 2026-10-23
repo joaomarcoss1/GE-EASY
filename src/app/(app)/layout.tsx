@@ -1,4 +1,5 @@
 import { getPoliticaSeguranca, requireSession } from "@/lib/auth";
+import { cssMarca } from "@/lib/marca";
 import { AppShell } from "@/components/layout/app-shell";
 import { SessionGuard } from "@/components/layout/session-guard";
 
@@ -9,6 +10,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // é lá que ficam as exigências de empresa ativa, vínculo ativo e 2FA.
   const session = await requireSession();
   const politica = await getPoliticaSeguranca();
+  // white-label: só uma cor #rrggbb validada vira CSS (sem injeção)
+  const marca = cssMarca(session.empresa?.marca?.cor);
   return (
     <AppShell
       profile={session.profile}
@@ -18,6 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       areaAtiva={session.areaAtiva}
       plataformaAdmin={session.plataformaAdmin}
     >
+      {marca && <style>{marca}</style>}
       {children}
       <SessionGuard minutos={politica.inatividade_min} />
     </AppShell>

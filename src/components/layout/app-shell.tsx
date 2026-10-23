@@ -29,7 +29,7 @@ export function AppShell({
   const [palette, setPalette] = useState(false);
   return (
     <div className="min-h-screen">
-      <Sidebar profile={profile} areas={areas} areaInicial={areaAtiva} plataformaAdmin={plataformaAdmin} empresaNome={empresa.nome} open={menu} onClose={() => setMenu(false)} />
+      <Sidebar profile={profile} areas={areas} areaInicial={areaAtiva} plataformaAdmin={plataformaAdmin} empresaNome={empresa.nome} logoUrl={empresa.marca?.logo_url ?? null} open={menu} onClose={() => setMenu(false)} />
       <div className="lg:pl-[264px]">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-bg/80 px-4 backdrop-blur-xl sm:px-6">
           <button className="grid h-10 w-10 place-items-center rounded-xl text-muted hover:bg-surface-2 lg:hidden" onClick={() => setMenu(true)} aria-label="Abrir menu">

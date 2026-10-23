@@ -9,8 +9,8 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: "#F4F4FD", 100: "#E8E8FA", 200: "#CFCFF3", 300: "#A9A9E6", 400: "#7B7BD3",
-          500: "#4F4FC4", 600: "#3B3BA3", 700: "#2D2D83", 800: "#23236A", 900: "#1A1A50", 950: "#11113A",
+          50: v("brand-50"), 100: v("brand-100"), 200: v("brand-200"), 300: v("brand-300"), 400: v("brand-400"),
+          500: v("brand-500"), 600: v("brand-600"), 700: v("brand-700"), 800: v("brand-800"), 900: v("brand-900"), 950: v("brand-950"),
         },
         accent: {
           50: "#FFF4EE", 100: "#FDE6DC", 200: "#FAC9B3", 300: "#F6A383", 400: "#F0703F",

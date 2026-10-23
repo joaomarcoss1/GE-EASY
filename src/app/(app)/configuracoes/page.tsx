@@ -16,6 +16,7 @@ import { CadastrosTab } from "@/components/configuracoes/cadastros-tab";
 import { DocumentacaoTab } from "@/components/configuracoes/documentacao-tab";
 import { RotasTab } from "@/components/configuracoes/rotas-tab";
 import { SettingsForm } from "@/components/configuracoes/settings-form";
+import { AssinaturaTab, DadosTab, MarcaTab } from "@/components/configuracoes/conta-tabs";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -36,6 +37,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     ...(canCadastros ? [{ key: "cadastros", label: "Cadastros" }, { key: "documentacao", label: "Documentação" }] : []),
     ...(can(profile, "rotas.definir") ? [{ key: "rotas", label: "Rotas e check-in" }] : []),
     ...(isAdmin ? [{ key: "empresa", label: "Empresa" }] : []),
+    ...(profile.admin_master ? [{ key: "assinatura", label: "Assinatura" }, { key: "marca", label: "Marca e domínio" }, { key: "dados", label: "Dados e suporte" }] : []),
   ];
   const tab = tabs.some((t) => t.key === sp.tab) ? sp.tab! : "perfil";
 
@@ -51,6 +53,9 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       {tab === "documentacao" && canCadastros && <DocumentacaoTab />}
       {tab === "rotas" && can(profile, "rotas.definir") && <RotasTab />}
       {tab === "empresa" && isAdmin && <EmpresaTab />}
+      {tab === "assinatura" && profile.admin_master && <AssinaturaTab empresaId={session.empresa!.id} />}
+      {tab === "marca" && profile.admin_master && <MarcaTab empresaId={session.empresa!.id} />}
+      {tab === "dados" && profile.admin_master && <DadosTab empresaId={session.empresa!.id} slug={session.empresa!.slug} />}
     </>
   );
 }
