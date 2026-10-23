@@ -42,6 +42,8 @@ const ALL_NAV: NavGroup[] = [
     area: "consultor",
     items: [
       { href: "/consultor", label: "Minha carteira", icon: "BriefcaseBusiness", permission: "clientes.view" },
+      { href: "/campo", label: "App de campo", icon: "Smartphone", permission: "rotas.executar" },
+      { href: "/rotas", label: "Minhas rotas", icon: "Route", permission: "rotas.executar" },
       { href: "/clientes", label: "Clientes", icon: "Users", permission: "clientes.view" },
       { href: "/visitas", label: "Visitas & check-in", icon: "MapPin", permission: "visitas.checkin" },
       { href: "/oportunidades", label: "Funil de vendas", icon: "KanbanSquare", permission: "comercial.view" },
@@ -60,6 +62,9 @@ const ALL_NAV: NavGroup[] = [
       { href: "/administrativo", label: "Painel administrativo", icon: "ClipboardList", permission: "clientes.ver_todos" },
       { href: "/administrativo/documentacao", label: "Central de documentação", icon: "FileCheck2", permission: "documentacao.analisar" },
       { href: "/administrativo/base", label: "Base de clientes", icon: "Database", permission: "clientes.ver_todos" },
+      { href: "/rotas", label: "Rotas", icon: "Route", permission: "rotas.ver" },
+      { href: "/rotas/mapa", label: "Mapa do campo", icon: "Map", permission: "rotas.ver" },
+      { href: "/rotas/despesas", label: "Despesas de rota", icon: "Receipt", permission: "despesas.aprovar" },
       { href: "/clientes", label: "Clientes", icon: "Users", permission: "clientes.view" },
       { href: "/atendimentos", label: "Atendimentos", icon: "MessagesSquare", permission: "atendimentos.view" },
       { href: "/documentos", label: "Documentos", icon: "FolderOpen" },

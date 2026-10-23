@@ -595,3 +595,123 @@ export interface ModeloDocumento {
   created_by: string | null;
   updated_at: string;
 }
+
+// ------------------------------------------------------------------ Rotas e check-in (fase 5)
+export type RotaStatus = "planejada" | "em_andamento" | "concluida" | "aprovada" | "cancelada";
+export type ParadaStatus = "pendente" | "visitada" | "nao_realizada" | "reagendada";
+export type DespesaStatus = "lancada" | "aprovada" | "recusada" | "reembolsada";
+
+export interface Veiculo {
+  id: string;
+  descricao: string;
+  placa: string | null;
+  consumo_km_l: number | null;
+  responsavel_id: string | null;
+  ativo: boolean;
+}
+
+export interface Rota {
+  id: string;
+  nome: string;
+  data: string;
+  consultor_id: string;
+  veiculo_id: string | null;
+  status: RotaStatus;
+  objetivo: string | null;
+  km_planejado: number | null;
+  tempo_planejado_min: number | null;
+  metodo_km: "linha_reta" | "google" | "rastreio" | "hodometro";
+  iniciada_em: string | null;
+  inicio_lat: number | null;
+  inicio_lng: number | null;
+  finalizada_em: string | null;
+  fim_lat: number | null;
+  fim_lng: number | null;
+  hodometro_inicio: number | null;
+  hodometro_fim: number | null;
+  resumo: RotaResumo | null;
+  aprovada_por: string | null;
+  aprovada_em: string | null;
+  observacoes: string | null;
+  created_at: string;
+}
+
+export interface RotaResumo {
+  km: number;
+  metodo_km: string;
+  km_linha_reta: number;
+  tempo_locomocao_min: number;
+  tempo_visita_min: number;
+  paradas: number;
+  visitadas: number;
+  nao_realizadas: number;
+  fora_do_raio: number;
+  inconsistencias: number;
+  adquiridos: number;
+  custo_km: number;
+  despesas_aprovadas: number;
+  despesas_pendentes: number;
+  custo_total: number;
+  custo_por_visitado: number | null;
+  custo_por_adquirido: number | null;
+}
+
+export interface RotaParada {
+  id: string;
+  rota_id: string;
+  ordem: number;
+  tipo: "cliente" | "cidade" | "endereco" | "ponto_interesse";
+  cliente_id: string | null;
+  titulo: string;
+  endereco: string | null;
+  cidade: string | null;
+  uf: string | null;
+  lat: number | null;
+  lng: number | null;
+  raio_m: number | null;
+  janela_inicio: string | null;
+  janela_fim: string | null;
+  objetivo: string | null;
+  obrigatoria: boolean;
+  status: ParadaStatus;
+  motivo: string | null;
+  reagendada_para: string | null;
+}
+
+export interface CheckinRota {
+  id: string;
+  rota_id: string;
+  parada_id: string | null;
+  consultor_id: string;
+  tipo: "chegada" | "saida";
+  registrado_em: string;
+  dispositivo_em: string | null;
+  lat: number;
+  lng: number;
+  precisao: number | null;
+  distancia_m: number | null;
+  dentro_do_raio: boolean | null;
+  justificativa: string | null;
+  foto_path: string | null;
+  resultado: string | null;
+  observacao: string | null;
+  flags: string[];
+  revisao: "pendente" | "aprovado" | "rejeitado" | null;
+}
+
+export interface DespesaRota {
+  id: string;
+  rota_id: string | null;
+  consultor_id: string;
+  tipo: string;
+  valor: number;
+  data: string;
+  descricao: string | null;
+  comprovante_path: string | null;
+  hodometro: number | null;
+  status: DespesaStatus;
+  aprovador_id: string | null;
+  aprovado_em: string | null;
+  motivo: string | null;
+  created_at: string;
+}

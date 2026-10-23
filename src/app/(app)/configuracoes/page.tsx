@@ -14,6 +14,7 @@ import { IntegracoesTab } from "@/components/configuracoes/integracoes-tab";
 import { UsuariosTab } from "@/components/configuracoes/usuarios-tab";
 import { CadastrosTab } from "@/components/configuracoes/cadastros-tab";
 import { DocumentacaoTab } from "@/components/configuracoes/documentacao-tab";
+import { RotasTab } from "@/components/configuracoes/rotas-tab";
 import { SettingsForm } from "@/components/configuracoes/settings-form";
 
 export const metadata: Metadata = { title: "Configurações" };
@@ -33,6 +34,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     { key: "integracoes", label: "Integrações" },
     ...(gereUsuarios ? [{ key: "usuarios", label: "Usuários" }] : []),
     ...(canCadastros ? [{ key: "cadastros", label: "Cadastros" }, { key: "documentacao", label: "Documentação" }] : []),
+    ...(can(profile, "rotas.definir") ? [{ key: "rotas", label: "Rotas e check-in" }] : []),
     ...(isAdmin ? [{ key: "empresa", label: "Empresa" }] : []),
   ];
   const tab = tabs.some((t) => t.key === sp.tab) ? sp.tab! : "perfil";
@@ -47,6 +49,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       {tab === "usuarios" && gereUsuarios && <UsuariosTab currentUserId={profile.id} />}
       {tab === "cadastros" && canCadastros && <CadastrosTab />}
       {tab === "documentacao" && canCadastros && <DocumentacaoTab />}
+      {tab === "rotas" && can(profile, "rotas.definir") && <RotasTab />}
       {tab === "empresa" && isAdmin && <EmpresaTab />}
     </>
   );

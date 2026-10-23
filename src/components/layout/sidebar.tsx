@@ -6,7 +6,9 @@ import {
   LayoutDashboard, CalendarDays, ListChecks, Users, KanbanSquare, Landmark, ShieldCheck, MapPin, Wallet, Target,
   BriefcaseBusiness, FolderOpen, BarChart3, Settings, X, Scale, AlarmClock, Gavel, Building2, TrendingUp,
   Newspaper, MessagesSquare, FileSignature, FileText, Timer, BadgePercent, ChevronDown, UserCheck, ClipboardList,
-  FileCheck2, Database, CalendarClock, IdCard, KeyRound, History, Trash2, Globe, type LucideIcon,
+  FileCheck2, Database, CalendarClock, IdCard, KeyRound, History, Trash2, Globe, Smartphone, Route, Map, Receipt,
+  MessageCircle, Megaphone, UserPlus, Clock, CalendarCheck, FileSpreadsheet, Repeat, PieChart, FileBarChart, CreditCard,
+  LifeBuoy, Upload, Banknote, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
@@ -18,7 +20,9 @@ import type { Area, Profile } from "@/lib/types";
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard, CalendarDays, ListChecks, Users, KanbanSquare, Landmark, ShieldCheck, MapPin, Wallet, Target, BriefcaseBusiness, FolderOpen, BarChart3, Settings,
   Scale, AlarmClock, Gavel, Building2, TrendingUp, Newspaper, MessagesSquare, FileSignature, FileText, Timer, BadgePercent, UserCheck, ClipboardList,
-  FileCheck2, Database, CalendarClock, IdCard, KeyRound, History, Trash2, Globe,
+  FileCheck2, Database, CalendarClock, IdCard, KeyRound, History, Trash2, Globe, Smartphone, Route, Map, Receipt,
+  MessageCircle, Megaphone, UserPlus, Clock, CalendarCheck, FileSpreadsheet, Repeat, PieChart, FileBarChart, CreditCard,
+  LifeBuoy, Upload, Banknote,
 };
 
 export function Sidebar({

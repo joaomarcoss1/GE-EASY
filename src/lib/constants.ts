@@ -445,3 +445,53 @@ export const MODELO_CATEGORIAS: Option[] = [
   { value: "oficio", label: "Ofício" },
   { value: "outro", label: "Outro" },
 ];
+
+// ------------------------------------------------------------------ Rotas e check-in (fase 5)
+export const ROTA_STATUS: Option[] = [
+  { value: "planejada", label: "Planejada", tone: "slate" },
+  { value: "em_andamento", label: "Em andamento", tone: "accent" },
+  { value: "concluida", label: "Concluída (aguarda aprovação)", tone: "sky" },
+  { value: "aprovada", label: "Aprovada", tone: "green" },
+  { value: "cancelada", label: "Cancelada", tone: "red" },
+];
+export const PARADA_STATUS: Option[] = [
+  { value: "pendente", label: "Pendente", tone: "slate" },
+  { value: "visitada", label: "Visitada", tone: "green" },
+  { value: "nao_realizada", label: "Não realizada", tone: "red" },
+  { value: "reagendada", label: "Reagendada", tone: "amber" },
+];
+export const PARADA_TIPOS: Option[] = [
+  { value: "cliente", label: "Cliente" },
+  { value: "cidade", label: "Cidade" },
+  { value: "endereco", label: "Endereço" },
+  { value: "ponto_interesse", label: "Ponto de interesse" },
+];
+export const CHECKIN_RESULTADOS: Option[] = [
+  { value: "visitado", label: "Visitado", tone: "sky" },
+  { value: "ausente", label: "Ausente", tone: "slate" },
+  { value: "reagendado", label: "Reagendado", tone: "amber" },
+  { value: "venda", label: "Venda", tone: "green" },
+  { value: "recusa", label: "Recusa", tone: "red" },
+  { value: "pre_cadastro", label: "Pré-cadastro", tone: "brand" },
+];
+export const CHECKIN_FLAGS: Record<string, string> = {
+  localizacao_simulada: "Localização simulada",
+  precisao_ruim: "Precisão ruim do GPS",
+  horario_divergente: "Horário do aparelho divergente",
+  salto_velocidade: "Salto impossível de velocidade",
+  ponto_repetido: "Mesmo ponto de outra parada",
+};
+export const DESPESA_TIPOS: Option[] = [
+  { value: "combustivel", label: "Combustível" },
+  { value: "pedagio", label: "Pedágio" },
+  { value: "alimentacao", label: "Alimentação" },
+  { value: "estacionamento", label: "Estacionamento" },
+  { value: "hospedagem", label: "Hospedagem" },
+  { value: "outros", label: "Outros" },
+];
+export const DESPESA_STATUS: Option[] = [
+  { value: "lancada", label: "Aguardando aprovação", tone: "amber" },
+  { value: "aprovada", label: "Aprovada", tone: "green" },
+  { value: "recusada", label: "Recusada", tone: "red" },
+  { value: "reembolsada", label: "Reembolsada", tone: "brand" },
+];
