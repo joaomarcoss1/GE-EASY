@@ -335,7 +335,9 @@ create policy folha_itens_update on public.folha_itens for update to authenticat
 
 -- Todo usuário da empresa vira um registro de funcionário (o RH completa o contrato); desligamento encerra
 insert into public.funcionarios (empresa_id, user_id, nome, cargo, email, tipo_contrato)
-select m.empresa_id, m.user_id, coalesce(nullif(p.full_name, ''), p.email, 'Funcionário'), p.cargo, p.email, 'nao_informado'
+select m.empresa_id, m.user_id,
+       case when char_length(coalesce(nullif(trim(p.full_name), ''), p.email, '')) >= 2 then left(coalesce(nullif(trim(p.full_name), ''), p.email), 200) else 'Funcionário' end,
+       left(p.cargo, 120), left(p.email, 200), 'nao_informado'
   from public.empresa_membros m join public.profiles p on p.id = m.user_id
  where m.ativo
 on conflict do nothing;

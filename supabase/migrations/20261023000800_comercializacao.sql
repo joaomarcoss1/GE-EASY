@@ -188,7 +188,9 @@ declare v_emp uuid := public.empresa_atual(); v_dom text := lower(trim(p_dominio
 begin
   if not public.is_admin_master() then raise exception 'Somente o administrador master.' using errcode = '42501'; end if;
   if v_dom = '' then
+    perform set_config('geeasy.dominio', 'on', true);
     update public.empresas set dominio = null, dominio_status = null, dominio_info = null where id = v_emp;
+    perform set_config('geeasy.dominio', 'off', true);
     return;
   end if;
   if not coalesce((select (limites->>'dominio_proprio')::boolean from public.empresas where id = v_emp), false) then
@@ -365,8 +367,8 @@ declare n int;
 begin
   perform set_config('geeasy.suporte', 'on', true);
   update public.empresa_membros set ativo = false where suporte_ate is not null and suporte_ate < now() and ativo;
-  perform set_config('geeasy.suporte', 'off', true);
   get diagnostics n = row_count;
+  perform set_config('geeasy.suporte', 'off', true);
   update public.acessos_suporte set status = 'expirado', encerrado_em = now() where status = 'ativo' and expira_em < now();
   return n;
 end $$;
