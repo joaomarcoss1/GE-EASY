@@ -102,42 +102,97 @@ Outras decisões técnicas estão nos ADRs em `docs/adr/`.
 - **Encaminhamento ao jurídico**: cria processo com situação `encaminhado | em_analise | ajuizado | cancelado | pendente_confirmacao`.
 - **Consentimento LGPD** obrigatório no cadastro (data, usuário, IP, versão do termo).
 
-## 5. Como verificar
+## 5. App de campo — PWA offline (Fase 4)
+
+- **`/campo`**: PWA instalável (`campo.webmanifest`, `sw.js`), uso com uma mão. Funciona sem internet:
+  pré-cadastro com consentimento LGPD, scanner de documentos (detecção de bordas, endireitamento, filtros,
+  PDF de várias páginas), rota do dia, check-in, despesas, ponto. Tudo entra numa **fila local** no
+  IndexedDB, **criptografada** (AES-GCM, chave não exportável) e é enviado item a item para
+  `/api/campo/sync` (idempotente pelo id gerado no aparelho; 410 = aparelho revogado ⇒ apaga tudo).
+- PIN opcional (5 erros apagam os dados do aparelho); push (Web Push/VAPID) a partir das notificações.
+- OCR opcional (Google Vision, desligável por empresa — custo por página).
+- Limitação de navegador: não há como detectar GPS simulado (no app nativo seria `isMock`).
+
+## 6. Rotas e check-in (Fase 5)
+
+- Rotas com paradas (cliente, cidade, endereço), geocodificação com cache (Google Maps, ou OpenStreetMap
+  sem chave), otimização (Google ou vizinho mais próximo), reagendamento.
+- Check-in/saída com raio, sinais de fraude (precisão ruim, horário divergente, salto de velocidade,
+  ponto repetido), revisão pelo gestor. Km por hodômetro ou linha reta × fator; tempos de locomoção e visita;
+  custo por km ou por consumo; custo por visitado/adquirido. Despesas com comprovante e aprovação.
+- Mapa do campo em tempo quase real (Realtime).
+
+## 7. WhatsApp e leads (Fase 6)
+
+- **Leads** de WhatsApp, formulário público `/f/<slug>` (limite por IP, campo isca, Turnstile, LGPD),
+  Facebook/Instagram Lead Ads, indicação, consultor e importação. Deduplicação por telefone/CPF/e-mail,
+  pontuação, distribuição (dono da carteira → regras por cidade/DDD/origem/interesse/campanha → rodízio ou
+  menor carga), SLA do primeiro contato com redistribuição e aviso ao supervisor, conversão em cliente.
+- **WhatsApp Cloud API** (oficial): webhook `/api/webhooks/meta` (assinatura `X-Hub-Signature-256`,
+  fila `webhook_eventos` idempotente, processamento com `after()` e pelo cron a cada minuto), mensagens
+  particionadas por mês, mídia validada pela assinatura do arquivo e servida só por URL assinada,
+  janela de 24 h (fora dela só modelo aprovado), opt-in/opt-out ("SAIR"), menu inicial, horário,
+  transferência com nota, campanhas com limite por hora, métricas. Token da Meta criptografado.
+- Regra dos 45 dias e desligamento movem conversas e leads.
+
+## 8. RH, ponto e pré-folha (Fase 7)
+
+- Funcionários (contrato) separados dos **dados sensíveis** (CPF, salário, dados bancários criptografados,
+  dependentes, atestados) — só `rh.dados_sensiveis`, leitura auditada.
+- **Ponto**: horário do servidor, NSR por empresa, hash encadeado, marcações **inalteráveis**, cercas
+  virtuais, funcionário externo, offline sinalizado, localização só no ato. Ajustes e ausências aprovados por
+  outra pessoa (a original é mantida). Cálculo diário e espelho mensal com ciência/contestação.
+  *Controle interno de jornada*: para valer como REP-P (Portaria MTP 671/2021) faltam registro do programa,
+  certificado e AFD — validar com a assessoria trabalhista.
+- **Pré-folha**: salário, extras (valor-hora = salário/220, +50%), faltas, comissões recebidas, reembolsos de
+  rota → revisão → aprovação (vira contas a pagar) → CSV para a contabilidade.
+
+## 9. Financeiro ampliado (Fase 8)
+
+Centros de custo, contas bancárias, recorrências automáticas, **alçada de aprovação** (outra pessoa aprova;
+baixa exige `financeiro.pagar`), extrato **OFX** com conciliação sugerida, fluxo previsto × realizado,
+DRE gerencial, centros de custo, inadimplência por atraso e saldos.
+
+## 10. Relatórios e BI (Fase 9)
+
+- `indicadores_diarios` por empresa e consultor (rotina 02h30, refaz os últimos 3 dias).
+- **Relatório mensal geral** automático no 1º dia útil (09h): gastos, rotas, clientes e custo por cliente,
+  documentação e 45 dias, vendas/processos com lista nominal, WhatsApp, ranking ponderado configurável,
+  pontos de atenção, comparação com o mês anterior; aviso aos admins e e-mail (Resend) com o resumo e o link.
+- Relatório operacional por período: check-ins, km, gastos, locomoção, CAC de campo, clientes, documentação, WhatsApp.
+
+## 11. Comercialização (Fase 10)
+
+- Planos (limites e módulos) e assinatura; cobrança pela **Asaas** (webhook `/api/webhooks/asaas` com
+  token), suspensão após a tolerância (7 dias) e ao fim do teste.
+- **Cadastro self-service** `/cadastro` (teste de 14 dias). **White-label** (logo e cor). **Domínio próprio**
+  pela API da Vercel. **Portabilidade** (`/api/empresa/exportar`, NDJSON auditado) e **exclusão agendada**
+  (anonimização após 30 dias; arquivos removidos). **Suporte temporário** autorizado pelo admin master.
+- Importação de clientes por CSV (Administrativo › Base).
+
+## 12. Como verificar
 
 ```bash
-npm run typecheck && npm run lint && npm test           # app (44 testes)
+npm run typecheck && npm run lint && npm test           # app (59 testes)
 wsl -d Ubuntu -u postgres -- bash /mnt/c/Users/joaom/Projetos/GE-EASY/scripts/db-test.sh   # banco
 ```
-`scripts/db-test.sh` cria um PostgreSQL 17 limpo com o stub do Supabase, aplica as 20 migrações e roda:
-`multiempresa_test.sql` (duas empresas: tela/API/arquivo/busca/rotina/suspensão — 49 verificações),
-`acessos_auditoria_test.sql` (39), `regra_45_dias_test.sql` (37: D-1, D0/D+1, envio parcial, prorrogação,
-devolução, dia 44, rotina repetida) e os 3 testes antigos (resultados iguais aos esperados).
-Os mesmos arquivos rodam no SQL Editor do Supabase (terminam com rollback).
+`scripts/db-test.sh` cria um PostgreSQL 17 limpo com o stub do Supabase, aplica as 28 migrações e roda os
+testes: multiempresa (49), acessos/auditoria (39), regra dos 45 dias (37), complemento da fase 2 (31),
+rotas (27), WhatsApp/leads (42), RH/ponto (29), financeiro (19), BI (19), comercialização (25) e os 3 antigos.
+Também rodam no CI (job `banco`). Os mesmos arquivos rodam no SQL Editor do Supabase (terminam com rollback).
 
-## 6. Implantação (homologação → produção)
+## 13. Implantação (homologação → produção)
 
-1. **Backup**: anote o horário para PITR (ou gere um backup) antes de migrar.
-2. **Homologação**: crie um branch/projeto de homologação, aplique `supabase/migrations/` (`supabase db push`)
-   e rode os testes SQL acima no SQL Editor. Aponte um deploy de *preview* da Vercel para ele.
-3. **Produção**: aplique as migrações `20261022000100` a `20261022000600` **e** publique o app na mesma janela
-   (o app antigo não funciona com o banco novo e vice-versa — ex.: upsert de configurações por empresa).
-4. Variáveis novas (opcionais): `NEXT_PUBLIC_ROOT_DOMAIN` (subdomínios por empresa; exige domínio curinga na Vercel).
-5. Pós-implantação: entrar como admin master, revisar *Acessos* (as concessões "Migração do papel …"
-   podem ser trocadas por níveis) e *Configurações › Documentação*.
-6. **Reversão**: restaurar o PITR anterior à migração e promover o deploy anterior na Vercel.
+1. **Backup**: anote o horário para PITR antes de migrar.
+2. Aplique as migrações em ordem **e** publique o app na mesma janela.
+3. Variáveis (todas opcionais — sem elas o recurso fica desligado ou usa a alternativa): ver `.env.example`
+   (VAPID, WhatsApp/Meta, Google Maps/Vision, Turnstile, Asaas, Vercel, Resend).
+4. **Reversão**: restaurar o PITR anterior e promover o deploy anterior na Vercel.
 
-## 7. Limitações conhecidas (desta entrega)
+## 14. Limitações conhecidas
 
-- Dias úteis sem feriados; rodízio de responsável administrativo não implementado (a tarefa vai para o departamento).
-- Usuário em duas empresas com duas abas abertas no **mesmo** endereço: Realtime/Storage usam a empresa padrão
-  (última escolhida); com subdomínios cada aba tem a sua.
-- Acesso de suporte temporário da plataforma, onboarding self-service, importação CSV de clientes,
-  white-label visual e cobrança: fase 10.
-- `auditoria_verificar()` percorre toda a cadeia da empresa a cada consulta (ok para o volume atual).
-- O cálculo de comissão ainda não lê `comissao_apos_transferencia`.
-
-## 8. Próximas fases (não implementadas)
-
-4 App do consultor (offline, scanner, push) · 5 Rotas e check-in GPS com anti-fraude, km e gastos ·
-6 WhatsApp Cloud API e leads · 7 RH, ponto e pré-folha · 8 Financeiro ampliado · 9 Relatórios/BI e
-fechamento mensal · 10 Comercialização (planos, cobrança, onboarding, white-label).
+- Dias úteis sem feriados (prazos, 5º dia útil da folha, 1º dia útil do relatório).
+- PWA: sem detecção de GPS simulado e sem rastreio em segundo plano (padrão desligado por LGPD).
+- Ponto não é REP-P certificado; pré-folha não calcula INSS/IRRF/FGTS (contabilidade/eSocial).
+- Exclusão de empresa anonimiza (não apaga) as linhas e mantém a trilha de auditoria (obrigação legal).
+- Pesquisa de satisfação do WhatsApp e envio de mídia pelo atendente não implementados.
