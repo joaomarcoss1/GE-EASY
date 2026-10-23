@@ -7,7 +7,7 @@ import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import { encrypt } from "@/lib/crypto";
 import { onlyDigits } from "@/lib/format";
 import { can } from "@/lib/rbac";
-import { WA_MODELO_CATEGORIAS, WA_RESULTADOS } from "@/lib/constants";
+import { DOC_CATEGORIAS, WA_MODELO_CATEGORIAS, WA_RESULTADOS } from "@/lib/constants";
 import { enviarPendentes, testarNumero } from "@/lib/integracoes/whatsapp";
 import { dbError, formToObject, guard, isUuid, limitar, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
@@ -286,4 +286,46 @@ export async function iniciarConversaCliente(clienteId: string): Promise<ActionS
   if (error) return erroDb(error);
   atualizar();
   return { ok: true, id: data as string, message: "Conversa aberta." };
+}
+
+const anexoSchema = z.object({
+  mensagem_id: zs.requiredUuid("a mensagem"),
+  categoria: z.string().refine((v) => DOC_CATEGORIAS.some((c) => c.value === v), "Categoria inválida"),
+  nome: zs.required("Nome", 200),
+});
+
+/**
+ * Anexa a mídia recebida pelo WhatsApp ao cadastro do cliente (um clique): o arquivo já passou pela verificação
+ * de assinatura ao chegar; é copiado para a pasta do cliente e entra na fila de análise documental.
+ */
+export async function anexarMidiaCliente(_: ActionState, formData: FormData): Promise<ActionState> {
+  const g = await guard("whatsapp.atender");
+  if ("denied" in g) return g.denied;
+  const parsed = anexoSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return zodErrors(parsed.error);
+  const supabase = await createClient();
+  const { data: m } = await supabase.from("wa_mensagens").select("id, conversa_id, midia_path, midia_mime").eq("id", parsed.data.mensagem_id).not("midia_path", "is", null).maybeSingle();
+  if (!m?.midia_path) return { error: "Mensagem sem arquivo ou sem acesso." };
+  const { data: cv } = await supabase.from("wa_conversas").select("wa_contatos(cliente_id)").eq("id", m.conversa_id).maybeSingle();
+  const clienteId = (cv?.wa_contatos as unknown as { cliente_id: string | null } | null)?.cliente_id;
+  if (!clienteId) return { error: "A conversa não está ligada a um cliente. Converta o lead primeiro." };
+  const { data: cli } = await supabase.from("clientes").select("id").eq("id", clienteId).maybeSingle();
+  if (!cli) return { error: "Sem acesso ao cliente." };
+  const ext = String(m.midia_path).split(".").pop();
+  const destino = `empresas/${g.session.empresa!.id}/clientes/${clienteId}/${crypto.randomUUID()}-whatsapp.${ext}`;
+  const admin = createAdminClient();
+  const { error: e1 } = await admin.storage.from("documentos").copy(m.midia_path as string, destino);
+  if (e1) return { error: "Não foi possível copiar o arquivo." };
+  const { data: info } = await admin.storage.from("documentos").list(destino.slice(0, destino.lastIndexOf("/")), { search: destino.slice(destino.lastIndexOf("/") + 1), limit: 1 });
+  const { error } = await supabase.from("documentos").insert({
+    cliente_id: clienteId, nome: parsed.data.nome, categoria: parsed.data.categoria, storage_path: destino, mime_type: m.midia_mime,
+    tamanho: Number(info?.[0]?.metadata?.size ?? 1), enviado_por: g.session.userId,
+  });
+  if (error) {
+    await admin.storage.from("documentos").remove([destino]);
+    return erroDb(error);
+  }
+  revalidatePath(`/clientes/${clienteId}`);
+  revalidatePath("/administrativo/documentacao");
+  return { ok: true, message: "Arquivo anexado ao cliente e enviado para análise." };
 }

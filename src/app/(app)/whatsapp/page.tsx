@@ -6,10 +6,10 @@ import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { departamentoOptions, getProfileMap, userOptions } from "@/lib/data";
-import { WA_CONVERSA_STATUS, WA_RESULTADOS } from "@/lib/constants";
+import { DOC_CATEGORIAS, WA_CONVERSA_STATUS, WA_RESULTADOS } from "@/lib/constants";
 import { dateTime, maskPhone, relative } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { assumirConversa, encerrarConversa, registrarNota, registrarOptin, salvarEtiquetas, transferirConversa } from "@/lib/actions/whatsapp";
+import { anexarMidiaCliente, assumirConversa, encerrarConversa, registrarNota, registrarOptin, salvarEtiquetas, transferirConversa } from "@/lib/actions/whatsapp";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -172,6 +172,10 @@ async function ConversaAberta({ c, userId, profiles, supervisiona }: { c: Conver
                 : <a href={`/api/whatsapp/midia/${m.id}`} target="_blank" rel="noopener" className="mb-1 flex items-center gap-1 font-semibold text-brand-600"><Paperclip className="h-4 w-4" />{m.midia_nome ?? m.tipo}</a>
             )}
             {m.conteudo && <p className="whitespace-pre-wrap break-words">{m.conteudo}</p>}
+            {m.midia_path && m.direcao === "entrada" && ct.cliente_id && (
+              <FormDrawerButton action={anexarMidiaCliente} title="Anexar ao cadastro do cliente" label="Anexar ao cliente" icon="none" variant="ghost" size="sm" hidden={{ mensagem_id: m.id }} values={{ nome: m.midia_nome ?? "Documento recebido pelo WhatsApp" }}
+                fields={[{ name: "nome", label: "Nome do documento", required: true, span: 6 }, { name: "categoria", label: "Categoria", type: "select", options: DOC_CATEGORIAS, required: true, span: 6 }]} />
+            )}
             <p className="mt-1 text-right text-[10px] text-muted">
               {dateTime(m.created_at)}
               {m.direcao === "saida" && ` · ${m.autor_id ? profiles.get(m.autor_id)?.full_name?.split(" ")[0] ?? "" : "automática"} · ${m.status}`}

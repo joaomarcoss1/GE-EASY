@@ -35,6 +35,7 @@ const ALL_NAV: NavGroup[] = [
       { href: "/dashboard", label: "Painel geral", icon: "LayoutDashboard" },
       { href: "/agenda", label: "Agenda", icon: "CalendarDays" },
       { href: "/tarefas", label: "Tarefas e demandas", icon: "ListChecks" },
+      { href: "/ponto", label: "Meu ponto", icon: "Clock", permission: "ponto.registrar" },
     ],
   },
   {
@@ -98,7 +99,9 @@ const ALL_NAV: NavGroup[] = [
     label: "RH",
     area: "rh",
     items: [
-      { href: "/rh", label: "Funcionários e acessos", icon: "IdCard", permission: "rh.funcionarios.ver" },
+      { href: "/rh", label: "Funcionários", icon: "IdCard", permission: "rh.funcionarios.ver" },
+      { href: "/ponto?tab=aprovacoes", label: "Gestão do ponto", icon: "CalendarCheck", permission: "ponto.gerir" },
+      { href: "/rh/folha", label: "Pré-folha", icon: "FileSpreadsheet", permission: "folha.gerir" },
       { href: "/departamentos", label: "Departamentos", icon: "Building2", permission: "departamentos.view" },
     ],
   },

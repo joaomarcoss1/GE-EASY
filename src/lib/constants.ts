@@ -548,3 +548,45 @@ export const WA_MODELO_CATEGORIAS: Option[] = [
   { value: "marketing", label: "Marketing (exige opt-in)" },
   { value: "authentication", label: "Autenticação" },
 ];
+
+// ---------------------------------------------------------------- RH, ponto e folha (fase 7)
+export const PONTO_TIPOS: Option[] = [
+  { value: "entrada", label: "Entrada" },
+  { value: "intervalo_inicio", label: "Início do intervalo" },
+  { value: "intervalo_fim", label: "Fim do intervalo" },
+  { value: "saida", label: "Saída" },
+];
+export const APROVACAO_STATUS: Option[] = [
+  { value: "pendente", label: "Pendente", tone: "amber" },
+  { value: "aprovado", label: "Aprovado", tone: "green" },
+  { value: "recusado", label: "Recusado", tone: "red" },
+];
+export const AUSENCIA_TIPOS: Option[] = [
+  { value: "ferias", label: "Férias" },
+  { value: "atestado", label: "Atestado médico" },
+  { value: "afastamento", label: "Afastamento" },
+  { value: "licenca", label: "Licença" },
+  { value: "falta_justificada", label: "Falta justificada" },
+  { value: "folga_banco", label: "Folga (banco de horas)" },
+];
+export const TIPOS_CONTRATO: Option[] = [
+  { value: "clt", label: "CLT" },
+  { value: "pj", label: "PJ" },
+  { value: "estagio", label: "Estágio" },
+  { value: "temporario", label: "Temporário" },
+  { value: "autonomo", label: "Autônomo" },
+  { value: "socio", label: "Sócio" },
+  { value: "nao_informado", label: "Não informado" },
+];
+export const FUNCIONARIO_STATUS: Option[] = [
+  { value: "ativo", label: "Ativo", tone: "green" },
+  { value: "ferias", label: "Férias", tone: "sky" },
+  { value: "afastado", label: "Afastado", tone: "amber" },
+  { value: "desligado", label: "Desligado", tone: "slate" },
+];
+export const FOLHA_STATUS: Option[] = [
+  { value: "em_revisao", label: "Em revisão", tone: "amber" },
+  { value: "aprovada", label: "Aprovada", tone: "green" },
+  { value: "exportada", label: "Exportada", tone: "brand" },
+  { value: "cancelada", label: "Cancelada", tone: "slate" },
+];

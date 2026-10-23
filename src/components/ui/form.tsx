@@ -8,7 +8,7 @@ import type { ActionState } from "@/lib/actions/types";
 import { Button } from "./button";
 import { useToast } from "./toast";
 
-export type FieldType = "text" | "email" | "tel" | "number" | "money" | "percent" | "date" | "datetime-local" | "time" | "select" | "multiselect" | "textarea" | "checkbox" | "hidden" | "password" | "url" | "documento" | "cep" | "cnj";
+export type FieldType = "text" | "email" | "tel" | "number" | "money" | "percent" | "date" | "datetime-local" | "time" | "select" | "multiselect" | "textarea" | "checkbox" | "hidden" | "password" | "url" | "documento" | "cep" | "cnj" | "file";
 
 export interface FieldDef {
   name: string;
@@ -109,6 +109,9 @@ export function Field({ field, defaultValue, error }: { field: FieldDef; default
         ))}
       </select>
     );
+  } else if (t === "file") {
+    // placeholder = tipos aceitos (accept); o servidor confere a assinatura do arquivo
+    control = <input {...common} type="file" accept={field.placeholder} className="input py-2 file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-sm" />;
   } else if (t === "textarea") {
     control = <textarea {...common} defaultValue={dv} rows={field.rows ?? 3} placeholder={field.placeholder} className="input resize-y" maxLength={5000} />;
   } else if (t === "checkbox") {
