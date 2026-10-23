@@ -151,7 +151,7 @@ begin
   update public.folha_itens set outros_descontos = 100 where competencia_id = comp and funcionario_id = fu;
   n := public.aprovar_folha(comp);
   execute 'reset role';
-  r := r || pg_temp.ok(n >= 1 and exists (select 1 from public.financeiro_lancamentos l join public.folha_itens i on i.lancamento_id = l.id where i.funcionario_id = fu and l.valor = i.total and l.categoria = 'folha'),
+  r := r || pg_temp.ok(n >= 1 and exists (select 1 from public.financeiro_lancamentos l join public.folha_itens i on i.lancamento_id = l.id where i.funcionario_id = fu and l.valor = i.total and l.categoria = 'Folha e pró-labore'),
                        '26 folha aprovada vira contas a pagar no financeiro');
   perform pg_temp.como(rh, e);
   begin

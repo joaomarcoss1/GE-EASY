@@ -698,7 +698,7 @@ begin
   select id into v_dep from public.departamentos where empresa_id = c.empresa_id and tipo = 'rh' order by created_at limit 1;
   for i in select fi.*, fu.nome from public.folha_itens fi join public.funcionarios fu on fu.id = fi.funcionario_id where fi.competencia_id = c.id and fi.total > 0 loop
     insert into public.financeiro_lancamentos (empresa_id, tipo, categoria, descricao, valor, vencimento, departamento_id, fornecedor, documento_ref, observacoes)
-    values (c.empresa_id, 'despesa', 'folha', left('Folha ' || to_char(c.competencia, 'MM/YYYY') || ' — ' || i.nome, 300), i.total, v_venc, v_dep, left(i.nome, 200),
+    values (c.empresa_id, 'despesa', 'Folha e pró-labore', left('Folha ' || to_char(c.competencia, 'MM/YYYY') || ' — ' || i.nome, 300), i.total, v_venc, v_dep, left(i.nome, 200),
             'folha:' || i.id, 'Gerado pela aprovação da pré-folha (salário, extras, comissões e reembolsos de rota).')
     returning id into v_lanc;
     update public.folha_itens set lancamento_id = v_lanc where id = i.id;

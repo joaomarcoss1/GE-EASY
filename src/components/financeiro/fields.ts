@@ -3,7 +3,7 @@ import {
   CONTRATO_STATUS, CONTRATO_TIPOS, FIN_CATEGORIAS_DESPESA, FIN_CATEGORIAS_RECEITA, FIN_STATUS, FORMAS_PAGAMENTO_ESC, type Option,
 } from "@/lib/constants";
 
-export function lancamentoFields(tipo: "receita" | "despesa", o: { clientes: Option[]; processos: Option[]; departamentos: Option[] }, novo = true): FieldDef[] {
+export function lancamentoFields(tipo: "receita" | "despesa", o: { clientes: Option[]; processos: Option[]; departamentos: Option[]; centros?: Option[]; contas?: Option[] }, novo = true): FieldDef[] {
   return [
     { name: "tipo", type: "hidden" },
     { name: "categoria", label: "Categoria", type: "select", options: tipo === "receita" ? FIN_CATEGORIAS_RECEITA : FIN_CATEGORIAS_DESPESA, emptyOption: false, span: 3 },
@@ -14,7 +14,9 @@ export function lancamentoFields(tipo: "receita" | "despesa", o: { clientes: Opt
     { name: "forma_pagamento", label: "Forma", type: "select", options: FORMAS_PAGAMENTO_ESC, emptyOption: "—", span: 2 },
     { name: "cliente_id", label: "Cliente", type: "select", options: o.clientes, emptyOption: "—", span: 3, section: "Vínculos" },
     { name: "processo_id", label: "Processo", type: "select", options: o.processos, emptyOption: "—", span: 3 },
-    { name: "departamento_id", label: "Departamento / centro de custo", type: "select", options: o.departamentos, emptyOption: "—", span: 3 },
+    { name: "departamento_id", label: "Departamento", type: "select", options: o.departamentos, emptyOption: "—", span: 3 },
+    ...(o.centros?.length ? ([{ name: "centro_custo_id", label: "Centro de custo", type: "select", options: o.centros, emptyOption: "—", span: 3 }] as FieldDef[]) : []),
+    ...(o.contas?.length ? ([{ name: "conta_id", label: "Conta bancária", type: "select", options: o.contas, emptyOption: "—", span: 3 }] as FieldDef[]) : []),
     ...(tipo === "despesa"
       ? ([
           { name: "fornecedor", label: "Fornecedor", span: 3 },

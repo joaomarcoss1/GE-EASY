@@ -10,6 +10,7 @@ import { brl, brlShort, date, monthLabel, todayISO } from "@/lib/format";
 import type { FinanceiroLancamento } from "@/lib/types";
 import { baixarEmLote, baixarLancamento, cancelarLancamento, deleteLancamento, estornarLancamento, saveLancamento } from "@/lib/actions/financeiro";
 import { PageHeader } from "@/components/ui/page-header";
+import { LinkButton } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -45,13 +46,16 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: P
   const ini12 = new Date(Date.UTC(y, m - 12, 1)).toISOString().slice(0, 10);
 
   const sel = "*, clientes(id, nome), processos(id, titulo)";
-  const [mesRes, atrasadosRes, historicoRes, clientes, processos, departamentos] = await Promise.all([
+  const [mesRes, atrasadosRes, historicoRes, clientes, processos, departamentos, centrosRes, contasRes, pendRes] = await Promise.all([
     supabase.from("financeiro_lancamentos").select(sel).gte("vencimento", ini).lte("vencimento", fim).order("vencimento").limit(3000),
     supabase.from("financeiro_lancamentos").select(sel).eq("status", "aberto").lt("vencimento", hoje).order("vencimento").limit(2000),
     supabase.from("financeiro_lancamentos").select("tipo, valor, valor_pago, data_pagamento").eq("status", "pago").gte("data_pagamento", ini12).lte("data_pagamento", fim).limit(10000),
     clienteOptions(),
     processoOptions(),
     departamentoOptions(),
+    supabase.from("centros_custo").select("id, nome").eq("ativo", true).order("nome"),
+    supabase.from("contas_bancarias").select("id, nome").eq("ativo", true).order("nome"),
+    supabase.from("financeiro_lancamentos").select("id", { count: "exact", head: true }).eq("aprovacao", "pendente").neq("status", "cancelado"),
   ]);
   const doMes = (mesRes.data ?? []) as unknown as Row[];
   const atrasados = (atrasadosRes.data ?? []) as unknown as Row[];
@@ -85,7 +89,8 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: P
     devedores.set(c.id, cur);
   }
 
-  const opts = { clientes, processos, departamentos };
+  const op = (r: { data: { id: string; nome: string }[] | null }) => (r.data ?? []).map((x) => ({ value: x.id, label: x.nome }));
+  const opts = { clientes, processos, departamentos, centros: op(centrosRes), contas: op(contasRes) };
   const fields = { receita: lancamentoFields("receita", opts, false), despesa: lancamentoFields("despesa", opts, false) };
   const toRow = (l: Row): LancRow => ({
     id: l.id,
@@ -151,6 +156,8 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: P
             <Suspense>
               <MonthPicker value={mes} />
             </Suspense>
+            <LinkButton href="/financeiro/gestao" variant="secondary">Gestão{pendRes.count ? ` (${pendRes.count} p/ aprovar)` : ""}</LinkButton>
+            <LinkButton href="/financeiro/relatorios" variant="secondary">DRE e relatórios</LinkButton>
             {novoBtn("despesa")}
             {novoBtn("receita")}
           </>

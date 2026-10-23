@@ -110,6 +110,8 @@ const ALL_NAV: NavGroup[] = [
     area: "financeiro",
     items: [
       { href: "/financeiro", label: "Financeiro", icon: "Wallet", permission: "financeiro.view" },
+      { href: "/financeiro/gestao", label: "Aprovações e conciliação", icon: "Banknote", permission: "financeiro.view" },
+      { href: "/financeiro/relatorios", label: "DRE e fluxo de caixa", icon: "FileBarChart", permission: "financeiro.view" },
       { href: "/contratos", label: "Contratos de honorários", icon: "FileText", permission: "contratos.view" },
       { href: "/comissoes", label: "Comissões", icon: "BadgePercent", permission: "comissoes.view" },
       { href: "/horas", label: "Controle de horas", icon: "Timer", permission: "horas.lancar" },
