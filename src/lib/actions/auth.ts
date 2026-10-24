@@ -114,7 +114,8 @@ export async function updatePassword(_: ActionState, formData: FormData): Promis
     }
     const { error } = await createAdminClient().auth.admin.updateUserById(user.id, { password: pass.data, app_metadata: { trocar_senha: false } });
     if (error) return { error: error.code === "weak_password" ? "Senha fraca ou já vazada na internet. Escolha outra." : error.code === "same_password" ? "A nova senha deve ser diferente da atual." : "Não foi possível alterar a senha." };
-    await supabase.auth.refreshSession();
+    // trocar a senha encerra as sessões da conta: entra de novo com a nova senha para continuar logado
+    await supabase.auth.signInWithPassword({ email: user.email ?? "", password: pass.data });
     return { ok: true, message: "Senha alterada com sucesso." };
   }
   // Link de recuperação ("Esqueci a senha")
