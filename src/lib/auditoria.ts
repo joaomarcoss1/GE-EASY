@@ -84,6 +84,8 @@ export const ACOES_AUDITORIA: Option[] = [
   { value: "DESLIGAMENTO", label: "Desligamento" },
   { value: "SIMULACAO", label: "Ver como (simulação)" },
   { value: "DISPOSITIVO_REVOGADO", label: "Aparelho revogado" },
+  { value: "USUARIO_CRIADO", label: "Acesso criado" },
+  { value: "SENHA_REDEFINIDA", label: "Senha definida pelo administrador" },
   { value: "SINCRONIZACAO", label: "Sincronização do app" },
   { value: "IMPORTACAO", label: "Importação" },
   { value: "EXPORTACAO_EMPRESA", label: "Exportação da empresa" },
