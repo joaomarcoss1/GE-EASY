@@ -62,7 +62,7 @@
 
 ## Checklist de produção
 - [ ] Em *Authentication › Providers › Email*, **desativar "Allow new users to sign up"** após criar o primeiro admin
-      (novos usuários entram por convite).
+      (novos usuários são criados pelo administrador, com senha inicial).
 - [ ] Ativar *Leaked password protection* e definir tamanho mínimo de senha 10 no painel do Supabase.
 - [ ] Configurar *Site URL* e *Redirect URLs* (`https://SEU-DOMINIO/auth/callback`, `/auth/confirm`).
 - [ ] Definir `APP_ENCRYPTION_KEY` (32 bytes base64) e `SUPABASE_SERVICE_ROLE_KEY` apenas no servidor (Vercel).

@@ -6,7 +6,7 @@ Navegador (React 19)
   ▼
 Next.js 15 (Vercel)  ──── middleware: sessão, AAL2, redirecionamentos
   │  @supabase/ssr com o JWT do usuário  →  RLS aplica as regras de acesso
-  │  service role (somente servidor)      →  convites, tokens Google
+  │  service role (somente servidor)      →  criação de usuários, tokens Google
   ▼
 Supabase: Postgres (RLS, triggers, pg_cron) · Auth (2FA) · Storage (bucket privado)
   ▲

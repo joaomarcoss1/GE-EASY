@@ -53,7 +53,7 @@ npm run dev                  # http://localhost:3000
 ```
 
 O **primeiro usuário** que se cadastrar no Supabase vira administrador. Depois disso, novos usuários entram
-inativos (aguardando aprovação) ou são convidados pelo admin em *Configurações › Usuários*.
+inativos (aguardando aprovação) ou são criados pelo admin em *Configurações › Usuários* (e-mail + senha inicial; troca no primeiro acesso).
 
 Implantação (Vercel + Supabase + Google Cloud) em [`docs/IMPLANTACAO.md`](docs/IMPLANTACAO.md).
 

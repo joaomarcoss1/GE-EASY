@@ -39,6 +39,7 @@ export function clienteFields(consultores: Option[], canTransfer: boolean, novo 
           name: "lgpd_consentimento",
           label: "O titular autorizou o tratamento dos dados para atendimento e contratação (LGPD)",
           type: "checkbox",
+          required: true,
           help: `Registramos data, hora, usuário e a versão do termo (${TERMO_LGPD_VERSAO}).`,
           span: 6,
           section: "Consentimento",

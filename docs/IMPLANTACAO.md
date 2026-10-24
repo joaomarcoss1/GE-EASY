@@ -9,7 +9,7 @@ No painel:
    `https://SEU-DOMINIO/auth/callback` e `https://SEU-DOMINIO/auth/confirm` (e `http://localhost:3000/**` para dev).
 2. Crie o primeiro usuário (tela de login não tem cadastro público: use *Authentication › Users › Add user*,
    marcando "Auto confirm"). **O primeiro usuário vira administrador automaticamente.**
-3. Depois disso, desative *Allow new users to sign up* (os demais entram por convite).
+3. Depois disso, desative *Allow new users to sign up* (os demais têm o acesso criado pelo administrador).
 4. *Project Settings › API*: copie a URL, a chave publicável e a **service_role** (só para o servidor).
 
 ## 2. Google Cloud (Agenda + Drive) — opcional

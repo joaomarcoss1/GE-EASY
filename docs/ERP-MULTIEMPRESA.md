@@ -54,7 +54,7 @@ Outras decisões técnicas estão nos ADRs em `docs/adr/`.
   sem domínio raiz configurado, o usuário escolhe a empresa após o login (`/selecionar-empresa`).
 - **Integrações por empresa**: Drive (configuração e cache de pastas), DJEN (OABs dos membros + adicionais) e
   logs de integração; a rotina `/api/cron/sincronizar` percorre empresa por empresa.
-- **Painel da plataforma** (`/plataforma`): criar empresa (com dados padrão e convite do admin master),
+- **Painel da plataforma** (`/plataforma`): criar empresa (com dados padrão e o admin master com senha inicial),
   situação (suspender = ninguém da empresa entra), plano, limite de usuários, domínio, módulos e uso.
 - **Desempenho**: contexto (empresa, papel, master, permissões) calculado **uma vez por requisição** e
   políticas com `(select função())`. Medido localmente com 30 mil clientes: contagem 2 s → 9 ms; lista de
@@ -69,7 +69,7 @@ Outras decisões técnicas estão nos ADRs em `docs/adr/`.
 - **No banco**: `tem_permissao('chave')` em políticas restritivas das tabelas principais — tirar a
   funcionalidade bloqueia a ação também por chamada direta à API. O **papel** continua definindo o escopo
   (próprios / departamento / empresa).
-- **Quem gere**: só o admin master define níveis, funcionalidades e exceções; RH (`usuarios.manage`) convida,
+- **Quem gere**: só o admin master define níveis, funcionalidades e exceções; RH (`usuarios.manage`) cria o acesso com senha inicial (sem e-mail),
   ativa e desativa (não promove a gestor/admin); ninguém altera o próprio acesso; sempre resta 1 master.
 - **Entrada por departamento**: `/inicio` (escolha da área, última em destaque), URLs `/consultor`,
   `/administrativo`, `/juridico`, `/rh`, `/financeiro`; o menu mostra a área ativa. A área **não** amplia

@@ -117,7 +117,7 @@ function Field({ field, defaultValue, error }: { field: FieldDef; defaultValue?:
   } else if (t === "checkbox") {
     return (
       <label className={cn("flex cursor-pointer items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm hover:bg-surface-2", spanCls(field.span))}>
-        <input type="checkbox" name={field.name} defaultChecked={defaultValue === true || defaultValue === "true"} className="h-4 w-4 rounded accent-brand-700" />
+        <input type="checkbox" name={field.name} required={field.required} defaultChecked={defaultValue === true || defaultValue === "true"} className="h-4 w-4 rounded accent-brand-700" />
         <span>
           <span className="font-medium">{field.label}</span>
           {field.help && <span className="block text-xs text-muted">{field.help}</span>}
