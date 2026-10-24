@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil } from "lucide-react";
+import { KeyRound, Plus, Pencil } from "lucide-react";
 import type { ActionState } from "@/lib/actions/types";
 import { Button } from "./button";
 import { Drawer } from "./drawer";
@@ -34,7 +34,7 @@ export function FormDrawerButton({
   title: string;
   description?: string;
   label?: string;
-  icon?: "plus" | "edit" | "none";
+  icon?: "plus" | "edit" | "key" | "none";
   variant?: "primary" | "accent" | "secondary" | "ghost" | "outline";
   size?: "sm" | "md" | "icon";
   submitLabel?: string;
@@ -53,7 +53,7 @@ export function FormDrawerButton({
     },
     [router, redirectTo],
   );
-  const Icon = icon === "plus" ? Plus : icon === "edit" ? Pencil : null;
+  const Icon = icon === "plus" ? Plus : icon === "edit" ? Pencil : icon === "key" ? KeyRound : null;
   return (
     <>
       <Button type="button" variant={variant} size={size} onClick={() => setOpen(true)} aria-label={label ?? title} title={size === "icon" ? title : undefined}>

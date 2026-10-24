@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
+import { strongPassword } from "@/lib/validators";
 import type { ActionState } from "./types";
 
 const safeNext = (v: unknown) => (typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : "/inicio");
@@ -88,20 +89,17 @@ export async function requestPasswordReset(_: ActionState, formData: FormData): 
   return { ok: true, message: "Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha." };
 }
 
-const strongPassword = z
-  .string()
-  .min(10, "Mínimo de 10 caracteres")
-  .max(128)
-  .regex(/[a-z]/, "Inclua uma letra minúscula")
-  .regex(/[A-Z]/, "Inclua uma letra maiúscula")
-  .regex(/\d/, "Inclua um número");
-
 export async function updatePassword(_: ActionState, formData: FormData): Promise<ActionState> {
   const pass = strongPassword.safeParse(formData.get("password"));
   if (!pass.success) return { error: pass.error.issues[0].message, fieldErrors: { password: pass.error.issues[0].message } };
   if (formData.get("password") !== formData.get("confirm")) return { error: "As senhas não conferem.", fieldErrors: { confirm: "As senhas não conferem." } };
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password: pass.data });
+  const { data, error } = await supabase.auth.updateUser({ password: pass.data });
   if (error) return { error: error.message.includes("different") ? "A nova senha deve ser diferente da atual." : "Não foi possível alterar a senha. O link pode ter expirado." };
+  // Senha inicial definida pelo administrador: libera o acesso e renova o token (sem a marca de troca)
+  if (data.user?.app_metadata?.trocar_senha && hasServiceRole()) {
+    await createAdminClient().auth.admin.updateUserById(data.user.id, { app_metadata: { trocar_senha: false } });
+    await supabase.auth.refreshSession();
+  }
   return { ok: true, message: "Senha alterada com sucesso." };
 }

@@ -48,7 +48,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       {tab === "perfil" && <PerfilTab session={session} />}
       {tab === "seguranca" && <SegurancaTab isAdmin={isAdmin} exigir2fa={sp.exigir2fa === "1"} />}
       {tab === "integracoes" && <IntegracoesTab ok={sp.ok} erro={sp.erro} isAdmin={can(profile, "integracoes.manage")} />}
-      {tab === "usuarios" && gereUsuarios && <UsuariosTab currentUserId={profile.id} />}
+      {tab === "usuarios" && gereUsuarios && <UsuariosTab currentUserId={profile.id} isMaster={!!profile.admin_master} />}
       {tab === "cadastros" && canCadastros && <CadastrosTab />}
       {tab === "documentacao" && canCadastros && <DocumentacaoTab />}
       {tab === "rotas" && can(profile, "rotas.definir") && <RotasTab />}

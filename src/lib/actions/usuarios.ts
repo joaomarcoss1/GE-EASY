@@ -3,14 +3,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
-import { env } from "@/lib/env";
-import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
+import { strongPassword } from "@/lib/validators";
+import { dbError, formToObject, guard, registrarAcesso, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
 const ROLES = ["admin", "gestor", "financeiro", "advogado", "assistente_juridico", "administrativo", "consultor", "consultor_externo"] as const;
 const GESTAO = new Set<string>(["admin", "gestor"]);
-const SERVICE_ROLE_MSG = "Configure a variável SUPABASE_SERVICE_ROLE_KEY no servidor para convidar usuários e reenviar acessos.";
-const redirectTo = () => `${env.siteUrl}/auth/callback?next=/redefinir-senha`;
+const SERVICE_ROLE_MSG = "Configure a variável SUPABASE_SERVICE_ROLE_KEY no servidor para criar usuários e definir senhas.";
 
 function revalidateUsers(id?: string) {
   revalidatePath("/configuracoes");
@@ -61,91 +60,141 @@ export async function updateUsuario(_: ActionState, formData: FormData): Promise
   return { ok: true, message: perfilError ? "Acesso atualizado. Comissão/território só o administrador altera." : "Usuário atualizado.", id: v.id };
 }
 
-const inviteSchema = z.object({
+const novoSchema = z.object({
   email: z.string().trim().toLowerCase().email("E-mail inválido").max(160),
   full_name: zs.required("Nome", 120),
+  senha: z.string().max(128).optional().default(""),
+  confirmar: z.string().max(128).optional().default(""),
+  trocar_senha: zs.bool(),
   role: zs.enumOf([...ROLES], "Selecione o papel"),
+  nivel_id: zs.uuid(),
   comissao_percentual: zs.number(0, 100),
   territorio: zs.text(120),
 });
 
+const erroSenha = (senha: string, confirmar: string): ActionState | null => {
+  const s = strongPassword.safeParse(senha);
+  if (!s.success) return { error: s.error.issues[0].message, fieldErrors: { senha: s.error.issues[0].message } };
+  if (senha !== confirmar) return { error: "As senhas não conferem.", fieldErrors: { confirmar: "As senhas não conferem" } };
+  return null;
+};
+
 /**
- * Convida um usuário para a empresa ativa. Conta nova: convite por e-mail. Conta já existente (outra
- * empresa da plataforma): só cria o vínculo. O acesso padrão do perfil (departamento/nível) é aplicado
- * pelo banco; o administrador master ajusta na tela Acessos. O service role ignora as regras do banco,
- * então os perfis de gestão são conferidos aqui.
+ * Cria o acesso direto no sistema, sem depender de e-mail: conta já confirmada, com a senha inicial
+ * definida aqui (opcionalmente trocada pelo usuário no primeiro acesso). Conta já existente (outra
+ * empresa da plataforma): só cria o vínculo e a senha continua a da pessoa. O acesso padrão do perfil é
+ * aplicado pelo banco; o nível do departamento (opcional) só pelo administrador master. O service role
+ * ignora as regras do banco, então os perfis de gestão são conferidos aqui.
  */
-export async function inviteUsuario(_: ActionState, formData: FormData): Promise<ActionState> {
+export async function criarUsuario(_: ActionState, formData: FormData): Promise<ActionState> {
   const g = await guard("usuarios.manage");
   if ("denied" in g) return g.denied;
   if (!hasServiceRole()) return { error: SERVICE_ROLE_MSG };
-  const parsed = inviteSchema.safeParse(formToObject(formData));
+  const parsed = novoSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
   const v = parsed.data;
-  if (GESTAO.has(v.role) && !g.session.profile.admin_master) return { error: "Somente o administrador master convida administradores e gestores.", fieldErrors: { role: "Perfil de gestão" } };
+  const master = !!g.session.profile.admin_master;
+  if (GESTAO.has(v.role) && !master) return { error: "Somente o administrador master cria administradores e gestores.", fieldErrors: { role: "Perfil de gestão" } };
   const empresaId = g.session.empresa!.id;
   const admin = createAdminClient();
 
-  let userId: string | null = null;
-  let existente = false;
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(v.email, { data: { full_name: v.full_name }, redirectTo: redirectTo() });
-  if (data?.user) userId = data.user.id;
-  else {
-    const msg = error?.message ?? "";
-    if (/already|registered|exists/i.test(msg)) {
-      const { data: p } = await admin.from("profiles").select("id").eq("email", v.email).maybeSingle();
-      userId = p?.id ?? null;
-      existente = true;
-    } else if (/rate limit/i.test(msg)) return { error: "Limite de envio de e-mails atingido. Aguarde alguns minutos." };
-    if (!userId) {
-      console.error("[usuarios.invite]", error?.status, msg);
-      return { error: "Não foi possível enviar o convite. Verifique o e-mail e as configurações de SMTP do Supabase." };
+  const { data: perfil } = await admin.from("profiles").select("id").eq("email", v.email).maybeSingle();
+  let userId = (perfil?.id as string | undefined) ?? null;
+  const novo = !userId;
+  if (userId) {
+    const { data: atual } = await admin.from("empresa_membros").select("ativo").eq("empresa_id", empresaId).eq("user_id", userId).maybeSingle();
+    if (atual) return { error: atual.ativo ? "Este usuário já faz parte da empresa." : "Este usuário já tem vínculo (desativado). Reative-o na lista.", fieldErrors: { email: "Já vinculado" } };
+  } else {
+    const invalida = erroSenha(v.senha, v.confirmar);
+    if (invalida) return invalida;
+    const { data, error } = await admin.auth.admin.createUser({
+      email: v.email,
+      password: v.senha,
+      email_confirm: true,
+      user_metadata: { full_name: v.full_name },
+      app_metadata: { trocar_senha: v.trocar_senha },
+    });
+    if (error || !data.user) {
+      console.error("[usuarios.criar]", error?.status, error?.code);
+      if (error?.code === "email_exists" || /already|registered/i.test(error?.message ?? "")) return { error: "Já existe uma conta com este e-mail.", fieldErrors: { email: "Já cadastrado" } };
+      if (error?.code === "weak_password") return { error: "Senha fraca ou já vazada na internet. Escolha outra.", fieldErrors: { senha: "Senha fraca" } };
+      return { error: "Não foi possível criar o usuário. Tente novamente." };
     }
+    userId = data.user.id;
   }
 
-  const { data: atual } = await admin.from("empresa_membros").select("ativo").eq("empresa_id", empresaId).eq("user_id", userId).maybeSingle();
-  if (atual) return { error: atual.ativo ? "Este usuário já faz parte da empresa." : "Este usuário já tem vínculo (desativado). Reative-o na lista.", fieldErrors: { email: "Já vinculado" } };
   const { error: vincError } = await admin
     .from("empresa_membros")
     .insert({ empresa_id: empresaId, user_id: userId, role: v.role, ativo: true, admin_master: false, convidado_por: g.session.userId });
   if (vincError) {
-    console.error("[usuarios.invite.vinculo]", vincError.code, vincError.message);
-    return { error: vincError.message.includes("Limite de usuários") ? vincError.message : "Convite enviado, mas o vínculo com a empresa falhou. Tente novamente." };
+    console.error("[usuarios.criar.vinculo]", vincError.code, vincError.message);
+    // conta criada agora sem vínculo não serve para nada: desfaz
+    if (novo) await admin.auth.admin.deleteUser(userId!);
+    return { error: vincError.message.includes("Limite de usuários") ? vincError.message : "Não foi possível vincular o usuário à empresa. Tente novamente." };
   }
-  if (!existente) {
+  if (novo) {
     await admin
       .from("profiles")
       .update({ full_name: v.full_name, comissao_percentual: v.comissao_percentual ?? 0, territorio: v.territorio, empresa_padrao_id: empresaId })
       .eq("id", userId);
   }
+  let aviso = "";
+  if (v.nivel_id && master) {
+    // pela sessão do master: o banco confere o nível (desta empresa) e audita
+    const supabase = await createClient();
+    const { data: nivel } = await supabase.from("departamento_niveis").select("departamento_id").eq("id", v.nivel_id).maybeSingle();
+    const { error } = nivel
+      ? await supabase.from("departamento_membros").upsert({ departamento_id: nivel.departamento_id, user_id: userId, nivel_id: v.nivel_id, ativo: true }, { onConflict: "departamento_id,user_id" })
+      : { error: { message: "nível não encontrado" } };
+    if (error) aviso = " O nível de acesso não foi aplicado: ajuste na tela Acessos.";
+  }
+  await registrarAcesso("USUARIO_CRIADO", "empresa_membros", userId, { role: v.role, conta_nova: novo, trocar_senha: novo && v.trocar_senha });
   revalidateUsers();
-  return { ok: true, message: existente ? `${v.email} já tinha conta e foi adicionado(a) à empresa.` : `Convite enviado para ${v.email}.`, id: userId };
+  return {
+    ok: true,
+    id: userId!,
+    message: (novo ? `Acesso criado. ${v.email} já pode entrar com a senha definida${v.trocar_senha ? " (e vai trocá-la no primeiro acesso)" : ""}.` : `${v.email} já tinha conta e foi adicionado(a) à empresa com a senha atual dele(a).`) + aviso,
+  };
 }
 
-/** Reenvia o convite (se ainda não aceito) ou um link de redefinição de senha. Só para membros da empresa. */
-export async function reenviarAcesso(id: string): Promise<ActionState> {
+const senhaSchema = z.object({
+  id: zs.requiredUuid("o usuário"),
+  senha: z.string().max(128),
+  confirmar: z.string().max(128),
+  trocar_senha: zs.bool(),
+});
+
+/**
+ * Define uma nova senha para um membro da empresa (esqueceu a senha, primeiro acesso). Não vale para
+ * contas que também acessam outra empresa ou a plataforma: a senha é da pessoa, não desta empresa.
+ */
+export async function definirSenhaUsuario(_: ActionState, formData: FormData): Promise<ActionState> {
   const g = await guard("usuarios.manage");
   if ("denied" in g) return g.denied;
-  if (!isUuid(id)) return { error: "Usuário inválido." };
   if (!hasServiceRole()) return { error: SERVICE_ROLE_MSG };
+  const parsed = senhaSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return zodErrors(parsed.error);
+  const v = parsed.data;
+  if (v.id === g.session.userId) return { error: "Para trocar a sua senha use Configurações › Segurança." };
+  const invalida = erroSenha(v.senha, v.confirmar);
+  if (invalida) return invalida;
   const supabase = await createClient();
-  const { data: membro } = await supabase.from("membros").select("email").eq("id", id).maybeSingle();
-  if (!membro?.email) return { error: "Usuário não encontrado nesta empresa." };
-
+  const { data: alvo } = await supabase.from("membros").select("id, email, role, admin_master").eq("id", v.id).maybeSingle();
+  if (!alvo) return { error: "Usuário não encontrado nesta empresa." };
+  if ((GESTAO.has(alvo.role as string) || alvo.admin_master) && !g.session.profile.admin_master) return { error: "Somente o administrador master redefine a senha de administradores e gestores." };
   const admin = createAdminClient();
-  const { data: authUser } = await admin.auth.admin.getUserById(id);
-  const pendingInvite = authUser?.user && !authUser.user.email_confirmed_at && !authUser.user.last_sign_in_at;
-  if (pendingInvite) {
-    const { error } = await admin.auth.admin.inviteUserByEmail(membro.email, { redirectTo: redirectTo() });
-    if (!error) return { ok: true, message: `Convite reenviado para ${membro.email}.` };
-    console.error("[usuarios.reinvite]", error.status, error.message);
-  }
-  const { error } = await admin.auth.resetPasswordForEmail(membro.email, { redirectTo: redirectTo() });
+  const [{ data: outras }, { data: plataforma }] = await Promise.all([
+    admin.from("empresa_membros").select("empresa_id").eq("user_id", v.id).neq("empresa_id", g.session.empresa!.id).limit(1),
+    admin.from("plataforma_admins").select("user_id").eq("user_id", v.id).maybeSingle(),
+  ]);
+  if (outras?.length || plataforma) return { error: "Esta conta também acessa outra empresa. A própria pessoa deve trocar a senha em “Esqueci a senha”." };
+  const { error } = await admin.auth.admin.updateUserById(v.id, { password: v.senha, app_metadata: { trocar_senha: v.trocar_senha } });
   if (error) {
-    console.error("[usuarios.reset]", error.status, error.message);
-    return { error: /rate limit/i.test(error.message) ? "Limite de envio de e-mails atingido. Aguarde alguns minutos." : "Não foi possível enviar o e-mail." };
+    console.error("[usuarios.senha]", error.status, error.code);
+    return error.code === "weak_password" ? { error: "Senha fraca ou já vazada na internet. Escolha outra.", fieldErrors: { senha: "Senha fraca" } } : { error: "Não foi possível definir a senha." };
   }
-  return { ok: true, message: `Link de redefinição de senha enviado para ${membro.email}.` };
+  await registrarAcesso("SENHA_REDEFINIDA", "profiles", v.id, { trocar_senha: v.trocar_senha });
+  return { ok: true, message: `Nova senha definida para ${alvo.email}.${v.trocar_senha ? " Ela será trocada no próximo acesso." : ""}` };
 }
 
 const consultorSchema = z.object({

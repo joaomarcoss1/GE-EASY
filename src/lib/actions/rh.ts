@@ -9,7 +9,7 @@ import { isValidCPF } from "@/lib/validators";
 import { onlyDigits } from "@/lib/format";
 import { can } from "@/lib/rbac";
 import { AUSENCIA_TIPOS, PONTO_TIPOS, TIPOS_CONTRATO } from "@/lib/constants";
-import { inviteUsuario } from "./usuarios";
+import { criarUsuario } from "./usuarios";
 import { dbError, formToObject, guard, isUuid, limitar, registrarAcesso, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
@@ -43,15 +43,18 @@ const funcSchema = z.object({
   observacoes: zs.text(2000),
   criar_acesso: zs.bool(),
   role: zs.text(40),
+  senha: z.string().max(128).optional().default(""),
+  confirmar: z.string().max(128).optional().default(""),
+  trocar_senha: zs.bool(),
 });
 
-/** Admissão/edição. Com "criar acesso", convida o usuário (o banco cria o vínculo e o registro, que é completado aqui). */
+/** Admissão/edição. Com "criar acesso", cria o usuário com a senha inicial (o banco cria o vínculo e o registro, que é completado aqui). */
 export async function salvarFuncionario(_: ActionState, formData: FormData): Promise<ActionState> {
   const g = await guard("rh.funcionarios.editar");
   if ("denied" in g) return g.denied;
   const parsed = funcSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
-  const { id, criar_acesso, role, ...v } = parsed.data;
+  const { id, criar_acesso, role, senha, confirmar, trocar_senha, ...v } = parsed.data;
   const supabase = await createClient();
   if (id) {
     const { data, error } = await supabase.from("funcionarios").update(v).eq("id", id).select("id").maybeSingle();
@@ -67,7 +70,10 @@ export async function salvarFuncionario(_: ActionState, formData: FormData): Pro
     fd.set("email", v.email);
     fd.set("full_name", v.nome);
     fd.set("role", role || "administrativo");
-    const r = await inviteUsuario({}, fd);
+    fd.set("senha", senha);
+    fd.set("confirmar", confirmar);
+    if (trocar_senha) fd.set("trocar_senha", "on");
+    const r = await criarUsuario({}, fd);
     if (!r.ok || !r.id) return r;
     const { data } = await createAdminClient().from("funcionarios").update(v).eq("empresa_id", g.session.empresa!.id).eq("user_id", r.id).select("id").maybeSingle();
     atualizar();

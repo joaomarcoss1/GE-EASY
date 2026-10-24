@@ -1,4 +1,14 @@
+import { z } from "zod";
 import { onlyDigits } from "./format";
+
+/** Senha forte (definida pelo usuário ou pelo administrador ao criar o acesso). */
+export const strongPassword = z
+  .string()
+  .min(10, "Mínimo de 10 caracteres")
+  .max(128)
+  .regex(/[a-z]/, "Inclua uma letra minúscula")
+  .regex(/[A-Z]/, "Inclua uma letra maiúscula")
+  .regex(/[0-9]/, "Inclua um número");
 
 export function isValidCPF(value: string) {
   const cpf = onlyDigits(value);

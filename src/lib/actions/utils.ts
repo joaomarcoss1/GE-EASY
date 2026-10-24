@@ -5,10 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { can, type Permission } from "@/lib/rbac";
 import type { ActionState } from "./types";
 
-export type { ActionState };
-
-
-export const initialState: ActionState = {};
 
 /** Converte FormData em objeto simples; checkboxes vêm como "on". */
 export function formToObject(formData: FormData) {
@@ -91,6 +87,7 @@ export function dbError(error: { code?: string; message?: string } | null): Acti
 export async function guard(permission?: Permission): Promise<{ session: Session } | { denied: ActionState }> {
   const session = await getSession();
   if (!session) return { denied: { error: "Sessão expirada. Entre novamente." } };
+  if (session.trocarSenha) return { denied: { error: "Defina a sua nova senha antes de continuar." } };
   if (!session.empresa) return { denied: { error: "Selecione a empresa em que vai trabalhar (ou peça acesso ao administrador)." } };
   if (!session.profile.active) return { denied: { error: "Seu acesso a esta empresa está desativado." } };
   const mfa = await getSituacao2fa(session.profile);

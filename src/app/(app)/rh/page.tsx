@@ -57,10 +57,13 @@ export default async function RhPage({ searchParams }: { searchParams: Promise<R
         actions={
           <>
             {edita && (
-              <FormDrawerButton action={salvarFuncionario} title="Admitir funcionário" label="Admitir" variant="accent" width="max-w-2xl" values={{ tipo_contrato: "clt", controla_ponto: true, role: "administrativo" }}
+              <FormDrawerButton action={salvarFuncionario} title="Admitir funcionário" label="Admitir" variant="accent" width="max-w-2xl" values={{ tipo_contrato: "clt", controla_ponto: true, role: "administrativo", trocar_senha: true }}
                 fields={[...camposFuncionario(deps, opJor), ...(can(profile, "usuarios.manage") ? [
-                  { name: "criar_acesso", label: "Criar acesso ao sistema (convite por e-mail)", type: "checkbox", span: 3, section: "Acesso" } as FieldDef,
+                  { name: "criar_acesso", label: "Criar acesso ao sistema (login = e-mail)", type: "checkbox", span: 3, section: "Acesso" } as FieldDef,
                   { name: "role", label: "Perfil de acesso", type: "select", options: ROLES.filter((r) => !["admin", "gestor"].includes(r.value)), span: 3 } as FieldDef,
+                  { name: "senha", label: "Senha inicial", type: "password", span: 3, help: "Mínimo de 10 caracteres, com maiúscula, minúscula e número" } as FieldDef,
+                  { name: "confirmar", label: "Confirmar senha", type: "password", span: 3 } as FieldDef,
+                  { name: "trocar_senha", label: "Pedir para trocar a senha no primeiro acesso", type: "checkbox", span: 6 } as FieldDef,
                 ] : [])]} />
             )}
             {can(profile, "ponto.gerir") && <LinkButton href="/ponto?tab=aprovacoes" variant="secondary"><Clock className="h-4 w-4" />Ponto{pendentes ? ` (${pendentes})` : ""}</LinkButton>}

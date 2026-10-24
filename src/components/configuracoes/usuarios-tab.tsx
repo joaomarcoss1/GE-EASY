@@ -1,21 +1,26 @@
-import { AlertTriangle, Mail, Users } from "lucide-react";
+import { AlertTriangle, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { hasServiceRole } from "@/lib/supabase/admin";
 import { ROLES } from "@/lib/constants";
 import { date, pct } from "@/lib/format";
 import type { Profile } from "@/lib/types";
-import { inviteUsuario, reenviarAcesso, updateUsuario } from "@/lib/actions/usuarios";
+import { criarUsuario, definirSenhaUsuario, updateUsuario } from "@/lib/actions/usuarios";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
-import { ConfirmAction } from "@/components/ui/confirm-action";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
-import { editUsuarioFields, inviteFields } from "./usuario-fields";
+import { editUsuarioFields, novoUsuarioFields, senhaUsuarioFields } from "./usuario-fields";
 
-export async function UsuariosTab({ currentUserId }: { currentUserId: string }) {
+export async function UsuariosTab({ currentUserId, isMaster }: { currentUserId: string; isMaster: boolean }) {
   const supabase = await createClient();
-  const { data } = await supabase.from("membros").select("*").order("full_name");
+  const [{ data }, { data: niveis }] = await Promise.all([
+    supabase.from("membros").select("*").order("full_name"),
+    isMaster ? supabase.from("departamento_niveis").select("id, nome, departamentos(nome)").order("ordem") : Promise.resolve({ data: [] }),
+  ]);
+  const opNiveis = ((niveis ?? []) as unknown as { id: string; nome: string; departamentos: { nome: string } | null }[])
+    .map((n) => ({ value: n.id, label: `${n.departamentos?.nome ?? "Departamento"} · ${n.nome}` }))
+    .sort((x, y) => x.label.localeCompare(y.label, "pt-BR"));
   const users = ((data ?? []) as Profile[]).sort((a, b) => Number(a.active) - Number(b.active));
   const pending = users.filter((u) => !u.active).length;
   const serviceRole = hasServiceRole();
@@ -26,9 +31,9 @@ export async function UsuariosTab({ currentUserId }: { currentUserId: string }) 
         <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
-            <p className="font-semibold">Convites desativados</p>
+            <p className="font-semibold">Criação de usuários desativada</p>
             <p className="mt-1">
-              Configure <code className="font-mono text-xs">SUPABASE_SERVICE_ROLE_KEY</code> no servidor para convidar usuários por e-mail e reenviar acessos. Enquanto isso, quem se cadastrar sozinho aparece aqui como <b>inativo</b>, aguardando sua aprovação.
+              Configure <code className="font-mono text-xs">SUPABASE_SERVICE_ROLE_KEY</code> no servidor para criar usuários e definir senhas. Enquanto isso, quem se cadastrar sozinho aparece aqui como <b>inativo</b>, aguardando sua aprovação.
             </p>
           </div>
         </div>
@@ -39,7 +44,7 @@ export async function UsuariosTab({ currentUserId }: { currentUserId: string }) 
           title="Usuários"
           description={`${users.length} usuário(s)${pending ? ` · ${pending} aguardando aprovação` : ""}`}
           icon={<Users className="h-4 w-4" />}
-          action={serviceRole && <FormDrawerButton action={inviteUsuario} fields={inviteFields} values={{ role: "consultor_externo", comissao_percentual: 0 }} title="Convidar usuário" label="Convidar" variant="accent" size="sm" width="max-w-lg" submitLabel="Enviar convite" description="O usuário recebe um e-mail para definir a senha e já entra ativo." />}
+          action={serviceRole && <FormDrawerButton action={criarUsuario} fields={novoUsuarioFields(opNiveis)} values={{ role: "administrativo", comissao_percentual: 0, trocar_senha: true }} title="Novo usuário" label="Novo usuário" variant="accent" size="sm" width="max-w-lg" submitLabel="Criar acesso" description="O acesso é criado na hora, sem e-mail: passe o login e a senha para a pessoa." />}
         />
         {users.length === 0 ? (
           <EmptyState title="Nenhum usuário" />
@@ -96,16 +101,20 @@ export async function UsuariosTab({ currentUserId }: { currentUserId: string }) 
                           variant="ghost"
                           width="max-w-lg"
                         />}
-                        {serviceRole && (
-                          <ConfirmAction
-                            action={reenviarAcesso}
-                            id={u.id}
-                            title="Reenviar acesso?"
-                            message={`Enviaremos para ${u.email} um novo convite (se ainda não aceito) ou um link para redefinir a senha.`}
-                            confirmLabel="Enviar e-mail"
-                            label="Reenviar convite / redefinir senha"
-                            icon={<Mail className="h-4 w-4" />}
-                            danger={false}
+                        {serviceRole && u.id !== currentUserId && (!(u.admin_master || u.role === "admin" || u.role === "gestor") || isMaster) && (
+                          <FormDrawerButton
+                            action={definirSenhaUsuario}
+                            fields={senhaUsuarioFields}
+                            values={{ trocar_senha: true }}
+                            hidden={{ id: u.id }}
+                            title={`Definir senha: ${u.full_name || u.email}`}
+                            description={`Login: ${u.email}`}
+                            label="Definir senha"
+                            icon="key"
+                            size="icon"
+                            variant="ghost"
+                            width="max-w-md"
+                            submitLabel="Salvar senha"
                           />
                         )}
                       </div>

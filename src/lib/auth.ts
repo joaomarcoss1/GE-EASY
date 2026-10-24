@@ -21,6 +21,8 @@ export interface Session {
   /** Área escolhida (só organiza a interface; não amplia permissões) */
   areaAtiva: Area | null;
   plataformaAdmin: boolean;
+  /** Senha inicial definida pelo administrador: precisa ser trocada antes de usar o sistema */
+  trocarSenha: boolean;
 }
 
 interface ContextoSessao {
@@ -35,14 +37,16 @@ interface ContextoSessao {
 /** Sessão atual (memoizada por requisição). Retorna null se não autenticado. */
 export const getSession = cache(async (): Promise<Session | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() confere a assinatura do JWT (chave assimétrica) sem ir ao servidor de autenticação;
+  // o vínculo ativo com a empresa é conferido no banco (contexto_sessao) a cada requisição.
+  const { data: auth } = await supabase.auth.getClaims();
+  const user = auth?.claims?.sub ? { id: auth.claims.sub, email: auth.claims.email as string | undefined, trocarSenha: !!auth.claims.app_metadata?.trocar_senha } : null;
   if (!user) return null;
   const [{ data: profile }, { data: ctx }, cookieStore] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single<Profile>(),
     supabase.rpc("contexto_sessao"),
     cookies(),
+    getPoliticaSeguranca(), // já carrega a política (memoizada) junto, em vez de depois
   ]);
   if (!profile) return null;
   const c = (ctx ?? null) as ContextoSessao | null;
@@ -64,10 +68,11 @@ export const getSession = cache(async (): Promise<Session | null> => {
     areas,
     areaAtiva: isArea(areaCookie) && areas.includes(areaCookie) ? areaCookie : null,
     plataformaAdmin: !!c?.plataforma_admin,
+    trocarSenha: user.trocarSenha,
   };
 });
 
-export interface PoliticaSeguranca {
+interface PoliticaSeguranca {
   inatividade_min: number;
   exigir_2fa: "nenhum" | "gestao" | "todos";
 }
@@ -103,6 +108,7 @@ export const getSituacao2fa = cache(async (profile: Pick<Profile, "role" | "admi
 export async function requireSession(): Promise<Session> {
   const session = await getSession();
   if (!session) redirect("/login");
+  if (session.trocarSenha) redirect("/redefinir-senha");
   if (!session.empresa) {
     if (session.empresas.length) redirect("/selecionar-empresa");
     if (session.plataformaAdmin) redirect("/plataforma");

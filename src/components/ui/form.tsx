@@ -60,7 +60,7 @@ function maskInput(type: FieldType | undefined, value: string) {
   return value;
 }
 
-export function Field({ field, defaultValue, error }: { field: FieldDef; defaultValue?: Values[string]; error?: string }) {
+function Field({ field, defaultValue, error }: { field: FieldDef; defaultValue?: Values[string]; error?: string }) {
   const id = `f-${field.name}`;
   const t = field.type ?? "text";
   const common = {
@@ -141,7 +141,7 @@ export function Field({ field, defaultValue, error }: { field: FieldDef; default
           inputMode={t === "money" || t === "percent" || t === "number" || masked ? "decimal" : undefined}
           onInput={masked ? (e) => ((e.target as HTMLInputElement).value = maskInput(t, (e.target as HTMLInputElement).value)) : undefined}
           className={cn("input", t === "money" && "pl-10", t === "percent" && "pr-9")}
-          autoComplete={t === "password" ? "current-password" : t === "email" ? "email" : "off"}
+          autoComplete={t === "password" ? "new-password" : t === "email" ? "email" : "off"}
         />
         {t === "percent" && <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-sm text-muted">%</span>}
       </div>

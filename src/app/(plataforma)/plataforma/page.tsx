@@ -54,7 +54,7 @@ export default async function PlataformaPage() {
         title="Empresas"
         description="Cada empresa tem dados totalmente isolados. Suspender bloqueia o acesso de todos os usuários dela."
         actions={
-          <FormDrawerButton action={criarEmpresa} title="Nova empresa" label="Nova empresa" variant="accent" width="max-w-lg" submitLabel="Criar e convidar"
+          <FormDrawerButton action={criarEmpresa} title="Nova empresa" label="Nova empresa" variant="accent" width="max-w-lg" submitLabel="Criar empresa"
             values={{ plano: "padrao", status: "trial" }}
             fields={[
               { name: "nome", label: "Nome da empresa", required: true, span: 6, section: "Empresa" },
@@ -63,7 +63,8 @@ export default async function PlataformaPage() {
               { name: "plano", label: "Plano", required: true, span: 3 },
               { name: "status", label: "Situação inicial", type: "select", options: STATUS.slice(0, 2), emptyOption: false, span: 3 },
               { name: "admin_nome", label: "Nome", required: true, span: 6, section: "Administrador master" },
-              { name: "admin_email", label: "E-mail", type: "email", required: true, span: 6 },
+              { name: "admin_email", label: "E-mail (login)", type: "email", required: true, span: 3 },
+              { name: "admin_senha", label: "Senha inicial", type: "password", span: 3, help: "10+ caracteres com maiúscula, minúscula e número; trocada no 1º acesso. Ignorada se o e-mail já tiver conta." },
             ]}
           />
         }

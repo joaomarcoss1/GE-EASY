@@ -6,7 +6,7 @@ import { can } from "@/lib/rbac";
 import { getProfiles } from "@/lib/data";
 import { ROLE_LABEL } from "@/lib/constants";
 import { brlShort, pct, relative } from "@/lib/format";
-import { inviteUsuario } from "@/lib/actions/usuarios";
+import { criarUsuario } from "@/lib/actions/usuarios";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { SegmentTabs } from "@/components/ui/filters";
-import { inviteFields } from "@/components/configuracoes/usuario-fields";
+import { novoUsuarioFields } from "@/components/configuracoes/usuario-fields";
 import { emptyStats, statsPorConsultor } from "@/components/consultores/stats";
 
 export const metadata: Metadata = { title: "Consultores" };
@@ -44,7 +44,7 @@ export default async function ConsultoresPage({ searchParams }: { searchParams: 
         description="Equipe interna e consultores externos: carteira, produção do mês, comissões e visitas de campo."
         actions={
           can(profile, "usuarios.manage") && (
-            <FormDrawerButton action={inviteUsuario} fields={inviteFields} values={{ role: "consultor_externo" }} title="Convidar consultor" label="Convidar consultor" variant="accent" submitLabel="Enviar convite" />
+            <FormDrawerButton action={criarUsuario} fields={novoUsuarioFields()} values={{ role: "consultor_externo", trocar_senha: true }} title="Novo consultor" label="Novo consultor" variant="accent" width="max-w-lg" submitLabel="Criar acesso" description="O acesso é criado na hora, sem e-mail: passe o login e a senha para a pessoa." />
           )
         }
       />
