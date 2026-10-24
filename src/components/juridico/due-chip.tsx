@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 import { date, daysUntil } from "@/lib/format";
 
 /** Classes por urgência de um vencimento (dias até a data). */
-export function urgencyCls(dias: number) {
+function urgencyCls(dias: number) {
   if (dias < 0) return "bg-red-600 text-white";
   if (dias === 0) return "bg-accent-500 text-white";
   if (dias <= 3) return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200";

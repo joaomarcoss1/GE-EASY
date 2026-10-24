@@ -163,20 +163,6 @@ export async function aprovarDocumento(id: string): Promise<ActionState> {
   return analisarDocumento({}, fd);
 }
 
-const transferenciaSchema = z.object({ documento: zs.required("CPF/CNPJ", 20), motivo: zs.required("Motivo", 500) });
-
-/** Pede à gestão a transferência de um cliente que já está em outra carteira. */
-export async function solicitarTransferencia(_: ActionState, formData: FormData): Promise<ActionState> {
-  const g = await guard("clientes.write");
-  if ("denied" in g) return g.denied;
-  const parsed = transferenciaSchema.safeParse(formToObject(formData));
-  if (!parsed.success) return zodErrors(parsed.error);
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("solicitar_transferencia_cliente", { p_documento: parsed.data.documento, p_motivo: parsed.data.motivo });
-  if (error) return erroBanco(error);
-  return { ok: true, message: "Solicitação enviada à gestão." };
-}
-
 // ---------------------------------------------------------------- Parâmetros e documentos exigidos
 
 const parametrosSchema = z.object({

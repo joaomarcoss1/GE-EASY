@@ -5,7 +5,7 @@
  */
 import { cnjDigits, isValidCNJ } from "./cnj";
 
-export const DATAJUD_BASE = "https://api-publica.datajud.cnj.jus.br";
+const DATAJUD_BASE = "https://api-publica.datajud.cnj.jus.br";
 /** Chave pública divulgada pelo CNJ (pode ser trocada pelo CNJ; sobrescreva com DATAJUD_API_KEY). */
 export const DATAJUD_CHAVE_PUBLICA = "cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==";
 
@@ -114,7 +114,7 @@ export interface ProcessoDatajud {
   movimentos: MovimentoNormalizado[];
 }
 
-export type AndamentoTipo = "publicacao" | "despacho" | "decisao" | "sentenca" | "acordao" | "peticao" | "audiencia" | "juntada" | "citacao" | "intimacao" | "outro";
+type AndamentoTipo = "publicacao" | "despacho" | "decisao" | "sentenca" | "acordao" | "peticao" | "audiencia" | "juntada" | "citacao" | "intimacao" | "outro";
 
 // ------------------------------------------------------------------ normalização
 
@@ -168,7 +168,7 @@ export function tipoDoMovimento(nome: string): AndamentoTipo {
 }
 
 /** Hash curto e estável (FNV-1a 32 bits) para compor o id externo do movimento. */
-export function hashCurto(s: string) {
+function hashCurto(s: string) {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -231,9 +231,6 @@ export function normalizarDatajud(resp: DjResposta): ProcessoDatajud | null {
   };
 }
 
-export const GRAU_LABEL: Record<string, string> = {
-  G1: "1º grau", G2: "2º grau", JE: "Juizado Especial", TR: "Turma Recursal", SUP: "Tribunal Superior", TRU: "Turma Regional", TNU: "Turma Nacional",
-};
 
 export function podeConsultarDatajud(cnj: string | null | undefined) {
   return !!cnj && isValidCNJ(cnj) && datajudAlias(cnj) !== null;

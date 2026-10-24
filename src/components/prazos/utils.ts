@@ -81,7 +81,7 @@ const FIXOS: Record<string, string> = {
 };
 
 /** Nome do feriado nacional (fixo ou móvel) na data, se houver. */
-export function nomeFeriado(iso: string): string | null {
+function nomeFeriado(iso: string): string | null {
   const fixo = FIXOS[iso.slice(5)];
   if (fixo) return fixo;
   const p = toISO(pascoa(Number(iso.slice(0, 4))));
@@ -93,7 +93,7 @@ export function nomeFeriado(iso: string): string | null {
 }
 
 /** Motivo detalhado de um dia não contado. */
-export function motivoDetalhado(p: { data: string; motivo: string }, extras: string[]) {
+function motivoDetalhado(p: { data: string; motivo: string }, extras: string[]) {
   if (p.motivo !== "Feriado") return p.motivo;
   if (extras.includes(p.data)) return "Feriado local (informado)";
   const n = nomeFeriado(p.data);
@@ -120,7 +120,7 @@ export function agruparPulados(pulados: CalculoPrazo["pulados"], extras: string[
 const diaUtilForense = (iso: string) => !isRecesso(iso) && isDiaUtil(iso);
 
 /** Dias úteis forenses entre hoje (exclusive) e a data (inclusive). */
-export function diasUteisAte(today: string, dataFim: string) {
+function diasUteisAte(today: string, dataFim: string) {
   let n = 0;
   for (let d = addDaysYmd(today, 1), guard = 0; d <= dataFim && guard < 800; d = addDaysYmd(d, 1), guard++) if (diaUtilForense(d)) n++;
   return n;

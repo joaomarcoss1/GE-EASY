@@ -62,10 +62,10 @@ export async function updateSession(request: NextRequest) {
     return res;
   };
 
-  // getUser() valida o JWT no servidor de autenticação (não confia só no cookie)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() renova a sessão se preciso e confere a assinatura do JWT localmente (chaves JWKS),
+  // sem uma ida ao servidor de autenticação a cada requisição
+  const { data: auth } = await supabase.auth.getClaims();
+  const user = auth?.claims?.sub ? auth.claims : null;
 
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"));
   const isApi = path.startsWith("/api/");

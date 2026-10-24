@@ -18,7 +18,7 @@ export async function carregarImagem(arquivo: Blob): Promise<HTMLCanvasElement> 
   return c;
 }
 
-export interface Analise {
+interface Analise {
   quad: Quad; // nos pixels da imagem de trabalho
   detectado: boolean;
   qualidade: Qualidade;

@@ -8,14 +8,14 @@ import { env, googleConfigured, serverEnv } from "@/lib/env";
  * - Escopos mínimos: calendar.events (eventos) e drive.file (apenas arquivos criados pelo app).
  * - Tokens criptografados com AES-256-GCM e guardados em tabela acessível só pelo service role.
  */
-export const GOOGLE_SCOPES = [
+const GOOGLE_SCOPES = [
   "openid",
   "email",
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/drive.file",
 ];
 
-export const googleRedirectUri = () => `${env.siteUrl}/api/integracoes/google/callback`;
+const googleRedirectUri = () => `${env.siteUrl}/api/integracoes/google/callback`;
 
 export function googleAuthUrl(state: string) {
   const params = new URLSearchParams({
@@ -237,8 +237,8 @@ export async function listCalendarEvents(userId: string, timeMin: string, timeMa
 // ---------------------------------------------------------------- Drive
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
-export const FOLDER_MIME = "application/vnd.google-apps.folder";
-export const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
+const FOLDER_MIME = "application/vnd.google-apps.folder";
+const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
 
 export class DriveError extends Error {
   constructor(
@@ -254,10 +254,10 @@ async function driveFetch(token: string, url: string, init?: RequestInit) {
 }
 
 /** Escapa valores usados na linguagem de consulta do Drive ('...'). */
-export const driveQ = (v: string) => v.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+const driveQ = (v: string) => v.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
 /** Nome de arquivo/pasta seguro para o Drive. */
-export const driveName = (v: string, max = 150) => v.replace(/[\u0000-\u001f/\\]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max) || "Sem nome";
+const driveName = (v: string, max = 150) => v.replace(/[\u0000-\u001f/\\]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max) || "Sem nome";
 
 /** Procura a pasta pelo nome dentro do pai (somente as criadas pelo app, pelo escopo drive.file) ou cria. */
 export async function findOrCreateFolder(token: string, name: string, parentId?: string | null): Promise<string> {

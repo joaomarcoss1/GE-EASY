@@ -62,18 +62,6 @@ export async function moverAtendimento(id: string, status: string, motivo?: stri
   return { ok: true, message: "Atendimento atualizado." };
 }
 
-export async function deleteAtendimento(id: string): Promise<ActionState> {
-  const g = await guard("processos.delete");
-  if ("denied" in g) return g.denied;
-  if (!isUuid(id)) return { error: "Atendimento inválido." };
-  const supabase = await createClient();
-  const { error, count } = await supabase.from("atendimentos").delete({ count: "exact" }).eq("id", id);
-  if (error) return dbError(error);
-  if (!count) return { error: "Somente a gestão pode excluir atendimentos." };
-  revalidar();
-  return { ok: true, message: "Atendimento excluído." };
-}
-
 const converterSchema = z.object({
   id: zs.requiredUuid("o atendimento"),
   documento: zs.text(20),

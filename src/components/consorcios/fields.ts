@@ -1,7 +1,7 @@
 import type { FieldDef } from "@/components/ui/form";
 import { CATEGORIAS_CONSORCIO, CONTEMPLACAO, COTA_STATUS, LANCE_RESULTADO, type Option } from "@/lib/constants";
 
-export interface CotaFieldOptions {
+interface CotaFieldOptions {
   clientes: Option[];
   administradoras: Option[];
   produtos: Option[];

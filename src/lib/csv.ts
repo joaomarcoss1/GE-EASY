@@ -1,8 +1,8 @@
 /** CSV para Excel (pt-BR): ponto e vírgula, BOM UTF-8, aspas sempre e fórmulas neutralizadas. */
-export type CsvCell = string | number | null | undefined;
+type CsvCell = string | number | null | undefined;
 
 /** Aspas sempre; neutraliza injeção de fórmula (= + - @ TAB CR) prefixando apóstrofo. */
-export function csvCell(v: CsvCell): string {
+function csvCell(v: CsvCell): string {
   let s = v == null ? "" : String(v);
   if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   return `"${s.replace(/"/g, '""')}"`;

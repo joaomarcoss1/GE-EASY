@@ -3,8 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { DATAJUD_CHAVE_PUBLICA, datajudBody, datajudUrl, normalizarDatajud, type DjResposta, type ProcessoDatajud } from "@/lib/juridico/datajud";
 import { isValidCNJ } from "@/lib/juridico/cnj";
 
-export type StatusDatajud = "ok" | "nao_encontrado" | "erro" | "indisponivel";
-export interface ResultadoDatajud {
+type StatusDatajud = "ok" | "nao_encontrado" | "erro" | "indisponivel";
+interface ResultadoDatajud {
   status: StatusDatajud;
   novos: number;
   mensagem: string;
@@ -13,7 +13,7 @@ export interface ResultadoDatajud {
 type Consulta = { ok: true; dados: ProcessoDatajud | null } | { ok: false; status: StatusDatajud; mensagem: string };
 
 /** Consulta a API pública do DataJud (sem dados do usuário: só o número do processo). */
-export async function consultarDatajud(cnj: string): Promise<Consulta> {
+async function consultarDatajud(cnj: string): Promise<Consulta> {
   if (!isValidCNJ(cnj)) return { ok: false, status: "erro", mensagem: "Número CNJ inválido." };
   const url = datajudUrl(cnj);
   if (!url) return { ok: false, status: "indisponivel", mensagem: "Este tribunal não está disponível na API pública do DataJud." };

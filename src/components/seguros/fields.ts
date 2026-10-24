@@ -1,7 +1,7 @@
 import type { FieldDef } from "@/components/ui/form";
 import { APOLICE_STATUS, FORMAS_PAGAMENTO, RAMOS_SEGURO, SINISTRO_STATUS, type Option } from "@/lib/constants";
 
-export interface ApoliceFieldOptions {
+interface ApoliceFieldOptions {
   clientes: Option[];
   seguradoras: Option[];
   produtos: Option[];

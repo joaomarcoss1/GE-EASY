@@ -2,7 +2,7 @@
  * Leitor de extrato OFX (SGML 1.x ou XML 2.x). Extrai só as transações (STMTTRN): data, valor com sinal,
  * descrição e FITID (identificador único do banco, usado para não importar duas vezes).
  */
-export type MovimentoOfx = { data: string; valor: number; descricao: string; fitid: string };
+type MovimentoOfx = { data: string; valor: number; descricao: string; fitid: string };
 
 const campo = (bloco: string, tag: string) => {
   const m = new RegExp(`<${tag}>([^<\\r\\n]*)`, "i").exec(bloco);

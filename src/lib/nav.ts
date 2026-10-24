@@ -1,7 +1,7 @@
 import type { Permission } from "@/lib/rbac";
 import type { Area } from "@/lib/types";
 
-export interface NavItem {
+interface NavItem {
   href: string;
   label: string;
   icon: string;
@@ -11,7 +11,7 @@ export interface NavItem {
   /** Só para o dono da plataforma */
   plataforma?: boolean;
 }
-export interface NavGroup {
+interface NavGroup {
   label: string;
   items: NavItem[];
   /** Grupo recolhido por padrão no menu (módulos secundários) */
@@ -134,7 +134,7 @@ const ALL_NAV: NavGroup[] = [
   },
 ];
 
-export const NAV: NavGroup[] = ALL_NAV.map((g) => ({ ...g, items: g.items.filter((i) => !EM_CONSTRUCAO.has(i.href)) }));
+const NAV: NavGroup[] = ALL_NAV.map((g) => ({ ...g, items: g.items.filter((i) => !EM_CONSTRUCAO.has(i.href)) }));
 
 interface Acesso {
   permissoes?: readonly string[];
@@ -142,7 +142,7 @@ interface Acesso {
 }
 
 /** Itens visíveis para o usuário (permissão, master, plataforma). */
-export function itemVisivel(i: NavItem, acesso: Acesso, plataformaAdmin: boolean) {
+function itemVisivel(i: NavItem, acesso: Acesso, plataformaAdmin: boolean) {
   if (i.plataforma) return plataformaAdmin;
   if (i.master) return !!acesso.admin_master;
   return !i.permission || !!acesso.permissoes?.includes(i.permission);

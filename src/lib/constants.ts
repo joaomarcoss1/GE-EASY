@@ -428,12 +428,6 @@ export const ATENDIMENTO_CANAIS: Option[] = [
   { value: "site", label: "Site" },
 ];
 
-export const PUBLICACAO_STATUS: Option[] = [
-  { value: "nova", label: "Nova", tone: "accent" },
-  { value: "tratada", label: "Tratada", tone: "green" },
-  { value: "descartada", label: "Descartada", tone: "slate" },
-];
-
 export const MODELO_CATEGORIAS: Option[] = [
   { value: "peticao", label: "Petição" },
   { value: "procuracao", label: "Procuração" },

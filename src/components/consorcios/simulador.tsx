@@ -6,7 +6,7 @@ import { brl, pct } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 
-export interface SimuladorInicial {
+interface SimuladorInicial {
   credito?: number;
   prazo?: number;
   taxaAdm?: number;

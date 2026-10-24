@@ -91,7 +91,7 @@ export interface ComunicacaoDjen {
 }
 
 /** Lê um item da resposta aceitando as variações de nome de campo já observadas na API. */
-export function lerComunicacao(item: Raw): ComunicacaoDjen | null {
+function lerComunicacao(item: Raw): ComunicacaoDjen | null {
   const id = str(item.id ?? item.numeroComunicacao);
   const disponibilizacao = normalizarData(item.data_disponibilizacao ?? item.dataDisponibilizacao ?? item.datadisponibilizacao);
   const texto = textoPlano(str(item.texto ?? item.conteudo));

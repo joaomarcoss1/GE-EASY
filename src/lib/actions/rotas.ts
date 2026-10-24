@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { coordValida, ordemVizinhoMaisProximo, percursoM, type Ponto } from "@/lib/geo";
 import { geocodificar, planejarComGoogle } from "@/lib/integracoes/maps";
 import { normalizarRotas, parametrosRotas } from "@/lib/parametros";
-import { CHECKIN_RESULTADOS, DESPESA_TIPOS, PARADA_TIPOS } from "@/lib/constants";
+import { DESPESA_TIPOS, PARADA_TIPOS } from "@/lib/constants";
 import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
@@ -273,78 +273,6 @@ export async function aprovarDespesaRapida(id: string): Promise<ActionState> {
   if (error) return erroDb(error);
   revalidatePath("/rotas/despesas");
   return { ok: true, message: "Despesa aprovada." };
-}
-
-// ------------------------------------------------------------------ execução (também usada pela sincronização offline)
-const inicioSchema = z.object({ rota_id: zs.requiredUuid("a rota"), lat: zs.number(-90, 90), lng: zs.number(-180, 180), hodometro: zs.number(0, 9_999_999), foto: zs.text(500) });
-
-export async function iniciarRota(input: z.input<typeof inicioSchema>): Promise<ActionState> {
-  const g = await guard("rotas.executar");
-  if ("denied" in g) return g.denied;
-  const parsed = inicioSchema.safeParse(input);
-  if (!parsed.success) return zodErrors(parsed.error);
-  const v = parsed.data;
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("iniciar_rota", { p_rota: v.rota_id, p_lat: v.lat, p_lng: v.lng, p_hodometro: v.hodometro, p_foto: v.foto });
-  if (error) return erroDb(error);
-  atualizar(v.rota_id);
-  return { ok: true, message: "Rota iniciada. Bom trabalho!" };
-}
-
-const checkinSchema = z.object({
-  id: zs.requiredUuid("o check-in"),
-  parada_id: zs.requiredUuid("a parada"),
-  tipo: zs.enumOf(["chegada", "saida"]),
-  lat: z.number().finite().min(-90).max(90),
-  lng: z.number().finite().min(-180).max(180),
-  precisao: z.number().finite().min(0).max(100_000).nullable().optional(),
-  dispositivo_em: z.string().datetime({ offset: true }).nullable().optional(),
-  resultado: z.string().refine((r) => CHECKIN_RESULTADOS.some((o) => o.value === r), "Resultado inválido").nullable().optional(),
-  observacao: zs.text(2000),
-  justificativa: zs.text(500),
-  mock: z.boolean().optional().default(false),
-  foto: zs.text(500),
-  dispositivo_id: zs.uuid(),
-});
-
-export async function registrarCheckin(input: z.input<typeof checkinSchema>): Promise<ActionState & { dentro?: boolean | null; distancia?: number | null }> {
-  const g = await guard("rotas.executar");
-  if ("denied" in g) return g.denied;
-  const parsed = checkinSchema.safeParse(input);
-  if (!parsed.success) return zodErrors(parsed.error);
-  const v = parsed.data;
-  if (v.tipo === "saida" && !v.resultado) return { error: "Informe o resultado da visita.", fieldErrors: { resultado: "Obrigatório" } };
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("registrar_checkin", {
-    p_id: v.id, p_parada: v.parada_id, p_tipo: v.tipo, p_lat: v.lat, p_lng: v.lng, p_precisao: v.precisao ?? null, p_dispositivo_em: v.dispositivo_em ?? null,
-    p_resultado: v.resultado ?? null, p_observacao: v.observacao, p_justificativa: v.justificativa, p_mock: v.mock, p_foto: v.foto, p_dispositivo: v.dispositivo_id,
-  });
-  if (error) return erroDb(error);
-  const r = (data ?? {}) as { dentro_do_raio?: boolean | null; distancia_m?: number | null; flags?: string[] };
-  revalidatePath("/campo");
-  return {
-    ok: true, dentro: r.dentro_do_raio ?? null, distancia: r.distancia_m ?? null,
-    message: r.dentro_do_raio === false ? `Registrado fora do raio (${r.distancia_m} m) — vai para revisão.` : v.tipo === "chegada" ? "Chegada registrada." : "Saída registrada.",
-  };
-}
-
-const fimSchema = z.object({
-  rota_id: zs.requiredUuid("a rota"), lat: zs.number(-90, 90), lng: zs.number(-180, 180), hodometro: zs.number(0, 9_999_999), foto: zs.text(500),
-  nao_realizadas: z.array(z.object({ parada_id: zs.requiredUuid("a parada"), motivo: zs.required("Motivo", 500) })).max(500).optional().default([]),
-});
-
-export async function finalizarRota(input: z.input<typeof fimSchema>): Promise<ActionState> {
-  const g = await guard("rotas.executar");
-  if ("denied" in g) return g.denied;
-  const parsed = fimSchema.safeParse(input);
-  if (!parsed.success) return zodErrors(parsed.error);
-  const v = parsed.data;
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("finalizar_rota", { p_rota: v.rota_id, p_lat: v.lat, p_lng: v.lng, p_hodometro: v.hodometro, p_foto: v.foto, p_nao_realizadas: v.nao_realizadas });
-  if (error) return erroDb(error);
-  const r = (data ?? {}) as { km?: number; visitadas?: number };
-  atualizar(v.rota_id);
-  return { ok: true, message: `Rota finalizada: ${r.km ?? 0} km, ${r.visitadas ?? 0} visita(s). Enviada para aprovação.` };
 }
 
 const despesaSchema = z.object({

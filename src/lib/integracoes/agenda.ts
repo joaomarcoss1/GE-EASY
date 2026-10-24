@@ -6,7 +6,7 @@ import { toSpIso } from "@/components/agenda/date-utils";
 import { deleteCalendarEvent, getAccessToken, upsertCalendarEvent, type CalendarEventInput } from "@/lib/google";
 
 /** Prazo => evento de dia inteiro no vencimento, com lembretes 2 dias e 1 dia antes (9h). */
-export function prazoParaEvento(p: {
+function prazoParaEvento(p: {
   id: string;
   descricao: string;
   data_fim: string;

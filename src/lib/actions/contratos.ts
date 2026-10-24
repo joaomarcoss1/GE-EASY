@@ -68,17 +68,6 @@ export async function saveContrato(_: ActionState, formData: FormData): Promise<
   return { ok: true, message: "Contrato cadastrado.", id: row.id };
 }
 
-export async function setContratoStatus(id: string, status: string): Promise<ActionState> {
-  const g = await guard("contratos.write");
-  if ("denied" in g) return g.denied;
-  if (!isUuid(id) || !(STATUS as readonly string[]).includes(status)) return { error: "Operação inválida." };
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("contratos_honorarios").update({ status }).eq("id", id).select("id").maybeSingle();
-  if (error) return dbError(error);
-  if (!data) return { error: "Sem permissão para alterar este contrato." };
-  revalidar(id);
-  return { ok: true, message: "Situação do contrato atualizada." };
-}
 
 export async function deleteContrato(id: string): Promise<ActionState> {
   const g = await guard("contratos.write");

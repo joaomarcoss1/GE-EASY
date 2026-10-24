@@ -276,18 +276,6 @@ export async function cancelarCampanha(id: string): Promise<ActionState> {
   return { ok: true, message: "Campanha cancelada; os envios pendentes não serão feitos." };
 }
 
-/** Abre conversa com um cliente a partir da ficha (cria contato/conversa; fora da janela só vai modelo). */
-export async function iniciarConversaCliente(clienteId: string): Promise<ActionState> {
-  const g = await guard("whatsapp.atender");
-  if ("denied" in g) return g.denied;
-  if (!isUuid(clienteId)) return { error: "Cliente inválido." };
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("wa_abrir_conversa_cliente", { p_cliente: clienteId });
-  if (error) return erroDb(error);
-  atualizar();
-  return { ok: true, id: data as string, message: "Conversa aberta." };
-}
-
 const anexoSchema = z.object({
   mensagem_id: zs.requiredUuid("a mensagem"),
   categoria: z.string().refine((v) => DOC_CATEGORIAS.some((c) => c.value === v), "Categoria inválida"),

@@ -29,7 +29,7 @@ export const buttonClass = (variant: Variant = "primary", size: Size = "md", cla
     className,
   );
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;

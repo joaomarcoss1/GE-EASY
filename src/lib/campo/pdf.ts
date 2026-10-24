@@ -2,7 +2,7 @@
  * PDF multipágina a partir de JPEGs (scanner do app). Escrito à mão para não carregar biblioteca no celular:
  * cada página é uma imagem DCT (o próprio JPEG) ajustada à largura A4.
  */
-export interface PaginaJpeg {
+interface PaginaJpeg {
   jpeg: Uint8Array;
   largura: number;
   altura: number;

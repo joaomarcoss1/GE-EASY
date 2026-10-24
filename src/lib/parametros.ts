@@ -3,7 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 /** Parâmetros de rotas, check-in e reembolso da empresa ativa (Configurações › Rotas), com padrões da especificação. */
-export interface ParametrosRotas {
+interface ParametrosRotas {
   raio_m: number;
   fora_do_raio: "justificar" | "bloquear";
   reembolso_modo: "km" | "consumo";
@@ -16,7 +16,7 @@ export interface ParametrosRotas {
   rastreio: boolean;
 }
 
-export const PADRAO_ROTAS: ParametrosRotas = {
+const PADRAO_ROTAS: ParametrosRotas = {
   raio_m: 150,
   fora_do_raio: "justificar",
   reembolso_modo: "km",

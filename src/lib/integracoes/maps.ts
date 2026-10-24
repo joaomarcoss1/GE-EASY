@@ -51,7 +51,7 @@ export async function geocodificar(endereco: string): Promise<(Ponto & { fonte: 
   return p;
 }
 
-export interface PlanoGoogle {
+interface PlanoGoogle {
   ordem: number[];
   distanciaM: number;
   duracaoS: number;

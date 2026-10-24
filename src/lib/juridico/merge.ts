@@ -66,7 +66,7 @@ export const PLACEHOLDERS: { key: string; label: string }[] = [
 
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
-export const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
 function maskDoc(v?: string | null) {
   const d = (v ?? "").replace(/\D/g, "");
@@ -81,7 +81,7 @@ function dataSP(d: Date) {
   return { y, m, d: dd };
 }
 
-export function valores(ctx: MergeContext): Record<string, string> {
+function valores(ctx: MergeContext): Record<string, string> {
   const c = ctx.cliente ?? {};
   const p = ctx.processo ?? {};
   const hoje = dataSP(ctx.hoje ?? new Date());

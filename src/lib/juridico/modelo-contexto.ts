@@ -4,7 +4,7 @@ import { renderModelo, renderTexto, type MergeContext } from "@/lib/juridico/mer
 import type { Cliente, ContratoHonorarios, ModeloDocumento, Processo, Profile } from "@/lib/types";
 import { descricaoHonorarios } from "@/components/financeiro/fields";
 
-export interface IdsModelo {
+interface IdsModelo {
   modeloId: string | null;
   clienteId: string | null;
   processoId: string | null;

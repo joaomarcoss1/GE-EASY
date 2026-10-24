@@ -18,7 +18,7 @@ async function vercel<T>(path: string, init?: RequestInit): Promise<T> {
   return j;
 }
 
-export type DominioVercel = { name: string; verified: boolean; verification?: { type: string; domain: string; value: string; reason?: string }[] };
+type DominioVercel = { name: string; verified: boolean; verification?: { type: string; domain: string; value: string; reason?: string }[] };
 
 export async function adicionarDominio(dominio: string) {
   return vercel<DominioVercel>("/v10/projects/:projeto/domains", { method: "POST", body: JSON.stringify({ name: dominio }) });

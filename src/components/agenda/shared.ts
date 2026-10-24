@@ -123,7 +123,7 @@ export function fromGoogleEvent(g: GoogleEventItem): CalEvent | null {
   };
 }
 
-export const LEMBRETES: Option[] = [
+const LEMBRETES: Option[] = [
   { value: "0", label: "Na hora do evento" },
   { value: "5", label: "5 minutos antes" },
   { value: "10", label: "10 minutos antes" },

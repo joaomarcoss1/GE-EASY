@@ -1,7 +1,7 @@
 import type { Tone } from "@/lib/constants";
 
 /** Classes estáticas por cor de departamento (o Tailwind precisa das strings completas). */
-export interface DepTone {
+interface DepTone {
   /** faixa/acento sólido */
   bar: string;
   /** selo da sigla */
@@ -63,7 +63,7 @@ const TONES: Record<Tone, DepTone> = {
   },
 };
 
-export const isTone = (v: string | null | undefined): v is Tone => !!v && v in TONES;
+const isTone = (v: string | null | undefined): v is Tone => !!v && v in TONES;
 export const depTone = (cor: string | null | undefined): DepTone => TONES[isTone(cor) ? cor : "brand"];
 export const toneOf = (cor: string | null | undefined): Tone => (isTone(cor) ? cor : "brand");
 

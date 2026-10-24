@@ -1,7 +1,7 @@
 import { isValidCPF } from "@/lib/validators";
 
 /** Extrai do texto lido por OCR (RG, CNH, CPF) os campos do pré-cadastro. Puro e testável. */
-export interface DadosOcr {
+interface DadosOcr {
   cpf: string | null;
   nome: string | null;
   data_nascimento: string | null; // AAAA-MM-DD

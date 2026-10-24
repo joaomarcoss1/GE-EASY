@@ -5,7 +5,7 @@
  */
 export const MAX_DOC_BYTES = 25 * 1024 * 1024; // 25 MB
 
-export const DOC_MIME_TYPES = [
+const DOC_MIME_TYPES = [
   "application/pdf",
   "image/png",
   "image/jpeg",

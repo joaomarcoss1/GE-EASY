@@ -30,7 +30,7 @@ export interface Historico {
   dados?: Record<string, unknown>;
 }
 
-export const VERSAO_APP = "1.0.0";
+const VERSAO_APP = "1.0.0";
 
 export async function enfileirar(tipo: TipoItem, payload: Record<string, unknown> & { id: string }, resumo: string, arquivos: { campo: string; nome: string; blob: Blob }[] = []) {
   const item: ItemFila = {
@@ -61,7 +61,7 @@ function avisarMudanca() {
 
 let emAndamento: Promise<ResultadoSync> | null = null;
 
-export interface ResultadoSync {
+interface ResultadoSync {
   enviados: number;
   falhas: number;
   restantes: number;

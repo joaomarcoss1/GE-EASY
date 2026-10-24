@@ -16,7 +16,7 @@ export function demandaFields(o: { processos: Option[]; membros: Option[]; canAs
   ];
 }
 
-export const FUNCOES_DEP: Option[] = [
+const FUNCOES_DEP: Option[] = [
   { value: "responsavel", label: "Responsável", tone: "accent" },
   { value: "membro", label: "Membro", tone: "slate" },
 ];

@@ -29,7 +29,7 @@ export interface AudienciaItem {
   canDelete: boolean;
 }
 
-export const DURACOES: Option[] = [15, 30, 45, 60, 90, 120, 180, 240, 300, 360].map((m) => ({
+const DURACOES: Option[] = [15, 30, 45, 60, 90, 120, 180, 240, 300, 360].map((m) => ({
   value: String(m),
   label: m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m / 60}h`,
 }));

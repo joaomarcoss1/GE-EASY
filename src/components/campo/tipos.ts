@@ -56,7 +56,7 @@ export interface Snapshot {
 
 export type Tela = "inicio" | "rota" | "cadastro" | "scanner" | "despesa" | "ponto" | "fila" | "ajustes";
 
-export interface Posicao {
+interface Posicao {
   lat: number;
   lng: number;
   precisao: number | null;

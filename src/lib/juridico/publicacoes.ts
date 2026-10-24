@@ -4,9 +4,9 @@
  */
 import { formatCNJ } from "./cnj";
 
-export const CNJ_REGEX = /\b\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}\b/g;
+const CNJ_REGEX = /\b\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}\b/g;
 
-export interface BlocoPublicacao {
+interface BlocoPublicacao {
   numero: string | null;
   conteudo: string;
 }

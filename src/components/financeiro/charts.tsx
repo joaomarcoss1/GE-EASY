@@ -8,7 +8,7 @@ const GRID = "rgb(var(--line))";
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const compact = (v: number) => v.toLocaleString("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
 
-export interface FinPoint {
+interface FinPoint {
   label: string;
   receitas: number;
   despesas: number;

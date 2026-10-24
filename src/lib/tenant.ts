@@ -7,7 +7,7 @@ import type { Area } from "./types";
  */
 export const EMPRESA_COOKIE = "ge_empresa";
 export const AREA_COOKIE = "ge_area";
-export const AREAS_VALIDAS: readonly Area[] = ["consultor", "administrativo", "juridico", "rh", "financeiro"];
+const AREAS_VALIDAS: readonly Area[] = ["consultor", "administrativo", "juridico", "rh", "financeiro"];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isEmpresaId = (v: string | null | undefined): v is string => !!v && UUID.test(v);

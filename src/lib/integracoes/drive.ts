@@ -22,7 +22,7 @@ import { DriveError, findOrCreateFolder, folderExists, getAccessToken, uploadDri
 
 export const RAIZ_NOME = "GE EASY — Arquivo do escritório";
 
-export interface DriveEscritorio {
+interface DriveEscritorio {
   user_id: string;
   email: string | null;
   definido_em?: string;
@@ -34,7 +34,7 @@ export async function getDriveEscritorio(db: SupabaseClient, empresaId: string):
   return v?.user_id ? v : null;
 }
 
-export async function tokenDoEscritorio(admin: SupabaseClient, empresaId: string) {
+async function tokenDoEscritorio(admin: SupabaseClient, empresaId: string) {
   const cfg = await getDriveEscritorio(admin, empresaId);
   if (!cfg) throw new DriveError("O Drive da empresa ainda não foi definido (Configurações › Integrações).", 412);
   const token = await getAccessToken(cfg.user_id);
@@ -170,7 +170,7 @@ async function pastaDestino(admin: SupabaseClient, pastas: Pastas, alvo: { clien
 }
 
 /** O caminho no Storage precisa pertencer ao cliente/processo (e à empresa) do próprio registro. */
-export function caminhoCoerente(d: Pick<DocRow, "storage_path" | "cliente_id" | "processo_id" | "empresa_id">) {
+function caminhoCoerente(d: Pick<DocRow, "storage_path" | "cliente_id" | "processo_id" | "empresa_id">) {
   if (!d.storage_path || d.storage_path.includes("..")) return false;
   let rel = d.storage_path;
   if (rel.startsWith("empresas/")) {

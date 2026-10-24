@@ -7,7 +7,7 @@ import { env, serverEnv } from "@/lib/env";
  * Notificações push (Web Push/VAPID) do app de campo, a partir das notificações do sistema.
  * Sem as chaves VAPID configuradas, as notificações continuam só dentro do sistema.
  */
-export const pushConfigurado = () => Boolean(env.vapidPublicKey && serverEnv().vapidPrivateKey);
+const pushConfigurado = () => Boolean(env.vapidPublicKey && serverEnv().vapidPrivateKey);
 
 export async function enviarPushPendentes(admin: SupabaseClient, ate: number): Promise<{ enviadas: number; falhas: number; sem_aparelho: number }> {
   const r = { enviadas: 0, falhas: 0, sem_aparelho: 0 };

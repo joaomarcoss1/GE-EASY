@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { todayISO } from "@/lib/format";
 
-export interface ConsultorStats {
+interface ConsultorStats {
   clientes: number;
   credito: number;
   premio: number;

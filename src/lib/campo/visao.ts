@@ -12,7 +12,7 @@ export function tonsDeCinza(rgba: Uint8ClampedArray | Uint8Array, w: number, h: 
   return g;
 }
 
-export function brilhoMedio(g: Uint8Array): number {
+function brilhoMedio(g: Uint8Array): number {
   let s = 0;
   for (const v of g) s += v;
   return g.length ? s / g.length : 0;
@@ -91,7 +91,7 @@ export function detectarDocumento(g0: Uint8Array, w: number, h: number, minArea 
 }
 
 /** Média em caixa (2r+1)² com imagem integral — O(w·h) qualquer que seja o raio. */
-export function desfocar(g: Uint8Array, w: number, h: number, r: number): Uint8Array {
+function desfocar(g: Uint8Array, w: number, h: number, r: number): Uint8Array {
   const I = new Float64Array((w + 1) * (h + 1));
   for (let y = 0; y < h; y++) {
     let linha = 0;

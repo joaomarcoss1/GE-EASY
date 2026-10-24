@@ -229,13 +229,6 @@ export interface Comissao {
 }
 
 export type MetaTipo = "consorcio_credito" | "seguro_premio" | "novos_clientes" | "comissao";
-export interface Meta {
-  id: string;
-  consultor_id: string | null;
-  periodo: string;
-  tipo: MetaTipo;
-  valor_meta: number;
-}
 
 export type EventoTipo = "reuniao" | "visita" | "ligacao" | "assembleia" | "renovacao" | "tarefa" | "audiencia" | "prazo" | "outro";
 export interface AgendaEvento {
@@ -323,17 +316,6 @@ export interface Notificacao {
   created_at: string;
 }
 
-export interface AuditLog {
-  id: number;
-  actor_id: string | null;
-  actor_email: string | null;
-  acao: string;
-  tabela: string;
-  registro_id: string | null;
-  dados_antigos: Record<string, unknown> | null;
-  dados_novos: Record<string, unknown> | null;
-  created_at: string;
-}
 
 // ---------------------------------------------------------------- Jurídico
 
@@ -520,21 +502,6 @@ export interface FinanceiroLancamento {
   created_at: string;
 }
 
-export interface HoraLancamento {
-  id: string;
-  user_id: string;
-  data: string;
-  minutos: number;
-  descricao: string;
-  processo_id: string | null;
-  cliente_id: string | null;
-  contrato_id: string | null;
-  faturavel: boolean;
-  valor_hora: number | null;
-  faturado: boolean;
-  lancamento_id: string | null;
-  created_at: string;
-}
 
 export interface Atendimento {
   id: string;
@@ -559,29 +526,6 @@ export interface Atendimento {
   created_at: string;
 }
 
-export interface Publicacao {
-  id: string;
-  data_publicacao: string;
-  data_disponibilizacao: string | null;
-  fonte: string | null;
-  numero_processo: string | null;
-  processo_id: string | null;
-  conteudo: string;
-  status: "nova" | "tratada" | "descartada";
-  prazo_id: string | null;
-  responsavel_id: string | null;
-  tratado_por: string | null;
-  tratado_em: string | null;
-  observacoes: string | null;
-  hash: string | null;
-  origem?: "manual" | "djen";
-  tribunal?: string | null;
-  orgao?: string | null;
-  tipo_comunicacao?: string | null;
-  link?: string | null;
-  oab?: string | null;
-  created_at: string;
-}
 
 export interface ModeloDocumento {
   id: string;
@@ -600,15 +544,6 @@ export interface ModeloDocumento {
 export type RotaStatus = "planejada" | "em_andamento" | "concluida" | "aprovada" | "cancelada";
 export type ParadaStatus = "pendente" | "visitada" | "nao_realizada" | "reagendada";
 export type DespesaStatus = "lancada" | "aprovada" | "recusada" | "reembolsada";
-
-export interface Veiculo {
-  id: string;
-  descricao: string;
-  placa: string | null;
-  consumo_km_l: number | null;
-  responsavel_id: string | null;
-  ativo: boolean;
-}
 
 export interface Rota {
   id: string;

@@ -34,7 +34,7 @@ import { addDays, dayLong, durationLabel, relativeDay, toLocal, WEEKDAYS_SHORT }
 import { eventoValues, lembreteLabel, type CalEvent } from "./shared";
 import { eventTone, toneOf } from "./tones";
 
-export interface AgendaActions {
+interface AgendaActions {
   create: (state: ActionState, formData: FormData) => Promise<ActionState>;
   update: (state: ActionState, formData: FormData) => Promise<ActionState>;
   remove: (id: string) => Promise<ActionState>;

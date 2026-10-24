@@ -7,7 +7,7 @@
  * para não depender do fuso da máquina que executa o código.
  */
 
-export const SP_OFFSET = "-03:00";
+const SP_OFFSET = "-03:00";
 const OFFSET_MS = 3 * 3_600_000;
 
 export const isYmd = (v: string | null | undefined): v is string =>
@@ -62,8 +62,6 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** "Quarta-feira, 14 de outubro" */
 export const dayLong = (ymd: string) => cap(fmt(ymd, { weekday: "long", day: "numeric", month: "long" }));
-/** "qua., 14 de out." */
-export const dayShort = (ymd: string) => fmt(ymd, { weekday: "short", day: "numeric", month: "short" });
 /** "Outubro de 2026" */
 export const monthTitle = (ymd: string) => cap(fmt(ymd, { month: "long", year: "numeric" }));
 /** "12 – 18 de out. de 2026" */
