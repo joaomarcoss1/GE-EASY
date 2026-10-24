@@ -45,6 +45,13 @@ export function PasswordForm({ action }: { action: (s: ActionState, f: FormData)
         </p>
       )}
       <div>
+        <label htmlFor="current-password" className="label">
+          Senha atual
+        </label>
+        <input id="current-password" name="atual" type="password" required maxLength={128} autoComplete="current-password" className="input" aria-invalid={state.fieldErrors?.atual ? true : undefined} />
+        {state.fieldErrors?.atual && <p className="mt-1 text-xs text-red-600">{state.fieldErrors.atual}</p>}
+      </div>
+      <div>
         <label htmlFor="new-password" className="label">
           Nova senha
         </label>

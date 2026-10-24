@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
 import { z } from "zod";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
@@ -94,12 +95,30 @@ export async function updatePassword(_: ActionState, formData: FormData): Promis
   if (!pass.success) return { error: pass.error.issues[0].message, fieldErrors: { password: pass.error.issues[0].message } };
   if (formData.get("password") !== formData.get("confirm")) return { error: "As senhas não conferem.", fieldErrors: { confirm: "As senhas não conferem." } };
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.updateUser({ password: pass.data });
-  if (error) return { error: error.message.includes("different") ? "A nova senha deve ser diferente da atual." : "Não foi possível alterar a senha. O link pode ter expirado." };
-  // Senha inicial definida pelo administrador: libera o acesso e renova o token (sem a marca de troca)
-  if (data.user?.app_metadata?.trocar_senha && hasServiceRole()) {
-    await createAdminClient().auth.admin.updateUserById(data.user.id, { app_metadata: { trocar_senha: false } });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sessão expirada. Entre novamente ou peça um novo link." };
+  const atual = String(formData.get("atual") ?? "");
+  const forcada = !!user.app_metadata?.trocar_senha;
+
+  // O projeto exige a senha atual para trocar a senha, e o SDK não a envia: quando a pessoa a informa
+  // (Segurança) ou acabou de entrar com a senha inicial do administrador, o servidor confere e grava.
+  if ((forcada || atual) && hasServiceRole()) {
+    if (atual) {
+      const verif = createSupabaseClient(env.supabaseUrl, env.supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+      const { error: e } = await verif.auth.signInWithPassword({ email: user.email ?? "", password: atual });
+      if (e) return { error: "Senha atual incorreta.", fieldErrors: { atual: "Senha atual incorreta" } };
+      await verif.auth.signOut({ scope: "local" });
+      if (atual === pass.data) return { error: "A nova senha deve ser diferente da atual.", fieldErrors: { password: "Igual à atual" } };
+    }
+    const { error } = await createAdminClient().auth.admin.updateUserById(user.id, { password: pass.data, app_metadata: { trocar_senha: false } });
+    if (error) return { error: error.code === "weak_password" ? "Senha fraca ou já vazada na internet. Escolha outra." : error.code === "same_password" ? "A nova senha deve ser diferente da atual." : "Não foi possível alterar a senha." };
     await supabase.auth.refreshSession();
+    return { ok: true, message: "Senha alterada com sucesso." };
   }
+  // Link de recuperação ("Esqueci a senha")
+  const { error } = await supabase.auth.updateUser({ password: pass.data });
+  if (error) return { error: error.code === "same_password" ? "A nova senha deve ser diferente da atual." : "Não foi possível alterar a senha. O link pode ter expirado." };
   return { ok: true, message: "Senha alterada com sucesso." };
 }
