@@ -9,7 +9,7 @@ import { dbError, guard, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
 const coord = (min: number, max: number, label: string) =>
-  z.coerce.number({ invalid_type_error: `${label} inválida` }).finite(`${label} inválida`).min(min, `${label} fora do intervalo`).max(max, `${label} fora do intervalo`);
+  z.coerce.number({ error: `${label} inválida` }).finite(`${label} inválida`).min(min, `${label} fora do intervalo`).max(max, `${label} fora do intervalo`);
 
 const checkInSchema = z.object({
   cliente_id: zs.uuid(),

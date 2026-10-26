@@ -15,7 +15,7 @@ function revalidate() {
 
 const metaSchema = z
   .object({
-    periodo: z.string({ required_error: "Informe o mês" }).trim().regex(/^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/, "Mês inválido"),
+    periodo: z.string({ error: "Informe o mês" }).trim().regex(/^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/, "Mês inválido"),
     tipo: zs.enumOf([...TIPOS], "Selecione o tipo de meta"),
     consultor_id: zs.uuid(),
     valor_meta: zs.money().refine((v) => v !== null && v > 0, "Informe um valor maior que zero"),

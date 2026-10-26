@@ -22,9 +22,9 @@ const schema = z.object({
   interesse: z.string().trim().max(500).optional(),
   renda: z.string().trim().max(20).optional(),
   mensagem: z.string().trim().max(2000).optional(),
-  consentimento: z.literal(true, { errorMap: () => ({ message: "É preciso aceitar o uso dos dados para contato" }) }),
+  consentimento: z.literal(true, { error: "É preciso aceitar o uso dos dados para contato" }),
   website: z.string().max(0).optional(), // isca: robôs preenchem
-  utm: z.record(z.string().max(200)).optional(),
+  utm: z.record(z.string(), z.string().max(200)).optional(),
   turnstile: z.string().max(4000).optional(),
 });
 

@@ -24,7 +24,7 @@ const txt = (max: number) => z.string().trim().max(max).nullish().transform((v) 
 
 const metaSchema = z.object({
   dispositivo: z.object({ id: UUID, nome: z.string().max(200), plataforma: z.string().max(120), versao: z.string().max(30), fila: z.number().int().min(0).max(100000) }),
-  item: z.object({ id: UUID, tipo: z.string().max(30), payload: z.record(z.unknown()) }).nullable(),
+  item: z.object({ id: UUID, tipo: z.string().max(30), payload: z.record(z.string(), z.unknown()) }).nullable(),
 });
 
 type Resposta = { status: "ok" | "duplicado" | "rejeitado"; mensagem: string; dados?: Record<string, unknown> };

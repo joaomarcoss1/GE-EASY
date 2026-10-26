@@ -95,7 +95,7 @@ const manualSchema = z.object({
   consultor_id: zs.uuid(),
   descricao: zs.required("Descrição", 300),
   competencia: z
-    .string({ required_error: "Informe a competência" })
+    .string({ error: "Informe a competência" })
     .trim()
     .regex(/^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/, "Competência inválida"),
   base_calculo: zs.money().refine((v) => v !== null && v > 0, "Informe a base de cálculo"),

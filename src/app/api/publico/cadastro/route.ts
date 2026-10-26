@@ -20,7 +20,7 @@ const schema = z.object({
   plano: z.string().trim().max(40).default("profissional"),
   nome: z.string().trim().min(2, "Informe seu nome").max(120),
   email: z.string().trim().toLowerCase().email("E-mail inválido").max(160),
-  termos: z.literal(true, { errorMap: () => ({ message: "É preciso aceitar os termos de uso e a política de privacidade" }) }),
+  termos: z.literal(true, { error: "É preciso aceitar os termos de uso e a política de privacidade" }),
   website: z.string().max(0).optional(),
   turnstile: z.string().max(4000).optional(),
 });
