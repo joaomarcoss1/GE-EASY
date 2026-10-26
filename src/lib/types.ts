@@ -327,6 +327,7 @@ export interface Departamento {
   cor: string;
   responsavel_id: string | null;
   ativo: boolean;
+  tipo: string;
 }
 
 export interface DepartamentoMembro {

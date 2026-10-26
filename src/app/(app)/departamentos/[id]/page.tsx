@@ -95,7 +95,7 @@ export default async function DepartamentoPage({ params, searchParams }: { param
   const manager = isManagerRole(profile.role);
   const supabase = await createClient();
 
-  const { data: depRow } = await supabase.from("departamentos").select("id, nome, sigla, descricao, cor, responsavel_id, ativo").eq("id", id).maybeSingle();
+  const { data: depRow } = await supabase.from("departamentos").select("id, nome, sigla, descricao, cor, responsavel_id, ativo, tipo").eq("id", id).maybeSingle();
   if (!depRow) notFound();
   const dep = depRow as Departamento;
 
@@ -228,7 +228,7 @@ export default async function DepartamentoPage({ params, searchParams }: { param
     statusFiltro === "todos" ? processos : statusFiltro === "encerrados" ? processos.filter((p) => !ATIVOS.includes(p.status)) : ativos;
 
   const base = `/departamentos/${id}`;
-  const depValues = { nome: dep.nome, sigla: dep.sigla, descricao: dep.descricao, cor: dep.cor, responsavel_id: dep.responsavel_id };
+  const depValues = { nome: dep.nome, sigla: dep.sigla, descricao: dep.descricao, cor: dep.cor, responsavel_id: dep.responsavel_id, tipo: dep.tipo };
 
   return (
     <>
@@ -499,7 +499,7 @@ export default async function DepartamentoPage({ params, searchParams }: { param
             title="Processos do departamento"
             description={`${num(processosLista.length)} processo(s) · provisionado ${brlShort(sum(processosLista, (p) => p.valor_provisionado))}`}
             action={
-              <div className="inline-flex rounded-xl border border-line bg-surface-2 p-1">
+              <div className="inline-flex max-w-full overflow-x-auto rounded-xl border border-line bg-surface-2 p-1">
                 {(
                   [
                     ["ativos", "Em andamento"],

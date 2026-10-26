@@ -17,7 +17,7 @@ export function formToObject(formData: FormData) {
       (obj[k] = (obj[k] as string[] | undefined) ?? []);
       (obj[k] as string[]).push(value);
     } else {
-      obj[key] = value;
+      obj[key] = value.replace(/\r\n/g, "\n"); // textarea envia CRLF: evita alteração falsa ao salvar sem mudar
     }
   }
   return obj;
@@ -26,9 +26,9 @@ export function formToObject(formData: FormData) {
 // Helpers de schema para campos de formulário (strings vazias => null)
 export const zs = {
   text: (max = 500) => z.string().trim().max(max).transform((v) => (v === "" ? null : v)).nullable().optional(),
-  required: (label: string, max = 200) => z.string({ required_error: `${label} é obrigatório` }).trim().min(1, `${label} é obrigatório`).max(max),
+  required: (label: string, max = 200) => z.string({ error: `${label} é obrigatório` }).trim().min(1, `${label} é obrigatório`).max(max),
   uuid: () => z.string().trim().transform((v) => (v === "" ? null : v)).nullable().optional().refine((v) => !v || /^[0-9a-f-]{36}$/i.test(v), "Identificador inválido"),
-  requiredUuid: (label: string) => z.string({ required_error: `Selecione ${label}` }).trim().regex(/^[0-9a-f-]{36}$/i, `Selecione ${label}`),
+  requiredUuid: (label: string) => z.string({ error: `Selecione ${label}` }).trim().regex(/^[0-9a-f-]{36}$/i, `Selecione ${label}`),
   money: () =>
     z.union([z.string(), z.number()]).optional().nullable().transform((v, ctx) => {
       if (v === undefined || v === null || v === "") return null;
@@ -51,7 +51,7 @@ export const zs = {
     }),
   date: () => z.string().trim().transform((v) => (v === "" ? null : v)).nullable().optional().refine((v) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v), "Data inválida"),
   bool: () => z.union([z.literal("on"), z.literal("true"), z.literal("false"), z.literal("")]).optional().transform((v) => v === "on" || v === "true"),
-  enumOf: <T extends [string, ...string[]]>(values: T, msg = "Opção inválida") => z.enum(values, { errorMap: () => ({ message: msg }) }),
+  enumOf: <T extends [string, ...string[]]>(values: T, msg = "Opção inválida") => z.enum(values, { error: msg }),
 };
 
 export function zodErrors(error: z.ZodError): ActionState {
