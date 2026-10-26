@@ -56,7 +56,7 @@ export function PeriodFilter({ de, ate, extra }: { de: string; ate: string; /** 
               key={p.label}
               type="button"
               onClick={() => go(p.de, p.ate)}
-              className={cn("rounded-full border px-3 py-1 text-xs font-medium transition", active ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200" : "border-line text-muted hover:text-fg")}
+              className={cn("rounded-full border px-3 py-2 text-xs font-medium transition sm:py-1", active ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200" : "border-line text-muted hover:text-fg")}
             >
               {p.label}
             </button>

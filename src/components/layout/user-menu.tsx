@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LogOut, UserCog, ShieldCheck, Moon, Sun } from "lucide-react";
+import { Building, LogOut, UserCog, ShieldCheck, Moon, Sun } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { ROLE_LABEL } from "@/lib/constants";
 import type { Profile } from "@/lib/types";
@@ -25,8 +25,18 @@ export function ThemeToggle() {
   );
 }
 
-export function UserMenu({ profile }: { profile: Profile }) {
+export function UserMenu({ profile, trocarEmpresa }: { profile: Profile; trocarEmpresa: boolean }) {
   const [open, setOpen] = useState(false);
+  const [dark, setDark] = useState(false);
+  useEffect(() => setDark(document.documentElement.classList.contains("dark")), [open]);
+  const alternarTema = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    try {
+      localStorage.setItem("ge-theme", next ? "dark" : "light");
+    } catch {}
+  };
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onClick = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
@@ -55,6 +65,15 @@ export function UserMenu({ profile }: { profile: Profile }) {
           <Link href="/configuracoes?tab=seguranca" onClick={() => setOpen(false)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-surface-2" role="menuitem">
             <ShieldCheck className="h-4 w-4 text-muted" /> Segurança e 2FA
           </Link>
+          {/* no celular o cabeçalho não mostra o tema nem a troca de empresa: ficam aqui */}
+          {trocarEmpresa && (
+            <Link href="/selecionar-empresa" onClick={() => setOpen(false)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-surface-2 md:hidden" role="menuitem">
+              <Building className="h-4 w-4 text-muted" /> Trocar empresa
+            </Link>
+          )}
+          <button type="button" onClick={alternarTema} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-surface-2 sm:hidden" role="menuitem">
+            {dark ? <Sun className="h-4 w-4 text-muted" /> : <Moon className="h-4 w-4 text-muted" />} {dark ? "Tema claro" : "Tema escuro"}
+          </button>
           <div className="my-1 h-px bg-line" />
           <form action={signOut}>
             <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40" role="menuitem">

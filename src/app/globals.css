@@ -46,6 +46,13 @@
   .table-base thead th { @apply sticky top-0 z-[1] bg-surface-2 px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted; }
   .table-base tbody td { @apply border-t border-line px-4 py-3 align-middle; }
   .table-base tbody tr { @apply transition-colors hover:bg-brand-50/50 dark:hover:bg-white/[0.03]; }
+  /* celular: tabelas mais compactas e a última coluna (ações) fixa à direita, sempre visível */
+  @media (max-width: 767px) {
+    .table-base thead th, .table-base tbody td { @apply px-3; }
+    .table-base thead th:last-child, .table-base tbody td:last-child { position: sticky; right: 0; box-shadow: -10px 0 10px -10px rgb(0 0 0 / 0.25); }
+    .table-base thead th:last-child { z-index: 2; }
+    .table-base tbody td:last-child { background: rgb(var(--surface)); }
+  }
   .brand-gradient { background: radial-gradient(1200px 600px at 10% -10%, #4F4FC4 0%, transparent 60%), radial-gradient(800px 500px at 110% 110%, rgba(225,79,38,.35) 0%, transparent 60%), linear-gradient(135deg, #1A1A50 0%, #2D2D83 55%, #23236A 100%); }
   .text-gradient { @apply bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent; }
 }

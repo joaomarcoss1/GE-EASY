@@ -459,7 +459,7 @@ function OpCard({
         )}
         {canWrite && <GripVertical className="ml-auto h-4 w-4 shrink-0 text-muted/50 opacity-0 transition group-hover:opacity-100" aria-hidden />}
         <div ref={menuRef} className={cn("relative", !canWrite && "ml-auto")} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-          <button type="button" onClick={() => setMenu((v) => !v)} className="-m-1 grid h-7 w-7 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-fg" aria-label="Ações da oportunidade" aria-expanded={menu} aria-haspopup="menu">
+          <button type="button" onClick={() => setMenu((v) => !v)} className="-m-1 grid h-9 w-9 place-items-center rounded-lg sm:h-7 sm:w-7 text-muted hover:bg-surface-2 hover:text-fg" aria-label="Ações da oportunidade" aria-expanded={menu} aria-haspopup="menu">
             <MoreHorizontal className="h-4 w-4" />
           </button>
           {menu && (

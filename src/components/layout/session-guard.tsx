@@ -50,6 +50,9 @@ export function SessionGuard({ minutos }: { minutos: number }) {
     gravar(Date.now());
     const eventos = ["mousemove", "keydown", "click", "scroll", "touchstart"] as const;
     eventos.forEach((e) => window.addEventListener(e, registrar, { passive: true }));
+    // "voltar" do navegador pode reexibir a página da memória (bfcache) depois de sair: recarrega para checar a sessão
+    const aoVoltar = (e: PageTransitionEvent) => e.persisted && window.location.reload();
+    window.addEventListener("pageshow", aoVoltar);
     const timer = window.setInterval(() => {
       const ociosoMs = Date.now() - Math.max(ultima.current, ler());
       const faltam = Math.ceil((limiteMs - ociosoMs) / 1000);
@@ -63,6 +66,7 @@ export function SessionGuard({ minutos }: { minutos: number }) {
     }, 1_000);
     return () => {
       eventos.forEach((e) => window.removeEventListener(e, registrar));
+      window.removeEventListener("pageshow", aoVoltar);
       window.clearInterval(timer);
     };
   }, [limiteMs, registrar]);

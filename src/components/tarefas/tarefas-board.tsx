@@ -228,7 +228,7 @@ function TarefaRow({
         aria-checked={done}
         aria-label={done ? `Reabrir "${t.titulo}"` : `Concluir "${t.titulo}"`}
         onClick={() => onToggle(t)}
-        className={cn("mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 transition-all active:scale-90", done ? "border-emerald-500 bg-emerald-500 text-white" : PRIO_RING[t.prioridade])}
+        className={cn("relative mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 transition-all after:absolute after:-inset-2.5 after:content-[''] active:scale-90", done ? "border-emerald-500 bg-emerald-500 text-white" : PRIO_RING[t.prioridade])}
       >
         {done && <Check className="h-3 w-3" strokeWidth={3.5} />}
       </button>

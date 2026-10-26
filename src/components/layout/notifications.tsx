@@ -48,7 +48,7 @@ export function Notifications({ userId }: { userId: string }) {
         {unread > 0 && <span className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent-500 px-1 text-[10px] font-bold text-white">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-2rem))] animate-pop-in overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
+        <div className="fixed inset-x-4 top-16 z-50 animate-pop-in sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-[360px] overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <p className="text-sm font-semibold">Notificações</p>
             {unread > 0 && (

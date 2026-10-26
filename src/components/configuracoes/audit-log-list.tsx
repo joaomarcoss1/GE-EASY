@@ -77,7 +77,7 @@ export function AuditLogList({ items }: { items: AuditItem[] }) {
               <Fragment key={it.id}>
                 <tr className={cn("cursor-pointer", isOpen && "bg-surface-2/60")} onClick={() => setOpen(isOpen ? null : it.id)}>
                   <td>
-                    <button type="button" aria-expanded={isOpen} aria-label={isOpen ? "Recolher detalhes" : "Ver detalhes"} className="grid h-7 w-7 place-items-center rounded-lg text-muted hover:bg-surface-2">
+                    <button type="button" aria-expanded={isOpen} aria-label={isOpen ? "Recolher detalhes" : "Ver detalhes"} className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2 sm:h-7 sm:w-7">
                       {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
                   </td>

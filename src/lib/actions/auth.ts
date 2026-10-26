@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { createHmac } from "node:crypto";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -66,18 +66,26 @@ export async function signIn(_: ActionState, formData: FormData): Promise<Action
   redirect(safeNext(formData.get("next")));
 }
 
-export async function signOut() {
+/**
+ * Encerra a sessão deste aparelho. O signOut do SDK não apaga os cookies quando a chamada à API falha
+ * (rede, token já expirado): os cookies sb-* são removidos aqui de qualquer forma.
+ */
+async function encerrarSessao(detalhes: Record<string, string> | null) {
   const supabase = await createClient();
-  await supabase.rpc("registrar_acesso", { p_acao: "LOGOUT", p_tabela: "auth", p_registro: null, p_detalhes: null });
-  await supabase.auth.signOut();
+  await supabase.rpc("registrar_acesso", { p_acao: "LOGOUT", p_tabela: "auth", p_registro: null, p_detalhes: detalhes }).then(() => undefined, () => undefined);
+  await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+  const jar = await cookies();
+  for (const c of jar.getAll()) if (c.name.startsWith("sb-")) jar.delete(c.name);
+}
+
+export async function signOut() {
+  await encerrarSessao(null);
   redirect("/login");
 }
 
 /** Saída por inatividade (chamada pelo vigia de sessão no navegador). */
 export async function signOutInatividade() {
-  const supabase = await createClient();
-  await supabase.rpc("registrar_acesso", { p_acao: "LOGOUT", p_tabela: "auth", p_registro: null, p_detalhes: { motivo: "inatividade" } });
-  await supabase.auth.signOut();
+  await encerrarSessao({ motivo: "inatividade" });
   redirect("/login?motivo=inatividade");
 }
 

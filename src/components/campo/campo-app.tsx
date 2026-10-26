@@ -211,7 +211,7 @@ export function CampoApp({ inicial, vapidKey, versaoMinima }: { inicial: Snapsho
             <p className="truncate text-xs text-white/70">{ctx.snap.empresa.nome}</p>
             <p className="truncate font-semibold">{ctx.snap.usuario.nome}</p>
           </div>
-          <button type="button" onClick={sincronizar} className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold" aria-label="Sincronizar">
+          <button type="button" onClick={sincronizar} className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-xs font-semibold" aria-label="Sincronizar">
             {sinc ? <Loader2 className="h-4 w-4 animate-spin" /> : online ? <RefreshCw className="h-4 w-4" /> : <CloudOff className="h-4 w-4" />}
             {online ? (fila ? `${fila} a enviar` : "em dia") : `offline${fila ? ` · ${fila}` : ""}`}
           </button>
