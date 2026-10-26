@@ -29,6 +29,8 @@
   ::selection { @apply bg-accent-500/25; }
   :focus-visible { @apply outline-none ring-2 ring-accent-500/70 ring-offset-2 ring-offset-bg; }
   * { scrollbar-width: thin; scrollbar-color: rgb(var(--line)) transparent; }
+  /* itens de grid não alargam a coluna além da tela (tabelas e gráficos rolam dentro do card) */
+  .grid > * { min-width: 0; }
 }
 
 @layer components {

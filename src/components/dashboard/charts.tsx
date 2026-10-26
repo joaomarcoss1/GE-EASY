@@ -216,7 +216,7 @@ export function CarteiraDonut({
   const [tab, setTab] = useState<"consorcio" | "seguro">("consorcio");
   return (
     <div>
-      <div className="mb-4 inline-flex rounded-xl border border-line bg-surface-2 p-1" role="tablist" aria-label="Linha de negócio">
+      <div className="mb-4 inline-flex max-w-full overflow-x-auto rounded-xl border border-line bg-surface-2 p-1" role="tablist" aria-label="Linha de negócio">
         {(
           [
             ["consorcio", `Consórcio (${totals.cotas})`],

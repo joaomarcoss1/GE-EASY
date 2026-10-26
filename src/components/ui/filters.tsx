@@ -62,7 +62,7 @@ export function SegmentTabs({ param, options, className }: { param: string; opti
   const { set, params } = useParamSetter();
   const current = params.get(param) ?? options[0]?.value ?? "";
   return (
-    <div className={cn("inline-flex rounded-xl border border-line bg-surface-2 p-1", className)} role="tablist">
+    <div className={cn("inline-flex max-w-full overflow-x-auto rounded-xl border border-line bg-surface-2 p-1", className)} role="tablist">
       {options.map((o, i) => {
         const active = current === o.value;
         return (
@@ -71,7 +71,7 @@ export function SegmentTabs({ param, options, className }: { param: string; opti
             role="tab"
             aria-selected={active}
             onClick={() => set(param, i === 0 ? null : o.value)}
-            className={cn("rounded-lg px-3.5 py-1.5 text-sm font-medium transition", active ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg")}
+            className={cn("shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-medium transition", active ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg")}
           >
             {o.label}
           </button>
