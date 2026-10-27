@@ -213,7 +213,7 @@ export async function otimizarRota(id: string): Promise<ActionState> {
   const { error } = await supabase.from("rotas").update({ km_planejado: km, tempo_planejado_min: minutos, metodo_km: metodo }).eq("id", id);
   if (error) return erroDb(error);
   atualizar(id);
-  return { ok: true, message: `Rota otimizada (${metodo === "google" ? "Google Maps" : "linha reta × fator rodoviário"}): ${km} km, ~${Math.round(minutos / 60 * 10) / 10} h com as visitas.` };
+  return { ok: true, message: `Rota otimizada (${metodo === "google" ? "Google Maps" : "linha reta × fator rodoviário"}): ${km.toLocaleString("pt-BR")} km, ~${Math.floor(minutos / 60)}h${String(Math.round(minutos % 60)).padStart(2, "0")} com as visitas.` };
 }
 
 const reagendarSchema = z.object({ paradas: z.array(zs.requiredUuid("as paradas")).min(1, "Selecione as paradas").max(200), rota_destino: zs.requiredUuid("a rota de destino") });

@@ -57,9 +57,11 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
   const tituloParada = new Map(paradas.map((p) => [p.id, `${p.ordem}. ${p.titulo}`]));
   const pontos = paradas.filter((p) => p.lat != null && p.lng != null).map((p) => ({ lat: Number(p.lat), lng: Number(p.lng) }));
   const trajeto = linkTrajeto(rota.inicio_lat != null ? [{ lat: Number(rota.inicio_lat), lng: Number(rota.inicio_lng) }, ...pontos] : pontos);
-  const caminhos = [...checkins.map((c) => c.foto_path), ...despesas.map((d) => d.comprovante_path)].filter((x): x is string => !!x);
+  const caminhos = [...checkins.map((c) => c.foto_path), ...despesas.map((d) => d.comprovante_path), rota.hodometro_foto_inicio, rota.hodometro_foto_fim].filter((x): x is string => !!x);
   const { data: urls } = caminhos.length ? await supabase.storage.from("documentos").createSignedUrls(caminhos, 600) : { data: [] };
   const urlDe = new Map((urls ?? []).filter((u) => u.signedUrl).map((u) => [u.path ?? "", u.signedUrl as string]));
+  const fotoHodIni = rota.hodometro_foto_inicio ? urlDe.get(rota.hodometro_foto_inicio) : undefined;
+  const fotoHodFim = rota.hodometro_foto_fim ? urlDe.get(rota.hodometro_foto_fim) : undefined;
   const opVeic = (veiculos ?? []).map((v) => ({ value: v.id, label: v.placa ? `${v.descricao} · ${v.placa}` : v.descricao }));
   const naoRealizadas = paradas.filter((p) => p.status === "nao_realizada" || (p.status === "pendente" && rota.status !== "planejada"));
 
@@ -177,7 +179,20 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title={`Check-ins (${checkins.length})`} description={rota.iniciada_em ? `Início ${time(rota.iniciada_em)}${rota.finalizada_em ? ` · fim ${time(rota.finalizada_em)}` : ""}` : "A rota ainda não foi iniciada."} icon={<Navigation className="h-4 w-4" />} />
+            <CardHeader
+              title={`Check-ins (${checkins.length})`}
+              description={rota.iniciada_em ? `Início ${time(rota.iniciada_em)}${rota.finalizada_em ? ` · fim ${time(rota.finalizada_em)}` : ""}` : "A rota ainda não foi iniciada."}
+              icon={<Navigation className="h-4 w-4" />}
+              action={
+                (fotoHodIni || fotoHodFim) && (
+                  <span className="text-xs text-muted">
+                    Hodômetro: {fotoHodIni && <a href={fotoHodIni} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-600 hover:underline">foto do início</a>}
+                    {fotoHodIni && fotoHodFim && " · "}
+                    {fotoHodFim && <a href={fotoHodFim} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-600 hover:underline">foto do fim</a>}
+                  </span>
+                )
+              }
+            />
             {checkins.length === 0 ? <EmptyState title="Sem check-ins" /> : (
               <ul className="divide-y divide-line">
                 {checkins.map((c) => (

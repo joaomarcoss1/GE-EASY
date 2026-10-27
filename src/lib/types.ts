@@ -565,6 +565,8 @@ export interface Rota {
   fim_lng: number | null;
   hodometro_inicio: number | null;
   hodometro_fim: number | null;
+  hodometro_foto_inicio: string | null;
+  hodometro_foto_fim: string | null;
   resumo: RotaResumo | null;
   aprovada_por: string | null;
   aprovada_em: string | null;

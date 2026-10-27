@@ -141,7 +141,9 @@ export async function getDownloadUrl(id: string): Promise<ActionState & { url?: 
     if (doc.drive_url && /^https:\/\/(drive|docs)\.google\.com\//.test(doc.drive_url)) return { ok: true, url: doc.drive_url };
     return { error: "Documento sem arquivo disponível." };
   }
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(doc.storage_path, 60, { download: doc.nome });
+  // o Storage devolve o nome codificado (%28, %C3%A1...) quando há acento, espaço ou parênteses: baixa com nome simples
+  const nomeArquivo = doc.nome.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/-+(\.|$)/g, "$1").replace(/\.{2,}/g, ".").replace(/^[-.]+/, "documento.").replace(/^documento\.$/, "documento") || "documento";
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(doc.storage_path, 60, { download: nomeArquivo });
   if (error || !data?.signedUrl) return { error: "Não foi possível gerar o link de download." };
   await registrarAcesso("DOWNLOAD", "documentos", id, { nome: doc.nome });
   return { ok: true, url: data.signedUrl };

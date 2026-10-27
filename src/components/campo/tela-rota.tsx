@@ -191,7 +191,8 @@ function Parada({ rota, p, ativa }: { rota: RotaCampo; p: ParadaCampo; ativa: bo
 
       {ativa && !chegada && p.status === "pendente" && etapa === "nada" && (
         <div className="mt-3 space-y-2">
-          {snap.parametros.exigir_selfie && <FotoInput label="Foto do check-in" frontal onFoto={setFoto} />}
+          {/* foto sempre disponível (comprova a visita); obrigatória e pela câmera frontal só quando a empresa exige selfie */}
+          {snap.parametros.exigir_selfie ? <FotoInput label="Selfie do check-in (obrigatória)" frontal onFoto={setFoto} /> : <FotoInput label="Foto do local (opcional)" onFoto={setFoto} />}
           <button type="button" disabled={ocupado} onClick={marcarChegada} className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-700 py-3 font-semibold text-white">
             {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />} Cheguei
           </button>
