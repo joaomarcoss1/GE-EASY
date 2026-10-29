@@ -1,47 +1,75 @@
 import Image from "next/image";
-import { ShieldCheck, CalendarDays, Scale, Building2 } from "lucide-react";
 
-const highlights = [
-  { icon: Scale, title: "Jurídico integrado", text: "Processos, andamentos, custas e honorários em um só lugar." },
-  { icon: CalendarDays, title: "Prazos e audiências", text: "Contagem em dias úteis (CPC), alertas e Google Agenda." },
-  { icon: Building2, title: "Por departamentos", text: "Consultor, administrativo, RH e financeiro com indicadores próprios." },
-  { icon: ShieldCheck, title: "Segurança total", text: "Controle de acesso por perfil, 2FA e auditoria de alterações." },
+const PARTICULAS = [
+  { x: 12, y: 18, s: 3, d: 4.2, l: 0 }, { x: 82, y: 14, s: 2, d: 5.1, l: 1.2 }, { x: 24, y: 70, s: 2, d: 3.8, l: 0.6 },
+  { x: 70, y: 76, s: 3, d: 4.6, l: 2.1 }, { x: 90, y: 48, s: 2, d: 5.4, l: 0.9 }, { x: 8, y: 44, s: 2, d: 4.9, l: 1.8 },
+  { x: 48, y: 8, s: 2, d: 4.1, l: 2.6 }, { x: 58, y: 90, s: 3, d: 5.6, l: 0.3 }, { x: 36, y: 30, s: 2, d: 3.9, l: 1.5 },
+];
+const BRASAS = [
+  { x: 18, d: 9, l: 0 }, { x: 34, d: 11, l: 3 }, { x: 52, d: 8, l: 5 }, { x: 66, d: 10, l: 1.5 }, { x: 80, d: 12, l: 6.5 }, { x: 90, d: 9.5, l: 4 },
 ];
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
-      <section className="brand-gradient relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col">
-        {/* fundo animado: grade, orbes que flutuam e anéis da marca */}
-        <div aria-hidden className="dots pointer-events-none absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_30%_20%,black,transparent_70%)]" />
-        <div aria-hidden className="pointer-events-none absolute -left-24 top-1/3 h-80 w-80 animate-drift rounded-full bg-brand-400/30 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-20 right-0 h-96 w-96 animate-drift rounded-full bg-accent-500/25 blur-3xl [animation-delay:-8s]" />
-        <div aria-hidden className="pointer-events-none absolute -right-40 -top-40 h-[520px] w-[520px] animate-float-slow rounded-full border-[60px] border-accent-500/15" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-52 -left-32 h-[560px] w-[560px] rounded-full border-[48px] border-white/[0.04]" />
-        <Image src="/brand/logo-wordmark-transparent.png" alt="EASY Gestão Especializada" width={1071} height={308} priority className="reveal relative h-auto w-[250px] drop-shadow-[0_8px_24px_rgba(0,0,0,0.25)]" />
-        <div className="relative mt-auto max-w-lg">
-          <p className="reveal mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-accent-200 backdrop-blur [animation-delay:120ms]">
-            <span className="h-1.5 w-1.5 animate-pulse-ring rounded-full bg-accent-400" /> GE EASY
-          </p>
-          <h1 className="reveal text-4xl font-bold leading-tight tracking-tight [animation-delay:200ms]">
-            Gestão Especializada <span className="text-gradient-light gradient-flow">EASY</span>
-          </h1>
-          <p className="reveal mt-4 text-base text-white/70 [animation-delay:280ms]">A plataforma de gestão da EASY: clientes, equipes, processos, prazos e financeiro organizados por departamento, com o comercial de consórcios e seguros integrado.</p>
-          <div className="stagger mt-10 grid grid-cols-2 gap-4 [&>*]:[animation-delay:360ms]">
-            {highlights.map(({ icon: Icon, title, text }, i) => (
-              <div
-                key={title}
-                style={{ animationDelay: `${380 + i * 90}ms` }}
-                className="glass group rounded-2xl p-4 transition duration-300 ease-smooth hover:-translate-y-1 hover:border-white/25 hover:bg-white/10"
-              >
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent-500/15 ring-1 ring-inset ring-accent-400/30 transition duration-300 group-hover:scale-110 group-hover:bg-accent-500/25">
-                  <Icon className="h-[18px] w-[18px] text-accent-300" />
-                </span>
-                <p className="mt-3 text-sm font-semibold">{title}</p>
-                <p className="mt-1 text-xs leading-relaxed text-white/60">{text}</p>
-              </div>
-            ))}
+      <section className="brand-gradient sweep relative hidden overflow-hidden text-white lg:flex lg:items-center lg:justify-center">
+        {/* fundo em movimento: grade deslizando, orbes, anéis e partículas */}
+        <div aria-hidden className="grid-move pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_50%_45%,black,transparent_75%)]" />
+        <div aria-hidden className="pointer-events-none absolute -left-24 top-1/4 h-96 w-96 animate-drift rounded-full bg-brand-400/30 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 right-0 h-[28rem] w-[28rem] animate-drift rounded-full bg-accent-500/25 blur-3xl [animation-delay:-9s]" />
+        <svg aria-hidden viewBox="0 0 800 800" className="pointer-events-none absolute left-1/2 top-[44%] w-[min(120%,980px)] -translate-x-1/2 -translate-y-1/2 opacity-70">
+          <circle cx="400" cy="400" r="190" fill="none" stroke="white" strokeOpacity=".07" />
+          <circle cx="400" cy="400" r="260" fill="none" stroke="white" strokeOpacity=".06" />
+          <circle cx="400" cy="400" r="330" fill="none" stroke="white" strokeOpacity=".05" />
+          <g className="ring-spin"><circle cx="400" cy="400" r="225" fill="none" stroke="#F0703F" strokeOpacity=".35" strokeWidth="1.5" strokeDasharray="4 22" strokeLinecap="round" /></g>
+          <g className="ring-spin-rev"><circle cx="400" cy="400" r="295" fill="none" stroke="white" strokeOpacity=".22" strokeWidth="1.5" strokeDasharray="2 30" strokeLinecap="round" /></g>
+        </svg>
+        {PARTICULAS.map((p, i) => (
+          <span key={i} aria-hidden className="spark" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, ["--d" as string]: `${p.d}s`, ["--l" as string]: `${p.l}s` }} />
+        ))}
+        {BRASAS.map((b, i) => (
+          <span key={i} aria-hidden className="ember" style={{ left: `${b.x}%`, ["--d" as string]: `${b.d}s`, ["--l" as string]: `${b.l}s` }} />
+        ))}
+
+        <div className="relative z-10 flex flex-col items-center px-12 text-center">
+          {/* marca: cada parte entra de um lado, depois o conjunto flutua e brilha */}
+          <div className="logo-float">
+            <div className="logo-glow relative aspect-[428/335] w-[min(340px,34vw)]">
+              {[
+                { src: "/brand/marca-2.png", fx: "-46px", fy: "-18px", delay: "0.15s" },
+                { src: "/brand/marca-1.png", fx: "-30px", fy: "36px", delay: "0.55s" },
+                { src: "/brand/marca-3.png", fx: "46px", fy: "26px", delay: "0.95s" },
+              ].map((m) => (
+                <Image
+                  key={m.src}
+                  src={m.src}
+                  alt=""
+                  fill
+                  priority
+                  sizes="340px"
+                  className="logo-part object-contain"
+                  style={{ ["--fx" as string]: m.fx, ["--fy" as string]: m.fy, animationDelay: m.delay }}
+                />
+              ))}
+              <span className="sr-only">EASY</span>
+            </div>
           </div>
+
+          {/* slogan */}
+          <p className="mt-12 text-[28px] font-semibold leading-snug tracking-tight xl:text-[32px]" aria-label="EASY Gestão Especializada que protege">
+            <span aria-hidden>
+              {[["EASY", false], ["Gestão", false], ["Especializada", false], ["que", true], ["protege", true]].map(([w, destaque], i) => (
+                <span
+                  key={w as string}
+                  className={`slogan-word mr-[0.28em] ${destaque ? "text-gradient-light gradient-flow font-bold" : ""}`}
+                  style={{ animationDelay: `${1.5 + i * 0.16}s` }}
+                >
+                  {w}
+                </span>
+              ))}
+            </span>
+          </p>
+          <span aria-hidden className="slogan-line mt-5 block h-[3px] w-24 rounded-full bg-gradient-to-r from-accent-500 to-accent-300" />
         </div>
       </section>
       <section className="relative flex items-center justify-center overflow-hidden px-5 py-12 sm:px-10">
