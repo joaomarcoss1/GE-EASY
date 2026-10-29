@@ -1,7 +1,7 @@
 "use client";
 import { useRef } from "react";
 import Image from "next/image";
-import { BadgeCheck, Building2, Fingerprint, MapPin, ShieldCheck, Users } from "lucide-react";
+import { BadgeCheck, Building2, Fingerprint, ShieldCheck } from "lucide-react";
 
 const PARTICULAS = [
   { x: 12, y: 18, s: 3, d: 4.2, l: 0 }, { x: 82, y: 14, s: 2, d: 5.1, l: 1.2 }, { x: 24, y: 70, s: 2, d: 3.8, l: 0.6 },
@@ -63,58 +63,6 @@ export function BrandPanel() {
       {BRASAS.map((b, i) => (
         <span key={i} aria-hidden className="ember" style={css({ left: `${b.x}%`, "--d": `${b.d}s`, "--l": `${b.l}s` })} />
       ))}
-
-      {/* widgets ilustrativos do sistema (decorativos) */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 hidden xl:block">
-        <div className="brand-layer absolute left-[5%] top-[13%]" style={layer(18, 12)}>
-          <div className="widget-in" style={{ animationDelay: "2.6s" }}>
-            <div className="widget-bob glass w-48 rounded-2xl p-3.5 shadow-2xl shadow-black/20" style={css({ "--bd": "7s" })}>
-              <div className="flex items-center gap-2 text-[11px] font-semibold text-white/80"><Users className="h-3.5 w-3.5 text-accent-300" /> Carteira de clientes</div>
-              <div className="mt-3 flex -space-x-2">
-                {["bg-accent-400", "bg-brand-300", "bg-emerald-400", "bg-amber-300"].map((c, i) => (
-                  <span key={i} className={`h-7 w-7 rounded-full ring-2 ring-brand-900/60 ${c}`} />
-                ))}
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-[10px] font-bold ring-2 ring-brand-900/60">+</span>
-              </div>
-              <svg viewBox="0 0 160 36" className="mt-3 h-9 w-full"><path d="M0 28 C20 26 28 14 48 16 S78 30 98 18 S130 4 160 8" fill="none" stroke="#F0703F" strokeWidth="2.2" strokeLinecap="round" /><path d="M0 28 C20 26 28 14 48 16 S78 30 98 18 S130 4 160 8 V36 H0Z" fill="url(#g1)" opacity=".35" /><defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop stopColor="#F0703F" /><stop offset="1" stopColor="#F0703F" stopOpacity="0" /></linearGradient></defs></svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="brand-layer absolute right-[5%] top-[19%]" style={layer(-22, 14)}>
-          <div className="widget-in" style={{ animationDelay: "2.9s" }}>
-            <div className="widget-bob glass flex w-44 items-center gap-3 rounded-2xl p-3.5 shadow-2xl shadow-black/20" style={css({ "--bd": "8s", "--bl": "-2s" })}>
-              <svg viewBox="0 0 40 40" className="h-11 w-11 shrink-0 -rotate-90"><circle cx="20" cy="20" r="16" fill="none" stroke="white" strokeOpacity=".15" strokeWidth="4" /><circle cx="20" cy="20" r="16" fill="none" stroke="#34D399" strokeWidth="4" strokeLinecap="round" pathLength="100" className="ring-fill" /></svg>
-              <div><p className="text-[11px] font-semibold text-white/90">Rotina em dia</p><p className="mt-0.5 text-[10px] text-white/55">Prazos e documentos</p></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="brand-layer absolute bottom-[21%] left-[6%]" style={layer(16, -14)}>
-          <div className="widget-in" style={{ animationDelay: "3.2s" }}>
-            <div className="widget-bob glass flex w-52 items-center gap-3 rounded-2xl p-3.5 shadow-2xl shadow-black/20" style={css({ "--bd": "9s", "--bl": "-4s" })}>
-              <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-400/15 ring-1 ring-inset ring-emerald-300/30">
-                <ShieldCheck className="h-5 w-5 text-emerald-300" />
-                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-pulse-ring rounded-full bg-emerald-400" />
-              </span>
-              <div><p className="text-[11px] font-semibold text-white/90">Dados protegidos</p><p className="mt-0.5 text-[10px] text-white/55">Acesso por perfil e auditoria</p></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="brand-layer absolute bottom-[17%] right-[5%]" style={layer(-18, -10)}>
-          <div className="widget-in" style={{ animationDelay: "3.5s" }}>
-            <div className="widget-bob glass w-48 rounded-2xl p-3.5 shadow-2xl shadow-black/20" style={css({ "--bd": "7.5s", "--bl": "-1s" })}>
-              <div className="flex items-center justify-between text-[11px] font-semibold text-white/80"><span className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-accent-300" /> Equipe em campo</span></div>
-              <div className="mt-3 flex h-12 items-end gap-1.5">
-                {[40, 62, 48, 80, 66, 94].map((h, i) => (
-                  <span key={i} className="bar flex-1 rounded-t bg-gradient-to-t from-accent-600 to-accent-300" style={css({ height: `${h}%`, "--bl": `${3.4 + i * 0.1}s` })} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* centro: logo + nome EASY + slogan */}
       <div className="relative z-10 flex w-full max-w-[640px] flex-col items-center px-10 text-center">
