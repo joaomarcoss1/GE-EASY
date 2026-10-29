@@ -27,6 +27,7 @@ export function clienteFields(consultores: Option[], canTransfer: boolean, novo 
     { name: "bairro", label: "Bairro", span: 3 },
     { name: "cidade", label: "Cidade", span: 4 },
     { name: "uf", label: "UF", type: "select", options: UFS, span: 2 },
+    { name: "latitude,longitude", label: "Local no mapa", type: "local", help: "Marque a porta do cliente: usado nas rotas e no check-in das visitas." },
     { name: "profissao", label: "Profissão / Ramo", span: 3, section: "Perfil comercial" },
     { name: "renda_mensal", label: "Renda / Faturamento mensal", type: "money", span: 3 },
     { name: "status", label: "Status comercial", type: "select", options: CLIENTE_STATUS, emptyOption: false, span: 2 },

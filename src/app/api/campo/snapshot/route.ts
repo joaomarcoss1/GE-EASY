@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { parametrosRotas } from "@/lib/parametros";
 import { onlyDigits, todayISO } from "@/lib/format";
+import { custoPercurso, kmEstimado } from "@/lib/geo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,12 +34,26 @@ export async function GET() {
     parametrosRotas(),
   ]);
   const ids = (rotas ?? []).map((r) => r.id);
-  const [{ data: paradas }, { data: checkins }] = ids.length
+  const veicIds = [...new Set((rotas ?? []).map((r) => r.veiculo_id).filter((x): x is string => !!x))];
+  const [{ data: paradas }, { data: checkins }, { data: veiculos }] = ids.length
     ? await Promise.all([
         db.from("rota_paradas").select("id, rota_id, ordem, tipo, cliente_id, titulo, endereco, cidade, uf, lat, lng, raio_m, janela_inicio, janela_fim, objetivo, obrigatoria, status").in("rota_id", ids).order("ordem"),
         db.from("checkins").select("id, rota_id, parada_id, tipo, registrado_em, resultado, dentro_do_raio").in("rota_id", ids).order("registrado_em"),
+        veicIds.length ? db.from("veiculos").select("id, descricao, placa, consumo_km_l").in("id", veicIds) : Promise.resolve({ data: [] }),
       ])
-    : [{ data: [] }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }];
+  /** Veículo e previsão de km/combustível da rota (km planejado ou linha reta × fator entre as paradas) */
+  const extras = (r: { veiculo_id: string | null; km_planejado: number | null }, ps: { lat: number | null; lng: number | null }[]) => {
+    const v = (veiculos ?? []).find((x) => x.id === r.veiculo_id) ?? null;
+    const pts = ps.filter((p) => p.lat != null && p.lng != null).map((p) => ({ lat: Number(p.lat), lng: Number(p.lng) }));
+    const km = r.km_planejado != null ? Number(r.km_planejado) : pts.length >= 2 ? kmEstimado(pts, parametros.fator_rodoviario) : null;
+    const consumo = Number(v?.consumo_km_l ?? parametros.consumo_km_l);
+    const c = km != null ? custoPercurso(km, { consumoKmL: consumo, precoCombustivel: parametros.preco_combustivel, valorKm: parametros.valor_km, modo: parametros.reembolso_modo }) : null;
+    return {
+      veiculo: v ? { descricao: v.descricao, placa: v.placa, consumo_km_l: consumo } : null,
+      previsao: km != null && c ? { km, litros: c.litros, combustivel: c.combustivel, consumo_km_l: consumo } : null,
+    };
+  };
   // o que falta de documento (até 30 clientes, os de prazo mais curto)
   const faltando = await Promise.all((pend ?? []).slice(0, 30).map(async (c) => {
     const { data } = await db.rpc("situacao_documental", { p_cliente: c.id });
@@ -76,6 +91,7 @@ export async function GET() {
       },
       rotas: (rotas ?? []).map((r) => ({
         ...r,
+        ...extras(r, (paradas ?? []).filter((p) => p.rota_id === r.id)),
         paradas: (paradas ?? []).filter((p) => p.rota_id === r.id),
         checkins: (checkins ?? []).filter((c) => c.rota_id === r.id),
       })),

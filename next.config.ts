@@ -9,7 +9,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: https://${supabaseHost} https://*.googleusercontent.com`,
+  `img-src 'self' data: blob: https://${supabaseHost} https://*.googleusercontent.com https://tile.openstreetmap.org`,
   "font-src 'self' data:",
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://viacep.com.br`,
   "frame-src 'self' https://drive.google.com https://docs.google.com https://challenges.cloudflare.com",

@@ -1,11 +1,26 @@
 "use client";
 import { useState } from "react";
-import { CheckCircle2, Flag, Loader2, LogIn, LogOut, MapPin, Navigation, Play } from "lucide-react";
+import { Car, CheckCircle2, Flag, Fuel, Loader2, LogIn, LogOut, MapPin, Navigation, Play } from "lucide-react";
 import { distanciaM } from "@/lib/geo";
 import { CHECKIN_RESULTADOS } from "@/lib/constants";
 import { useCampo } from "./contexto";
 import { hojeISO, posicaoAtual, type ParadaCampo, type RotaCampo } from "./tipos";
 import { FotoInput } from "./foto-input";
+import { Mapa, type TomMapa } from "@/components/mapa/mapa";
+
+const fmt = (n: number, d = 1) => n.toLocaleString("pt-BR", { maximumFractionDigits: d });
+const TOM_PARADA: Record<string, TomMapa> = { pendente: "brand", visitada: "green", nao_realizada: "red", reagendada: "slate" };
+
+/**
+ * Navegação pelo Google Maps com as paradas pendentes em ordem.
+ * shortcut: o link do Maps aceita poucas paradas intermediárias (~9 no celular); acima disso, navegue parada a parada.
+ */
+function linkNavegacao(rota: RotaCampo) {
+  const pts = rota.paradas.filter((p) => p.status === "pendente" && p.lat != null && p.lng != null).slice(0, 10).map((p) => `${p.lat},${p.lng}`);
+  if (!pts.length) return null;
+  const destino = pts.pop()!;
+  return `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${destino}${pts.length ? `&waypoints=${encodeURIComponent(pts.join("|"))}` : ""}`;
+}
 
 /** Execução da rota no campo: iniciar, chegada/saída em cada parada (com raio), finalizar. Funciona offline. */
 export function TelaRota() {
@@ -76,6 +91,25 @@ function ExecucaoRota({ rota }: { rota: RotaCampo }) {
         <p className="text-xs text-muted">{rota.data.split("-").reverse().join("/")}</p>
         <h1 className="text-xl font-bold">{rota.nome}</h1>
         {rota.objetivo && <p className="text-sm text-muted">{rota.objetivo}</p>}
+      </div>
+
+      <div className="card space-y-3 p-4">
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <p className="flex items-start gap-2"><Car className="mt-0.5 h-4 w-4 shrink-0 text-brand-700" /><span>{rota.veiculo ? <><b>{rota.veiculo.descricao}</b>{rota.veiculo.placa ? <span className="block text-xs text-muted">{rota.veiculo.placa}</span> : null}</> : <span className="text-muted">Sem veículo definido</span>}</span></p>
+          <p className="flex items-start gap-2"><Fuel className="mt-0.5 h-4 w-4 shrink-0 text-accent-600" /><span>{rota.previsao ? <><b>≈ {fmt(rota.previsao.km)} km</b><span className="block text-xs text-muted">{fmt(rota.previsao.litros)} l · R$ {fmt(rota.previsao.combustivel, 2)} ({fmt(rota.previsao.consumo_km_l)} km/l)</span></> : <span className="text-muted">Previsão sem locais</span>}</span></p>
+        </div>
+        {rota.paradas.some((p) => p.lat != null) && (
+          <Mapa
+            className="h-56"
+            marcadores={rota.paradas.filter((p) => p.lat != null && p.lng != null).map((p) => ({ lat: p.lat!, lng: p.lng!, rotulo: p.ordem, titulo: p.titulo, tom: TOM_PARADA[p.status] ?? "brand" }))}
+            linhas={[{ pontos: rota.paradas.filter((p) => p.lat != null && p.lng != null).map((p) => ({ lat: p.lat!, lng: p.lng! })), tracejada: true }]}
+          />
+        )}
+        {linkNavegacao(rota) && (
+          <a href={linkNavegacao(rota)!} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-sm font-semibold text-brand-700">
+            <Navigation className="h-4 w-4" /> Navegar pelas paradas pendentes
+          </a>
+        )}
       </div>
 
       {rota.status === "planejada" && (

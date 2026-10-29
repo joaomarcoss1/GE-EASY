@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coordValida, distanciaM, ordemVizinhoMaisProximo, percursoM } from "../geo";
+import { coordValida, custoPercurso, distanciaM, kmEstimado, ordemVizinhoMaisProximo, percursoM } from "../geo";
 
 const saoLuis = { lat: -2.5307, lng: -44.3068 };
 const codo = { lat: -4.4553, lng: -43.8856 };
@@ -24,5 +24,13 @@ describe("geo", () => {
     const longe = { lat: saoLuis.lat + 0.1, lng: saoLuis.lng };
     expect(ordemVizinhoMaisProximo(saoLuis, [longe, null, perto])).toEqual([2, 0, 1]);
     expect(percursoM([saoLuis, perto, longe])).toBeCloseTo(distanciaM(saoLuis, longe), -1);
+  });
+  it("km estimado e combustível", () => {
+    const km = kmEstimado([saoLuis, codo, { lat: 0, lng: 0 }], 1.3);
+    expect(km).toBeGreaterThan(273);
+    expect(km).toBeLessThan(299);
+    expect(custoPercurso(100, { consumoKmL: 10, precoCombustivel: 6, valorKm: 0.9, modo: "consumo" })).toEqual({ litros: 10, combustivel: 60, reembolso: 60 });
+    expect(custoPercurso(100, { consumoKmL: 10, precoCombustivel: 6, valorKm: 0.9, modo: "km" }).reembolso).toBe(90);
+    expect(custoPercurso(0, { consumoKmL: 0, precoCombustivel: 6, valorKm: 0.9, modo: "km" }).litros).toBe(0);
   });
 });

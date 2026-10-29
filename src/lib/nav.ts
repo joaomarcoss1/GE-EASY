@@ -68,6 +68,7 @@ const ALL_NAV: NavGroup[] = [
       { href: "/rotas", label: "Rotas", icon: "Route", permission: "rotas.ver" },
       { href: "/rotas/mapa", label: "Mapa do campo", icon: "Map", permission: "rotas.ver" },
       { href: "/rotas/despesas", label: "Despesas de rota", icon: "Receipt", permission: "despesas.aprovar" },
+      { href: "/rotas/veiculos", label: "Veículos e combustível", icon: "Car", permission: "rotas.definir" },
       { href: "/leads", label: "Leads", icon: "UserPlus", permission: "leads.distribuir" },
       { href: "/whatsapp", label: "WhatsApp", icon: "MessageCircle", permission: "whatsapp.atender" },
       { href: "/whatsapp/campanhas", label: "Campanhas de WhatsApp", icon: "Megaphone", permission: "whatsapp.campanhas" },

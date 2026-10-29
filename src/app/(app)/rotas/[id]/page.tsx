@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Check, Clock, Gauge, MapPin, Navigation, Receipt, Route, Smartphone, Wallet, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Car, Check, Clock, Fuel, Gauge, MapPin, Navigation, Receipt, Route, Smartphone, Wallet, X } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
@@ -9,6 +9,9 @@ import { clienteOptions, consultorOptions, getProfileMap } from "@/lib/data";
 import { CADASTRO_STATUS, CARTEIRAS, CHECKIN_FLAGS, CHECKIN_RESULTADOS, DESPESA_STATUS, DESPESA_TIPOS, PARADA_STATUS, PARADA_TIPOS, ROTA_STATUS } from "@/lib/constants";
 import { brl, date, num, time } from "@/lib/format";
 import { linkTrajeto } from "@/lib/integracoes/maps";
+import { parametrosRotas } from "@/lib/parametros";
+import { custoPercurso, kmEstimado } from "@/lib/geo";
+import { Mapa, type Marcador, type TomMapa } from "@/components/mapa/mapa";
 import type { CheckinRota, DespesaRota, Rota, RotaParada, RotaResumo } from "@/lib/types";
 import {
   adicionarClientesFiltro, adicionarParada, aprovarDespesaRapida, aprovarRota, cancelarRota, otimizarRota, reagendarParadas, removerParada, revisarCheckin, salvarRota,
@@ -35,7 +38,7 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
   const supabase = await createClient();
   const { data: rota } = await supabase.from("rotas").select("*").eq("id", id).maybeSingle<Rota>();
   if (!rota) notFound();
-  const [{ data: pRows }, { data: cRows }, { data: dRows }, { data: resumoAtual }, profiles, clientes, consultores, { data: veiculos }, { data: planejadas }] = await Promise.all([
+  const [{ data: pRows }, { data: cRows }, { data: dRows }, { data: resumoAtual }, profiles, clientes, consultores, { data: veiculos }, { data: planejadas }, par] = await Promise.all([
     supabase.from("rota_paradas").select("*").eq("rota_id", id).order("ordem"),
     supabase.from("checkins").select("*").eq("rota_id", id).order("registrado_em"),
     supabase.from("despesas_rota").select("*").eq("rota_id", id).order("created_at"),
@@ -43,8 +46,9 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
     getProfileMap(),
     can(profile, "rotas.definir") ? clienteOptions() : Promise.resolve([]),
     can(profile, "rotas.definir") ? consultorOptions() : Promise.resolve([]),
-    supabase.from("veiculos").select("id, descricao, placa").eq("ativo", true),
+    supabase.from("veiculos").select("id, descricao, placa, consumo_km_l, ativo"),
     supabase.from("rotas").select("id, nome, data").eq("status", "planejada").neq("id", id).order("data").limit(50),
+    parametrosRotas(),
   ]);
   const paradas = (pRows ?? []) as RotaParada[];
   const checkins = (cRows ?? []) as CheckinRota[];
@@ -62,7 +66,29 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
   const urlDe = new Map((urls ?? []).filter((u) => u.signedUrl).map((u) => [u.path ?? "", u.signedUrl as string]));
   const fotoHodIni = rota.hodometro_foto_inicio ? urlDe.get(rota.hodometro_foto_inicio) : undefined;
   const fotoHodFim = rota.hodometro_foto_fim ? urlDe.get(rota.hodometro_foto_fim) : undefined;
-  const opVeic = (veiculos ?? []).map((v) => ({ value: v.id, label: v.placa ? `${v.descricao} · ${v.placa}` : v.descricao }));
+  const opVeic = (veiculos ?? []).filter((v) => v.ativo || v.id === rota.veiculo_id).map((v) => ({ value: v.id, label: v.placa ? `${v.descricao} · ${v.placa}` : v.descricao }));
+  // km e combustível: planejado (otimização ou linha reta × fator entre as paradas) e realizado (resumo do banco)
+  const veiculo = (veiculos ?? []).find((v) => v.id === rota.veiculo_id) ?? null;
+  const consumo = Number(veiculo?.consumo_km_l ?? par.consumo_km_l);
+  const inicio = rota.inicio_lat != null && rota.inicio_lng != null ? { lat: Number(rota.inicio_lat), lng: Number(rota.inicio_lng) } : null;
+  const kmEstimadoPlan = rota.km_planejado == null && pontos.length >= 2;
+  const kmPlan = rota.km_planejado != null ? Number(rota.km_planejado) : kmEstimadoPlan ? kmEstimado(inicio ? [inicio, ...pontos] : pontos, par.fator_rodoviario) : null;
+  const regra = { consumoKmL: consumo, precoCombustivel: par.preco_combustivel, valorKm: par.valor_km, modo: par.reembolso_modo };
+  const combPlan = kmPlan != null ? custoPercurso(kmPlan, regra) : null;
+  const combReal = resumo ? custoPercurso(Number(resumo.km), regra) : null;
+  const TOM_PARADA: Record<string, TomMapa> = { pendente: "brand", visitada: "green", nao_realizada: "red", reagendada: "slate" };
+  const chegadas = checkins.filter((c) => c.tipo === "chegada");
+  const marcadores: Marcador[] = [
+    ...paradas.filter((p) => p.lat != null && p.lng != null).map((p) => ({ lat: Number(p.lat), lng: Number(p.lng), rotulo: p.ordem, titulo: `${p.ordem}. ${p.titulo}`, tom: TOM_PARADA[p.status] ?? "brand" })),
+    ...chegadas.map((c) => ({ lat: c.lat, lng: c.lng, pequeno: true, tom: (c.dentro_do_raio === false ? "red" : "green") as TomMapa, titulo: `Check-in ${time(c.registrado_em)}${c.parada_id ? ` · ${tituloParada.get(c.parada_id) ?? ""}` : ""}${c.dentro_do_raio === false ? ` · fora do raio (${c.distancia_m} m)` : ""}` })),
+    ...(inicio ? [{ ...inicio, rotulo: "I", tom: "accent" as TomMapa, titulo: `Início${rota.iniciada_em ? ` ${time(rota.iniciada_em)}` : ""}` }] : []),
+    ...(rota.fim_lat != null && rota.fim_lng != null ? [{ lat: Number(rota.fim_lat), lng: Number(rota.fim_lng), rotulo: "F", tom: "accent" as TomMapa, titulo: "Fim" }] : []),
+  ];
+  const linhas = [
+    { pontos: inicio ? [inicio, ...pontos] : pontos, tom: "brand" as TomMapa, tracejada: true },
+    { pontos: [...(inicio ? [inicio] : []), ...chegadas.map((c) => ({ lat: c.lat, lng: c.lng })), ...(rota.fim_lat != null ? [{ lat: Number(rota.fim_lat), lng: Number(rota.fim_lng) }] : [])], tom: "accent" as TomMapa },
+  ];
+  const semLocal = paradas.filter((p) => p.lat == null).length;
   const naoRealizadas = paradas.filter((p) => p.status === "nao_realizada" || (p.status === "pendente" && rota.status !== "planejada"));
 
   return (
@@ -94,8 +120,15 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
         }
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Km planejado / realizado" value={`${rota.km_planejado != null ? num(rota.km_planejado) : "—"} / ${resumo ? num(resumo.km) : "—"}`} hint={resumo ? `Método: ${resumo.metodo_km === "hodometro" ? "hodômetro" : "linha reta × fator"}` : undefined} icon={<Gauge className="h-5 w-5" />} />
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3 2xl:grid-cols-5">
+        <StatCard label="Km planejado / realizado" value={`${kmPlan != null ? `${kmEstimadoPlan ? "≈ " : ""}${num(kmPlan)}` : "—"} / ${resumo ? num(resumo.km) : "—"}`} hint={resumo ? `Método: ${resumo.metodo_km === "hodometro" ? "hodômetro" : "linha reta × fator"}` : undefined} icon={<Gauge className="h-5 w-5" />} />
+        <StatCard
+          label="Combustível plan. / real."
+          value={`${combPlan ? `${num(combPlan.litros)} l` : "—"} / ${combReal ? `${num(combReal.litros)} l` : "—"}`}
+          hint={`${combPlan ? `≈ ${brl(combPlan.combustivel)}` : "—"} / ${combReal ? brl(combReal.combustivel) : "—"} · ${num(consumo)} km/l · ${brl(par.preco_combustivel)}/l`}
+          icon={<Fuel className="h-5 w-5" />}
+          tone="accent"
+        />
         <StatCard label="Locomoção / em visita" value={`${horas(resumo?.tempo_locomocao_min)} / ${horas(resumo?.tempo_visita_min)}`} hint={rota.tempo_planejado_min ? `Planejado: ${horas(rota.tempo_planejado_min)}` : undefined} icon={<Clock className="h-5 w-5" />} tone="accent" />
         <StatCard label="Custo da rota" value={resumo ? brl(resumo.custo_total) : "—"} hint={resumo ? `km ${brl(resumo.custo_km)} + despesas ${brl(resumo.despesas_aprovadas)}` : undefined} icon={<Wallet className="h-5 w-5" />} tone="green" />
         <StatCard label="Custo por cliente" value={resumo?.custo_por_visitado != null ? brl(resumo.custo_por_visitado) : "—"} hint={`Adquiridos: ${resumo?.adquiridos ?? 0}${resumo?.custo_por_adquirido != null ? ` · ${brl(resumo.custo_por_adquirido)} cada` : ""}`} icon={<MapPin className="h-5 w-5" />} />
@@ -105,6 +138,16 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
           <AlertTriangle className="h-4 w-4" /> {resumo.fora_do_raio} check-in(s) fora do raio e {resumo.inconsistencias} com sinal de inconsistência — revise abaixo.
         </div>
       )}
+
+      <Card className="mb-6">
+        <CardHeader
+          title="Mapa da rota"
+          icon={<MapPin className="h-4 w-4" />}
+          description={<span className="flex flex-wrap items-center gap-x-3 gap-y-1"><span>- - - planejado</span><span className="text-accent-600">━ realizado</span><span>● paradas (verde visitada, vermelho não realizada)</span><span className="inline-flex items-center gap-1"><Car className="h-3.5 w-3.5" />{veiculo ? `${veiculo.descricao}${veiculo.placa ? ` · ${veiculo.placa}` : ""}` : "sem veículo (consumo padrão)"}</span></span>}
+          action={semLocal > 0 ? <Badge tone="amber">{semLocal} parada(s) sem local</Badge> : undefined}
+        />
+        <div className="px-5 pb-5"><Mapa marcadores={marcadores} linhas={linhas} className="h-80 lg:h-96" /></div>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
         <Card>
@@ -124,7 +167,7 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
                     { name: "limite", label: "Máximo", type: "number", min: 1, max: 100, span: 2 },
                   ]} />
                 <FormDrawerButton action={adicionarParada} hidden={{ rota_id: rota.id }} title="Nova parada" label="Parada" size="sm" variant="accent" width="max-w-lg"
-                  description="Com cliente, o endereço e a localização vêm do cadastro. Sem coordenadas, o sistema localiza pelo endereço."
+                  description="Com cliente, o endereço e o local vêm do cadastro. Para um ponto específico, busque o endereço ou clique no mapa."
                   values={{ tipo: "cliente", obrigatoria: true }}
                   fields={[
                     { name: "tipo", label: "Tipo", type: "select", options: PARADA_TIPOS, emptyOption: false, span: 3 },
@@ -133,8 +176,7 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
                     { name: "endereco", label: "Endereço", span: 6 },
                     { name: "cidade", label: "Cidade", span: 4 },
                     { name: "uf", label: "UF", span: 2 },
-                    { name: "lat", label: "Latitude", type: "number", step: "any", span: 3 },
-                    { name: "lng", label: "Longitude", type: "number", step: "any", span: 3 },
+                    { name: "lat,lng", label: "Local exato no mapa", type: "local", help: "Opcional: sem marcar, usa o local do cliente ou o endereço." },
                     { name: "raio_m", label: "Raio (m)", type: "number", min: 20, max: 5000, span: 2, help: "Vazio = padrão da empresa" },
                     { name: "janela_inicio", label: "Janela de", type: "time", span: 2 },
                     { name: "janela_fim", label: "até", type: "time", span: 2 },

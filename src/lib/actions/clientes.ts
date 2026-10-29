@@ -26,6 +26,8 @@ const clienteSchema = z
     bairro: zs.text(100),
     cidade: zs.text(100),
     uf: zs.text(2),
+    latitude: zs.number(-90, 90),
+    longitude: zs.number(-180, 180),
     profissao: zs.text(100),
     renda_mensal: zs.money(),
     origem: zs.text(60),

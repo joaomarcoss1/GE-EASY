@@ -8,7 +8,7 @@ import {
   Newspaper, MessagesSquare, FileSignature, FileText, Timer, BadgePercent, ChevronDown, UserCheck, ClipboardList,
   FileCheck2, Database, CalendarClock, IdCard, KeyRound, History, Trash2, Globe, Smartphone, Route, Map, Receipt,
   MessageCircle, Megaphone, UserPlus, Clock, CalendarCheck, FileSpreadsheet, Repeat, PieChart, FileBarChart, CreditCard,
-  LifeBuoy, Upload, Banknote, type LucideIcon,
+  LifeBuoy, Upload, Banknote, Car, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
@@ -22,7 +22,7 @@ const ICONS: Record<string, LucideIcon> = {
   Scale, AlarmClock, Gavel, Building2, TrendingUp, Newspaper, MessagesSquare, FileSignature, FileText, Timer, BadgePercent, UserCheck, ClipboardList,
   FileCheck2, Database, CalendarClock, IdCard, KeyRound, History, Trash2, Globe, Smartphone, Route, Map, Receipt,
   MessageCircle, Megaphone, UserPlus, Clock, CalendarCheck, FileSpreadsheet, Repeat, PieChart, FileBarChart, CreditCard,
-  LifeBuoy, Upload, Banknote,
+  LifeBuoy, Upload, Banknote, Car,
 };
 
 export function Sidebar({

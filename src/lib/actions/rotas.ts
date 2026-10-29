@@ -38,6 +38,11 @@ export async function salvarRota(_: ActionState, formData: FormData): Promise<Ac
   if (!parsed.success) return zodErrors(parsed.error);
   const { id, ...v } = parsed.data;
   const supabase = await createClient();
+  // rota nova sem veículo escolhido: o veículo ativo de que o consultor é responsável (carro próprio ou da frota)
+  if (!id && !v.veiculo_id) {
+    const { data: dele } = await supabase.from("veiculos").select("id").eq("responsavel_id", v.consultor_id).eq("ativo", true).limit(1).maybeSingle();
+    v.veiculo_id = dele?.id ?? null;
+  }
   const { data, error } = id
     ? await supabase.from("rotas").update(v).eq("id", id).select("id").maybeSingle()
     : await supabase.from("rotas").insert({ ...v, status: "planejada" }).select("id").single();
@@ -90,6 +95,7 @@ export async function adicionarParada(_: ActionState, formData: FormData): Promi
   const v = parsed.data;
   const supabase = await createClient();
   let { titulo, endereco, cidade, uf, lat, lng } = v;
+  let clienteSemLocal = false;
   if (v.cliente_id) {
     const { data: c } = await supabase.from("clientes").select("nome, endereco, numero, bairro, cidade, uf, latitude, longitude").eq("id", v.cliente_id).maybeSingle();
     if (!c) return { error: "Cliente não encontrado ou sem acesso.", fieldErrors: { cliente_id: "Sem acesso" } };
@@ -98,6 +104,7 @@ export async function adicionarParada(_: ActionState, formData: FormData): Promi
     cidade = cidade ?? c.cidade;
     uf = uf ?? c.uf;
     if (lat == null && c.latitude != null) { lat = Number(c.latitude); lng = Number(c.longitude); }
+    clienteSemLocal = c.latitude == null;
   }
   if (!titulo) titulo = cidade ? `${cidade}${uf ? `/${uf}` : ""}` : endereco;
   if (!titulo || titulo.length < 2) return { error: "Informe o título, o cliente ou o endereço da parada.", fieldErrors: { titulo: "Obrigatório" } };
@@ -113,6 +120,8 @@ export async function adicionarParada(_: ActionState, formData: FormData): Promi
     objetivo: v.objetivo, obrigatoria: v.obrigatoria,
   });
   if (error) return erroDb(error);
+  // o cliente passa a ter o local: as próximas rotas e o check-in de visitas já usam (sem permissão de edição, segue sem)
+  if (clienteSemLocal && lat != null && lng != null) await supabase.from("clientes").update({ latitude: lat, longitude: lng }).eq("id", v.cliente_id!);
   atualizar(v.rota_id);
   return { ok: true, message: `Parada incluída.${aviso}` };
 }
@@ -145,6 +154,14 @@ export async function adicionarClientesFiltro(_: ActionState, formData: FormData
   const existentes = new Set((ja ?? []).map((p) => p.cliente_id));
   const novos = (clientes ?? []).filter((c) => !existentes.has(c.id));
   if (!novos.length) return { error: "Nenhum cliente novo encontrado com esses filtros." };
+  // clientes sem local: localiza pelo endereço (cache + limite por hora) e guarda no cadastro
+  for (const c of novos.filter((x) => x.latitude == null && (x.endereco || x.cidade)).slice(0, 25)) {
+    const geo = await geocodificar([[c.endereco, c.numero].filter(Boolean).join(", "), c.bairro, c.cidade, c.uf, "Brasil"].filter(Boolean).join(", "));
+    if (!geo) continue;
+    c.latitude = geo.lat;
+    c.longitude = geo.lng;
+    await supabase.from("clientes").update({ latitude: geo.lat, longitude: geo.lng }).eq("id", c.id);
+  }
   let ordem = (await proximaOrdem(supabase, v.rota_id)) - 1;
   const { error } = await supabase.from("rota_paradas").insert(
     novos.map((c) => ({
@@ -301,6 +318,17 @@ export async function lancarDespesa(_: ActionState, formData: FormData): Promise
   return { ok: true, message: "Despesa lançada para aprovação." };
 }
 
+/** Endereço → coordenadas para o seletor de local (cache e limite por usuário em geocodificar). */
+export async function localizarEndereco(texto: string): Promise<ActionState & { lat?: number; lng?: number }> {
+  const g = await guard();
+  if ("denied" in g) return g.denied;
+  const t = typeof texto === "string" ? texto.trim().slice(0, 300) : "";
+  if (t.length < 6) return { error: "Digite o endereço (rua, número e cidade)." };
+  const geo = await geocodificar(/brasil/i.test(t) ? t : `${t}, Brasil`);
+  if (!geo) return { error: "Endereço não encontrado. Marque o ponto clicando no mapa." };
+  return { ok: true, message: `Localizado (${geo.fonte}). Ajuste o marcador se precisar.`, lat: geo.lat, lng: geo.lng };
+}
+
 // ------------------------------------------------------------------ veículos e parâmetros
 const veiculoSchema = z.object({ id: zs.uuid(), descricao: zs.required("Descrição", 120), placa: zs.text(10), consumo_km_l: zs.number(1, 100), responsavel_id: zs.uuid(), ativo: zs.bool() });
 
@@ -315,6 +343,7 @@ export async function salvarVeiculo(_: ActionState, formData: FormData): Promise
   const { error } = id ? await supabase.from("veiculos").update(row).eq("id", id) : await supabase.from("veiculos").insert(row);
   if (error) return erroDb(error);
   revalidatePath("/configuracoes");
+  revalidatePath("/rotas/veiculos");
   return { ok: true, message: "Veículo salvo." };
 }
 
@@ -334,5 +363,6 @@ export async function salvarParametrosRotas(_: ActionState, formData: FormData):
   const { error } = await supabase.from("configuracoes").upsert({ chave: "rotas", valor, updated_by: g.session.userId }, { onConflict: "empresa_id,chave" });
   if (error) return dbError(error);
   revalidatePath("/configuracoes");
+  revalidatePath("/rotas", "layout");
   return { ok: true, message: "Parâmetros de rotas salvos." };
 }

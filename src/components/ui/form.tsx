@@ -1,6 +1,7 @@
 "use client";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
+import dynamic from "next/dynamic";
 import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { Option } from "@/lib/constants";
@@ -8,7 +9,10 @@ import type { ActionState } from "@/lib/actions/types";
 import { Button } from "./button";
 import { useToast } from "./toast";
 
-export type FieldType = "text" | "email" | "tel" | "number" | "money" | "percent" | "date" | "datetime-local" | "time" | "select" | "multiselect" | "textarea" | "checkbox" | "hidden" | "password" | "url" | "documento" | "cep" | "cnj" | "file";
+// mapa (Leaflet) só é baixado nos formulários que têm o campo "local"
+const CampoLocal = dynamic(() => import("@/components/mapa/campo-local").then((m) => m.CampoLocal), { ssr: false });
+
+export type FieldType = "text" | "email" | "tel" | "number" | "money" | "percent" | "date" | "datetime-local" | "time" | "select" | "multiselect" | "textarea" | "checkbox" | "hidden" | "password" | "url" | "documento" | "cep" | "cnj" | "file" | "local";
 
 export interface FieldDef {
   name: string;
@@ -74,6 +78,12 @@ function Field({ field, defaultValue, error }: { field: FieldDef; defaultValue?:
   const dv = defaultValue === null || defaultValue === undefined || Array.isArray(defaultValue) ? "" : String(defaultValue);
 
   if (t === "hidden") return <input type="hidden" name={field.name} value={dv} />;
+  if (t === "local") {
+    // name "lat,lng": dois campos ocultos; defaultValue chega como "lat,lng"
+    const [a, b] = field.name.split(",") as [string, string];
+    const [lat, lng] = dv.split(",").map((x) => (x === "" ? NaN : Number(x)));
+    return <CampoLocal nomes={[a, b]} valor={Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null} label={field.label} help={field.help} error={error} />;
+  }
 
   let control: React.ReactNode;
   if (t === "multiselect") {
@@ -225,7 +235,11 @@ export function ResourceForm({
           lastSection = f.section ?? lastSection;
           return (
             <FieldWithSection key={f.name} header={header}>
-              <Field field={f} defaultValue={values?.[f.name]} error={state.fieldErrors?.[f.name]} />
+              <Field
+                field={f}
+                defaultValue={f.type === "local" ? f.name.split(",").map((n) => values?.[n] ?? "").join(",") : values?.[f.name]}
+                error={state.fieldErrors?.[f.type === "local" ? f.name.split(",")[0] : f.name]}
+              />
             </FieldWithSection>
           );
         })}

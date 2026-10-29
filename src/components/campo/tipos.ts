@@ -36,6 +36,8 @@ export interface RotaCampo {
   objetivo: string | null;
   iniciada_em: string | null;
   km_planejado: number | null;
+  veiculo?: { descricao: string; placa: string | null; consumo_km_l: number } | null;
+  previsao?: { km: number; litros: number; combustivel: number; consumo_km_l: number } | null;
   paradas: ParadaCampo[];
   checkins: CheckinCampo[];
 }

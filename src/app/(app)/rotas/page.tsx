@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Map as MapIcon, Receipt, Route } from "lucide-react";
+import { Car, Map as MapIcon, Receipt, Route } from "lucide-react";
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -10,6 +10,8 @@ import { consultorOptions, getProfileMap, pageRange } from "@/lib/data";
 import { ROTA_STATUS } from "@/lib/constants";
 import { brl, date, num, todayISO } from "@/lib/format";
 import type { Rota } from "@/lib/types";
+import { parametrosRotas } from "@/lib/parametros";
+import { custoPercurso } from "@/lib/geo";
 import { salvarRota } from "@/lib/actions/rotas";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -34,12 +36,17 @@ export default async function RotasPage({ searchParams }: { searchParams: Promis
   if (sp.consultor && /^[0-9a-f-]{36}$/i.test(sp.consultor)) q = q.eq("consultor_id", sp.consultor);
   if (sp.periodo === "hoje") q = q.eq("data", todayISO());
   else if (sp.periodo === "futuras") q = q.gte("data", todayISO());
-  const [{ data, count }, profiles, consultores, { data: veiculos }] = await Promise.all([
-    q, getProfileMap(), consultorOptions(), supabase.from("veiculos").select("id, descricao, placa").eq("ativo", true).order("descricao"),
+  const [{ data, count }, profiles, consultores, { data: veiculos }, par] = await Promise.all([
+    q, getProfileMap(), consultorOptions(), supabase.from("veiculos").select("id, descricao, placa, consumo_km_l, ativo").order("descricao"), parametrosRotas(),
   ]);
   const rotas = (data ?? []) as Rota[];
   const planeja = can(profile, "rotas.definir");
-  const opVeic = (veiculos ?? []).map((v) => ({ value: v.id, label: v.placa ? `${v.descricao} · ${v.placa}` : v.descricao }));
+  const consumoDe = new Map((veiculos ?? []).map((v) => [v.id, Number(v.consumo_km_l ?? par.consumo_km_l)]));
+  /** Custo previsto do deslocamento pelo km planejado (mesma regra do resumo), antes da rota ser executada */
+  const previsto = (r: Rota) => r.km_planejado == null ? null : custoPercurso(Number(r.km_planejado), {
+    consumoKmL: (r.veiculo_id && consumoDe.get(r.veiculo_id)) || par.consumo_km_l, precoCombustivel: par.preco_combustivel, valorKm: par.valor_km, modo: par.reembolso_modo,
+  });
+  const opVeic = (veiculos ?? []).filter((v) => v.ativo).map((v) => ({ value: v.id, label: v.placa ? `${v.descricao} · ${v.placa}` : v.descricao }));
 
   return (
     <>
@@ -50,6 +57,7 @@ export default async function RotasPage({ searchParams }: { searchParams: Promis
         actions={
           <>
             {can(profile, "rotas.ver") && <LinkButton href="/rotas/mapa" variant="secondary"><MapIcon className="h-4 w-4" />Mapa do campo</LinkButton>}
+            {planeja && <LinkButton href="/rotas/veiculos" variant="secondary"><Car className="h-4 w-4" />Veículos</LinkButton>}
             {(can(profile, "despesas.aprovar") || can(profile, "despesas.lancar")) && <LinkButton href="/rotas/despesas" variant="secondary"><Receipt className="h-4 w-4" />Despesas</LinkButton>}
             {planeja && (
               <FormDrawerButton action={salvarRota} title="Nova rota" label="Nova rota" variant="accent" redirectTo="/rotas/:id" width="max-w-lg"
@@ -86,7 +94,7 @@ export default async function RotasPage({ searchParams }: { searchParams: Promis
                   <td><StatusBadge options={ROTA_STATUS} value={r.status} /></td>
                   <td className="text-right text-sm">{r.km_planejado != null ? num(r.km_planejado) : "—"} / {r.resumo ? num(r.resumo.km) : "—"}</td>
                   <td className="text-right text-sm">{r.resumo ? `${r.resumo.visitadas}/${r.resumo.paradas}` : "—"}</td>
-                  <td className="text-right text-sm">{r.resumo ? brl(r.resumo.custo_total) : "—"}</td>
+                  <td className="text-right text-sm">{r.resumo ? brl(r.resumo.custo_total) : previsto(r) ? <span className="text-muted" title={`Previsto: ${num(previsto(r)!.litros)} l de combustível`}>≈ {brl(previsto(r)!.reembolso)}</span> : "—"}</td>
                 </tr>
               ))}
             </tbody>

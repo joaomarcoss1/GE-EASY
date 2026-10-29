@@ -45,3 +45,22 @@ export function percursoM(pontos: Ponto[]): number {
   for (let i = 1; i < pontos.length; i++) t += distanciaM(pontos[i - 1], pontos[i]);
   return t;
 }
+
+/** Km por estrada estimado: soma em linha reta entre os pontos × fator rodoviário (mesmo critério do banco). */
+export function kmEstimado(pontos: Ponto[], fatorRodoviario: number): number {
+  return Math.round((percursoM(pontos.filter(coordValida)) / 1000) * Math.max(1, fatorRodoviario) * 100) / 100;
+}
+
+export interface CustoPercurso {
+  litros: number;
+  combustivel: number;
+  /** Valor do deslocamento pela regra da empresa (R$/km ou consumo × combustível), como em rota_resumo() */
+  reembolso: number;
+}
+
+/** Combustível e custo de deslocamento de um percurso. consumoKmL: o do veículo ou o padrão da empresa. */
+export function custoPercurso(km: number, p: { consumoKmL: number; precoCombustivel: number; valorKm: number; modo: "km" | "consumo" }): CustoPercurso {
+  const litros = Math.round((km / Math.max(p.consumoKmL, 0.1)) * 100) / 100;
+  const combustivel = Math.round(litros * p.precoCombustivel * 100) / 100;
+  return { litros, combustivel, reembolso: p.modo === "consumo" ? combustivel : Math.round(km * p.valorKm * 100) / 100 };
+}

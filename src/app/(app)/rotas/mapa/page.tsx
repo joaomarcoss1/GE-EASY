@@ -13,6 +13,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RealtimeRefresh } from "@/components/ui/realtime-refresh";
+import { Mapa, type Marcador, type TomMapa } from "@/components/mapa/mapa";
 
 export const metadata: Metadata = { title: "Mapa do campo" };
 
@@ -35,11 +36,30 @@ export default async function MapaCampoPage() {
     : [{ data: [] }, { data: [] }];
   const checkins = (cRows ?? []) as CheckinRota[];
   const paradas = (pRows ?? []) as { id: string; rota_id: string; titulo: string; status: string; lat: number | null; lng: number | null }[];
+  const TOM: Record<string, TomMapa> = { pendente: "brand", visitada: "green", nao_realizada: "red", reagendada: "slate" };
+  const nomeDe = (r: Rota) => profiles.get(r.consultor_id)?.full_name ?? "Consultor";
+  const marcadores: Marcador[] = [
+    ...paradas.filter((p) => p.lat != null && p.lng != null).map((p) => {
+      const r = rotas.find((x) => x.id === p.rota_id);
+      return { lat: Number(p.lat), lng: Number(p.lng), pequeno: true, tom: TOM[p.status] ?? "brand", titulo: `${p.titulo}${r ? ` · ${nomeDe(r)}` : ""}` };
+    }),
+    // último check-in de cada rota: onde o consultor está agora
+    ...rotas.flatMap((r) => {
+      const ult = checkins.filter((c) => c.rota_id === r.id).at(-1);
+      const nome = nomeDe(r);
+      return ult ? [{ lat: ult.lat, lng: ult.lng, rotulo: nome.trim().charAt(0).toUpperCase(), tom: "accent" as TomMapa, titulo: `${nome} · ${ult.tipo === "chegada" ? "chegou" : "saiu"} às ${time(ult.registrado_em)}` }] : [];
+    }),
+  ];
 
   return (
     <>
       <PageHeader eyebrow="Campo" title="Mapa do campo" description="Rotas de hoje, último check-in de cada consultor e inconsistências — atualizado em tempo quase real." actions={<RealtimeRefresh tabelas={["checkins", "rotas"]} />} />
       {rotas.length === 0 ? <Card><EmptyState icon={<MapPin className="h-6 w-6" />} title="Nenhuma rota hoje" /></Card> : (
+        <>
+        <Card className="mb-6">
+          <CardHeader title="Campo agora" description="Laranja: último check-in de cada consultor (inicial do nome). Pontos: paradas — azul pendente, verde visitada, vermelho não realizada." icon={<MapPin className="h-4 w-4" />} />
+          <div className="px-5 pb-5"><Mapa marcadores={marcadores} className="h-96 lg:h-[28rem]" /></div>
+        </Card>
         <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-3">
           {rotas.map((r) => {
             const cs = checkins.filter((c) => c.rota_id === r.id);
@@ -71,6 +91,7 @@ export default async function MapaCampoPage() {
             );
           })}
         </div>
+        </>
       )}
     </>
   );
