@@ -30,6 +30,11 @@ create table auth.users (
   updated_at timestamptz default now(),
   last_sign_in_at timestamptz
 );
+create table auth.mfa_factors (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'unverified'
+);
 create table auth.sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,

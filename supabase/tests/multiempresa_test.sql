@@ -219,6 +219,18 @@ begin
   select count(*) into n from public.empresa_publica('empresa-b-teste', null);
   r := r || pg_temp.ok(n = 1, '46 empresa encontrada pelo subdomínio');
 
+  -- situação do 2FA da equipe: só o admin, só membros da empresa ativa
+  execute 'reset role';
+  insert into auth.mfa_factors (user_id, status) values (adv_a, 'verified'), (adm_b, 'verified');
+  perform pg_temp.como(adm_a, ea);
+  select count(*) into n from public.seguranca_2fa_equipe() f where f.user_id in (adm_b, cons_b);
+  r := r || pg_temp.ok(n = 0, '47 2FA da equipe não mostra membros de outra empresa');
+  select count(*) into n from public.seguranca_2fa_equipe() f where f.user_id = adv_a and f.dois_fatores;
+  r := r || pg_temp.ok(n = 1, '48 2FA da equipe mostra o fator verificado do membro');
+  perform pg_temp.como(adv_a, ea);
+  select count(*) into n from public.seguranca_2fa_equipe();
+  r := r || pg_temp.ok(n = 0, '49 2FA da equipe vazio para quem não é admin');
+
   execute 'reset role';
   raise exception '%', case when r like '%FALHOU%' then 'RESULTADO: FALHOU' else 'RESULTADO: OK' end || r;
 end $$;

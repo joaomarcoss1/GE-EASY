@@ -7,7 +7,7 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
 ## Multiempresa (leia antes de mexer em dados)
 - Toda tabela de negócio tem `empresa_id` + política RLS **restritiva** `empresa_id = (select empresa_atual())`.
   Tabela nova de negócio: adicione `empresa_id ... default public.empresa_atual()`, a política restritiva e o
-  gatilho `zz_empresa_vinculos` (ver `20261022000200_multiempresa.sql`).
+  gatilho `zz_empresa_vinculos` (ver `20261022200748_multiempresa.sql`).
 - A empresa ativa vai no cabeçalho `x-empresa-id` (cookie `ge_empresa`, `src/lib/tenant.ts`); o banco confere o vínculo.
 - **Service role ignora o isolamento**: sempre filtre/grave `empresa_id` da sessão (`session.empresa.id`).
 - Papel/ativo são por vínculo (`empresa_membros`); `profiles.role` é legado. Listas de usuários: visão `membros`.

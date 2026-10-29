@@ -1,6 +1,5 @@
 import { Fingerprint, ShieldAlert, ShieldCheck, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import { dateTime } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/constants";
 import { salvarPoliticaSeguranca } from "@/lib/actions/seguranca";
@@ -22,25 +21,18 @@ const ACESSOS: Record<string, string> = {
 /** Painel do administrador: política de sessão/2FA, situação do 2FA da equipe e acessos sensíveis recentes. */
 export async function SegurancaEscritorio() {
   const supabase = await createClient();
-  const [{ data: cfg }, { data: acessos }, { data: perfis }] = await Promise.all([
+  const [{ data: cfg }, { data: acessos }, { data: perfis }, { data: fatores, error: erroFatores }] = await Promise.all([
     supabase.from("configuracoes").select("valor").eq("chave", "seguranca").maybeSingle(),
     supabase.from("audit_logs").select("id, actor_email, acao, tabela, registro_id, dados_novos, created_at").in("acao", Object.keys(ACESSOS)).order("created_at", { ascending: false }).limit(25),
     supabase.from("membros").select("id, full_name, email, role, active"),
+    // fatores ficam no schema auth: a função lê só os membros da empresa ativa
+    supabase.rpc("seguranca_2fa_equipe"),
   ]);
   const politica = (cfg?.valor ?? {}) as { inatividade_min?: number; exigir_2fa?: string };
 
-  // Situação do 2FA: leitura pelo service role (fatores ficam no schema auth)
-  let mfa: Map<string, { doisFatores: boolean; ultimoAcesso: string | null }> | null = null;
-  if (hasServiceRole()) {
-    try {
-      const { data } = await createAdminClient().auth.admin.listUsers({ perPage: 500 });
-      mfa = new Map(
-        (data?.users ?? []).map((u) => [u.id, { doisFatores: (u.factors ?? []).some((f) => f.status === "verified"), ultimoAcesso: u.last_sign_in_at ?? null }]),
-      );
-    } catch {
-      mfa = null;
-    }
-  }
+  const mfa: Map<string, { doisFatores: boolean; ultimoAcesso: string | null }> | null = erroFatores
+    ? null
+    : new Map(((fatores ?? []) as { user_id: string; dois_fatores: boolean; ultimo_acesso: string | null }[]).map((f) => [f.user_id, { doisFatores: f.dois_fatores, ultimoAcesso: f.ultimo_acesso }]));
   const ativos = (perfis ?? []).filter((p) => p.active);
   const sem2fa = mfa ? ativos.filter((p) => !mfa!.get(p.id)?.doisFatores).length : null;
 
@@ -75,7 +67,7 @@ export async function SegurancaEscritorio() {
       <Card>
         <CardHeader
           title="2FA da equipe"
-          description={sem2fa === null ? "Configure SUPABASE_SERVICE_ROLE_KEY para ver a situação de cada usuário." : `${ativos.length - sem2fa} de ${ativos.length} usuário(s) ativo(s) com 2FA`}
+          description={sem2fa === null ? "Não foi possível ler a situação do 2FA da equipe." : `${ativos.length - sem2fa} de ${ativos.length} usuário(s) ativo(s) com 2FA`}
           icon={<Users className="h-4 w-4" />}
           action={sem2fa ? <Badge tone="amber" dot>{sem2fa} sem 2FA</Badge> : sem2fa === 0 ? <Badge tone="green" dot>Todos protegidos</Badge> : undefined}
         />
