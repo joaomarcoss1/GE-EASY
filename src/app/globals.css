@@ -182,3 +182,25 @@
 .ember { position: absolute; bottom: -10px; width: 3px; height: 3px; border-radius: 9999px; background: #F0703F; box-shadow: 0 0 8px #F0703F; opacity: 0; animation: rise var(--d, 9s) ease-in var(--l, 0s) infinite; }
 .slogan-word { display: inline-block; opacity: 0; animation: word-in 1s cubic-bezier(.2,.8,.2,1) forwards; }
 .slogan-line { transform-origin: left; animation: line-grow 1.2s cubic-bezier(.2,.8,.2,1) 2.2s both; }
+
+/* ---------- painel de marca (login): destaque do nome EASY e widgets ---------- */
+@keyframes metal-sweep { 0% { background-position: 130% 0; } 55%, 100% { background-position: -30% 0; } }
+@keyframes easy-in { from { opacity: 0; transform: translateY(24px) scale(.96); letter-spacing: .2em; filter: blur(10px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes bar-grow { from { transform: scaleY(.08); } to { transform: scaleY(1); } }
+@keyframes ring-fill { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 8; } }
+@keyframes widget-in { from { opacity: 0; transform: translateY(26px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+
+.easy-metal {
+  background-image: linear-gradient(105deg, #fff 0%, #fff 38%, #FFD9C6 47%, #FF8A4D 50%, #FFD9C6 53%, #fff 62%, #fff 100%);
+  background-size: 260% 100%;
+  -webkit-mask: url(/brand/easy-texto.png) center / contain no-repeat; mask: url(/brand/easy-texto.png) center / contain no-repeat;
+  animation: metal-sweep 6s ease-in-out 2.4s infinite;
+  filter: drop-shadow(0 10px 30px rgb(0 0 0 / .35));
+}
+.easy-in { animation: easy-in 1.3s cubic-bezier(.2,.8,.2,1) 1.1s both; }
+.brand-layer { transition: transform .6s cubic-bezier(.2,.8,.2,1); will-change: transform; }
+.widget-in { opacity: 0; animation: widget-in .9s cubic-bezier(.2,.8,.2,1) forwards; }
+.widget-bob { animation: bob var(--bd, 7s) ease-in-out var(--bl, 0s) infinite; }
+.bar { transform-origin: bottom; animation: bar-grow 1.2s cubic-bezier(.2,.8,.2,1) var(--bl, 3s) both; }
+.ring-fill { stroke-dasharray: 100; animation: ring-fill 1.6s cubic-bezier(.2,.8,.2,1) 3s both; }
