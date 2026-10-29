@@ -1,7 +1,7 @@
 {
   "name": "GE EASY — Gestão Especializada EASY",
   "short_name": "GE EASY",
-  "description": "Gestão da EASY Consórcio & Seguros",
+  "description": "EASY — Gestão Especializada",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#11113A",

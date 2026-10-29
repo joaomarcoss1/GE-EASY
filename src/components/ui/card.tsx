@@ -1,8 +1,8 @@
 import { cn } from "@/lib/cn";
 
-export function Card({ className, children, ...p }: React.HTMLAttributes<HTMLDivElement>) {
+export function Card({ className, children, interactive, ...p }: React.HTMLAttributes<HTMLDivElement> & { interactive?: boolean }) {
   return (
-    <div className={cn("card", className)} {...p}>
+    <div className={cn("card", interactive && "card-interactive", className)} {...p}>
       {children}
     </div>
   );

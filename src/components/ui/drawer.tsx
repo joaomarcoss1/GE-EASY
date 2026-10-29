@@ -35,7 +35,7 @@ export function Drawer({
   if (!open || typeof document === "undefined") return null;
   return createPortal(
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 animate-fade-in bg-brand-950/50 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 animate-fade-in bg-brand-950/50 backdrop-blur-sm" onClick={onClose} />
       <div className={cn("absolute inset-y-0 right-0 flex w-full animate-slide-in flex-col bg-surface shadow-pop", width)}>
         <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-5">
           <div>

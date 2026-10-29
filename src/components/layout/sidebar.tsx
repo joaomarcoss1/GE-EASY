@@ -57,29 +57,32 @@ export function Sidebar({
 
   return (
     <>
-      {open && <div className="fixed inset-0 z-40 bg-brand-950/60 lg:hidden" onClick={onClose} />}
+      {open && <div className="fixed inset-0 z-40 animate-fade-in bg-brand-950/60 backdrop-blur-sm lg:hidden" onClick={onClose} />}
       <aside
         className={cn(
-          "brand-gradient fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col text-white transition-transform duration-300 lg:translate-x-0",
+          "brand-gradient fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col overflow-hidden text-white shadow-2xl shadow-brand-950/40 transition-transform duration-500 ease-smooth lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between px-5 pb-4 pt-5">
-          <Link href="/inicio" className="block" onClick={onClose}>
+        {/* brilhos de marca ao fundo (decorativos) */}
+        <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 animate-drift rounded-full bg-brand-400/25 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-28 -right-24 h-64 w-64 animate-drift rounded-full bg-accent-500/20 blur-3xl [animation-delay:-9s]" />
+        <div className="relative flex items-center justify-between px-5 pb-4 pt-5">
+          <Link href="/inicio" className="block transition duration-300 hover:scale-[1.03] hover:drop-shadow-[0_6px_16px_rgba(225,79,38,0.35)]" onClick={onClose}>
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logoUrl} alt={empresaNome} className="h-12 w-auto max-w-[168px] object-contain" />
             ) : (
-              <Image src="/brand/logo-wordmark-transparent.png" alt="GE EASY" width={170} height={62} priority className="h-auto w-[168px]" />
+              <Image src="/brand/logo-wordmark-transparent.png" alt="EASY Gestão Especializada" width={1071} height={308} priority className="h-auto w-[172px]" />
             )}
           </Link>
           <button className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 lg:hidden" onClick={onClose} aria-label="Fechar menu">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="mx-5 mb-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+        <div className="glass relative mx-5 mb-3 rounded-xl px-3 py-2">
           <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
-            GE <span className="text-accent-300">EASY</span> · Gestão
+            <span className="text-accent-300">GE</span> · Gestão Especializada
           </p>
           <p className="mt-0.5 truncate text-xs font-medium text-white/90" title={empresaNome}>{empresaNome}</p>
         </div>
@@ -101,7 +104,7 @@ export function Sidebar({
             ))}
           </nav>
         )}
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6" aria-label="Menu principal">
+        <nav className="relative flex-1 space-y-5 overflow-y-auto px-3 pb-6" aria-label="Menu principal">
           {grupos.map((group) => {
             const items = group.items;
             const hasActive = items.some((i) => pathname === i.href || pathname.startsWith(i.href + "/"));
@@ -121,7 +124,7 @@ export function Sidebar({
                 ) : (
                   <p className="px-3 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/40">{group.label}</p>
                 )}
-                {isOpen && <ul className="space-y-0.5">
+                {isOpen && <ul className="stagger space-y-0.5">
                   {items.map((item) => {
                     const Icon = ICONS[item.icon] ?? LayoutDashboard;
                     const active = pathname === item.href || (item.href !== "/administrativo" && pathname.startsWith(item.href + "/"));
@@ -131,12 +134,12 @@ export function Sidebar({
                           href={item.href}
                           onClick={onClose}
                           className={cn(
-                            "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition",
-                            active ? "bg-white text-brand-800 shadow-lg shadow-brand-950/30" : "text-white/75 hover:bg-white/10 hover:text-white",
+                            "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200 ease-smooth",
+                            active ? "bg-gradient-to-r from-white to-brand-50 text-brand-800 shadow-lg shadow-brand-950/30" : "text-white/75 hover:translate-x-0.5 hover:bg-white/10 hover:text-white",
                           )}
                         >
-                          {active && <span className="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-accent-500" />}
-                          <Icon className={cn("h-[18px] w-[18px]", active ? "text-accent-500" : "text-white/60 group-hover:text-white")} />
+                          {active && <span className="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-accent-500 shadow-[0_0_12px_rgb(225_79_38/0.9)]" />}
+                          <Icon className={cn("h-[18px] w-[18px] transition-transform duration-200 ease-spring group-hover:scale-110", active ? "text-accent-500" : "text-white/60 group-hover:text-white")} />
                           {item.label}
                         </Link>
                       </li>
@@ -147,7 +150,7 @@ export function Sidebar({
             );
           })}
         </nav>
-        <div className="border-t border-white/10 px-5 py-4 text-[11px] text-white/45">© {new Date().getFullYear()} GE EASY</div>
+        <div className="relative border-t border-white/10 px-5 py-4 text-[11px] text-white/45">© {new Date().getFullYear()} GE EASY · Gestão Especializada</div>
       </aside>
     </>
   );

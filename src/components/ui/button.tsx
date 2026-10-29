@@ -7,12 +7,12 @@ type Variant = "primary" | "accent" | "secondary" | "ghost" | "danger" | "outlin
 type Size = "sm" | "md" | "lg" | "icon";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-brand-700 text-white hover:bg-brand-600 shadow-sm shadow-brand-900/20",
-  accent: "bg-accent-500 text-white hover:bg-accent-600 shadow-glow",
+  primary: "btn-shine bg-gradient-to-b from-brand-600 to-brand-800 text-white shadow-md shadow-brand-900/25 ring-1 ring-inset ring-white/15 hover:from-brand-500 hover:to-brand-700 hover:shadow-glow-brand",
+  accent: "btn-shine bg-gradient-to-b from-accent-400 to-accent-600 text-white shadow-glow ring-1 ring-inset ring-white/15 hover:from-accent-300 hover:to-accent-500",
   secondary: "bg-surface text-fg border border-line hover:bg-surface-2 shadow-sm",
   outline: "border border-brand-200 text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:text-brand-200 dark:hover:bg-brand-900/40",
   ghost: "text-muted hover:text-fg hover:bg-surface-2",
-  danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
+  danger: "bg-gradient-to-b from-red-500 to-red-700 text-white shadow-sm ring-1 ring-inset ring-white/15 hover:from-red-400 hover:to-red-600",
 };
 const sizes: Record<Size, string> = {
   sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
@@ -23,7 +23,7 @@ const sizes: Record<Size, string> = {
 
 export const buttonClass = (variant: Variant = "primary", size: Size = "md", className?: string) =>
   cn(
-    "inline-flex shrink-0 items-center justify-center font-semibold transition-all duration-150 active:scale-[.98] disabled:pointer-events-none disabled:opacity-60",
+    "inline-flex shrink-0 items-center justify-center font-semibold transition-all duration-200 ease-smooth hover:-translate-y-px active:translate-y-0 active:scale-[.97] disabled:pointer-events-none disabled:opacity-60",
     variants[variant],
     sizes[size],
     className,

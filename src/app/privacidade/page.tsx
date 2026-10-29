@@ -58,7 +58,10 @@ export default function PrivacidadePage() {
     <main className="min-h-screen bg-bg px-4 py-10 text-fg">
       <div className="mx-auto max-w-3xl">
         <div className="mb-8 flex items-center justify-between gap-4">
-          <Image src="/brand/logo-wordmark.png" alt="GE EASY" width={170} height={62} className="h-12 w-auto" />
+          <>
+            <Image src="/brand/logo-wordmark-dark.png" alt="EASY Gestão Especializada" width={1071} height={308} className="h-12 w-auto dark:hidden" />
+            <Image src="/brand/logo-wordmark-transparent.png" alt="EASY Gestão Especializada" width={1071} height={308} className="hidden h-12 w-auto dark:block" />
+          </>
           <Link href="/login" className="text-sm font-semibold text-brand-600 hover:underline">
             Entrar
           </Link>
