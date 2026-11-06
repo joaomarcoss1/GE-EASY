@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { consultorOptions, getProfileMap, pageRange, searchTerm } from "@/lib/data";
 import { CADASTRO_STATUS, CARTEIRAS, ORIGENS } from "@/lib/constants";
-import { date, maskDocumento } from "@/lib/format";
+import { date, maskDocumento, maskPhone, whatsappLink } from "@/lib/format";
 import { PageHeader } from "@/components/ui/page-header";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { importarClientes } from "@/lib/actions/conta";
@@ -25,7 +25,7 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
   const supabase = await createClient();
   let q = supabase
     .from("clientes")
-    .select("id, nome, documento, cidade, uf, carteira, status_cadastro, consultor_id, responsavel_admin_id, prazo_documentacao, origem", { count: "estimated" })
+    .select("id, nome, documento, telefone, whatsapp, cidade, uf, carteira, status_cadastro, consultor_id, responsavel_admin_id, prazo_documentacao, origem", { count: "estimated" })
     .order("updated_at", { ascending: false })
     .range(from, to);
   const termo = searchTerm(sp.q);
@@ -47,6 +47,8 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
     status_cadastro: c.status_cadastro,
     responsavel: (c.consultor_id && nomes.get(c.consultor_id)?.full_name) || (c.responsavel_admin_id && nomes.get(c.responsavel_admin_id)?.full_name) || "—",
     prazo: c.prazo_documentacao ? date(c.prazo_documentacao) : "—",
+    telefone: maskPhone(c.whatsapp || c.telefone),
+    whatsapp: whatsappLink(c.whatsapp || c.telefone),
   }));
 
   return (

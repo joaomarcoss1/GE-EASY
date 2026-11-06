@@ -67,7 +67,8 @@ export function maskPhone(v: string | null | undefined) {
 
 export function whatsappLink(v: string | null | undefined, text?: string) {
   let d = onlyDigits(v);
-  if (!d) return null;
+  // sem DDD (8 ou 9 dígitos) o WhatsApp não encontra o número
+  if (d.length < 10) return null;
   if (d.length <= 11) d = "55" + d;
   return `https://wa.me/${d}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
@@ -82,3 +83,18 @@ export const monthLabel = (iso: string) => {
   const [y, m] = iso.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString("pt-BR", { month: "short", year: "2-digit", timeZone: "UTC" });
 };
+
+const ROTULOS_ETIQUETA: Record<string, string> = { "sem-cpf-valido": "Sem CPF válido", "revisar-cadastro": "Revisar cadastro", "arquivo-morto": "Arquivo morto" };
+
+/** Rótulo legível de uma etiqueta: "acao:Auxílio Doença" → "Auxílio Doença", "planilha-2025" → "Planilha 2025". */
+export function tagLabel(t: string) {
+  if (ROTULOS_ETIQUETA[t]) return ROTULOS_ETIQUETA[t];
+  const m = /^(acao|corretor):(.+)$/i.exec(t);
+  if (m) return m[1].toLowerCase() === "corretor" ? `Corretor: ${m[2]}` : m[2];
+  const p = /^planilha-(\d{4})$/i.exec(t);
+  if (p) return `Planilha ${p[1]}`;
+  return t;
+}
+
+/** Etiquetas que pedem atenção (destacadas em âmbar). */
+export const tagAlerta = (t: string) => t === "revisar-cadastro" || t === "sem-cpf-valido";

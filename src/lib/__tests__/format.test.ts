@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brl, date, initials, maskDocumento, maskPhone, onlyDigits, whatsappLink } from "../format";
+import { brl, date, initials, maskDocumento, maskPhone, onlyDigits, tagLabel, whatsappLink } from "../format";
 
 describe("formatação pt-BR", () => {
   it("formata moeda", () => {
@@ -19,9 +19,21 @@ describe("formatação pt-BR", () => {
   it("gera link de WhatsApp com DDI", () => {
     expect(whatsappLink("11987654321")).toBe("https://wa.me/5511987654321");
     expect(whatsappLink("")).toBeNull();
+    expect(whatsappLink("981717195")).toBeNull(); // sem DDD
+    expect(whatsappLink("(99) 98171-7195")).toBe("https://wa.me/5599981717195");
   });
   it("gera iniciais", () => {
     expect(initials("Maria da Silva")).toBe("MS");
     expect(initials("")).toBe("?");
+  });
+});
+
+describe("tagLabel", () => {
+  it("deixa as etiquetas legíveis", () => {
+    expect(tagLabel("acao:Auxílio Doença")).toBe("Auxílio Doença");
+    expect(tagLabel("corretor:Jose")).toBe("Corretor: Jose");
+    expect(tagLabel("planilha-2025")).toBe("Planilha 2025");
+    expect(tagLabel("revisar-cadastro")).toBe("Revisar cadastro");
+    expect(tagLabel("vip")).toBe("vip");
   });
 });

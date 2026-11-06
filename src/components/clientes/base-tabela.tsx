@@ -1,6 +1,7 @@
 "use client";
 import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CADASTRO_STATUS, CARTEIRAS, type Option } from "@/lib/constants";
 import { redistribuirClientes } from "@/lib/actions/ciclo";
@@ -17,6 +18,8 @@ export interface LinhaBase {
   status_cadastro: string;
   responsavel: string;
   prazo: string;
+  telefone: string;
+  whatsapp: string | null;
 }
 
 /** Base de clientes com seleção para redistribuição em lote (para um consultor ou para a base administrativa). */
@@ -67,7 +70,7 @@ export function BaseTabela({ linhas, consultores, podeRedistribuir }: { linhas: 
           <thead>
             <tr>
               {podeRedistribuir && <th className="w-10"><input type="checkbox" aria-label="Selecionar todos" checked={todos} onChange={() => setSel(todos ? new Set() : new Set(linhas.map((l) => l.id)))} /></th>}
-              <th>Cliente</th><th>Cidade</th><th>Carteira</th><th>Responsável</th><th>Situação</th><th>Prazo</th>
+              <th>Cliente</th><th>Contato</th><th>Cidade</th><th>Carteira</th><th>Responsável</th><th>Situação</th><th>Prazo</th>
             </tr>
           </thead>
           <tbody>
@@ -75,6 +78,18 @@ export function BaseTabela({ linhas, consultores, podeRedistribuir }: { linhas: 
               <tr key={l.id}>
                 {podeRedistribuir && <td><input type="checkbox" name="ids[]" value={l.id} checked={sel.has(l.id)} onChange={() => alternar(l.id)} aria-label={`Selecionar ${l.nome}`} /></td>}
                 <td><Link href={`/clientes/${l.id}`} className="font-medium hover:text-brand-600">{l.nome}</Link><div className="text-xs text-muted">{l.documento}</div></td>
+                <td className="text-xs">
+                  {l.telefone ? (
+                    <span className="flex items-center gap-1.5 whitespace-nowrap">
+                      {l.telefone}
+                      {l.whatsapp && (
+                        <a href={l.whatsapp} target="_blank" rel="noopener noreferrer" title="Conversar no WhatsApp" aria-label={`WhatsApp de ${l.nome}`} className="grid h-6 w-6 place-items-center rounded-md bg-emerald-600 text-white transition hover:bg-emerald-700">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                    </span>
+                  ) : <span className="text-muted">—</span>}
+                </td>
                 <td className="text-sm">{l.cidade}</td>
                 <td><StatusBadge options={CARTEIRAS} value={l.carteira} /></td>
                 <td className="text-sm">{l.responsavel}</td>

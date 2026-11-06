@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Users, Phone, Mail } from "lucide-react";
+import { Users, Phone, Mail, MessageCircle } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { consultorOptions, getProfileMap, pageRange, searchTerm } from "@/lib/data";
 import { CADASTRO_STATUS, CLIENTE_STATUS } from "@/lib/constants";
-import { maskDocumento, maskPhone, date } from "@/lib/format";
+import { maskDocumento, maskPhone, date, tagAlerta, tagLabel, whatsappLink } from "@/lib/format";
 import type { Cliente } from "@/lib/types";
 import { createCliente } from "@/lib/actions/clientes";
 import { PageHeader } from "@/components/ui/page-header";
@@ -97,7 +97,17 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
                         </Link>
                       </td>
                       <td className="text-xs">
-                        {c.telefone || c.whatsapp ? <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-muted" />{maskPhone(c.whatsapp || c.telefone)}</div> : null}
+                        {c.telefone || c.whatsapp ? (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-muted" />
+                            <span className="whitespace-nowrap">{maskPhone(c.whatsapp || c.telefone)}</span>
+                            {whatsappLink(c.whatsapp || c.telefone) && (
+                              <a href={whatsappLink(c.whatsapp || c.telefone)!} target="_blank" rel="noopener noreferrer" title="Conversar no WhatsApp" aria-label={`WhatsApp de ${c.nome}`} className="grid h-6 w-6 place-items-center rounded-md bg-emerald-600 text-white transition hover:bg-emerald-700">
+                                <MessageCircle className="h-3.5 w-3.5" />
+                              </a>
+                            )}
+                          </div>
+                        ) : null}
                         {c.email ? <div className="mt-0.5 flex items-center gap-1.5 text-muted"><Mail className="h-3.5 w-3.5" />{c.email}</div> : null}
                       </td>
                       <td className="text-sm">{c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : <span className="text-muted">—</span>}</td>
@@ -105,7 +115,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
                       <td>
                         <div className="flex flex-wrap items-center gap-1">
                           <StatusBadge options={CADASTRO_STATUS} value={c.status_cadastro} />
-                          {c.tags.slice(0, 2).map((t) => <Badge key={t} tone="brand">{t}</Badge>)}
+                          {c.tags.filter(tagAlerta).slice(0, 2).map((t) => <Badge key={t} tone="amber">{tagLabel(t)}</Badge>)}
                         </div>
                       </td>
                       <td className="text-xs text-muted">{date(c.created_at)}</td>

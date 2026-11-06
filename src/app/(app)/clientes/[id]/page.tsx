@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Mail, MapPin, MessageCircle, Phone, Landmark, ShieldCheck, KanbanSquare, CalendarDays, ListChecks, Plus, Briefcase, Cake, Wallet, Scale, FileJson, FolderOpen } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, MessageCircle, Phone, Landmark, ShieldCheck, KanbanSquare, CalendarDays, ListChecks, Plus, Briefcase, Cake, Wallet, Scale, FileJson, FolderOpen, UserX } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { consultorOptions, getProfileMap } from "@/lib/data";
-import { PROCESSO_AREAS, PROCESSO_FASES, PROCESSO_STATUS, APOLICE_STATUS, CLIENTE_STATUS, COTA_STATUS, ETAPAS, EVENTO_TIPOS, INTERACAO_TIPOS, ORIGENS, RAMOS_SEGURO, CATEGORIAS_CONSORCIO, TAREFA_STATUS, PRIORIDADES } from "@/lib/constants";
-import { brl, date, dateTime, maskDocumento, maskPhone, relative, whatsappLink } from "@/lib/format";
+import { CADASTRO_STATUS, PROCESSO_AREAS, PROCESSO_FASES, PROCESSO_STATUS, APOLICE_STATUS, COTA_STATUS, ETAPAS, EVENTO_TIPOS, INTERACAO_TIPOS, ORIGENS, RAMOS_SEGURO, CATEGORIAS_CONSORCIO, TAREFA_STATUS, PRIORIDADES } from "@/lib/constants";
+import { brl, date, dateTime, maskDocumento, maskPhone, onlyDigits, relative, tagAlerta, tagLabel, whatsappLink } from "@/lib/format";
 import type { AgendaEvento, Cliente, ConsorcioCota, Interacao, Oportunidade, SeguroApolice, Tarefa } from "@/lib/types";
 import { addInteracao, deleteCliente, deleteInteracao, updateCliente } from "@/lib/actions/clientes";
 import { Avatar } from "@/components/ui/avatar";
@@ -25,6 +25,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DocumentosPanel } from "@/components/documentos/documentos-panel";
 import { clienteFields } from "../fields";
 import { CicloCard } from "@/components/clientes/ciclo-card";
+import { ObservacoesCard } from "@/components/clientes/observacoes-card";
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -73,43 +74,53 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
 
       <Card className="mb-6 overflow-hidden">
         <div className="brand-gradient h-20" />
-        <div className="-mt-10 flex flex-col gap-5 px-6 pb-6 sm:flex-row sm:items-end">
-          <Avatar name={cliente.nome} size={84} className="ring-4 ring-surface" />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">{cliente.nome}</h1>
-              <StatusBadge options={CLIENTE_STATUS} value={cliente.status} />
-              {cliente.tags.map((t) => <Badge key={t} tone="brand">{t}</Badge>)}
-            </div>
-            <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
-              {cliente.documento && <span>{maskDocumento(cliente.documento)}</span>}
-              {cliente.cidade && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{cliente.cidade}/{cliente.uf}</span>}
-              <span>Consultor: <b className="font-medium text-fg">{consultor?.full_name ?? "—"}</b></span>
+        <div className="px-6 pb-5">
+          {/* linha 1: foto sobre a faixa e ações à direita (abaixo da faixa, sem sobrepor o nome) */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <Avatar name={cliente.nome} size={84} className="-mt-10 shrink-0 ring-4 ring-surface" />
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-3">
+              {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:bg-emerald-700"><MessageCircle className="h-4 w-4" /> WhatsApp</a>}
+              {(cliente.whatsapp || cliente.telefone) && <a href={`tel:${onlyDigits(cliente.whatsapp || cliente.telefone)}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" aria-label="Ligar" title="Ligar"><Phone className="h-4 w-4" /></a>}
+              {cliente.email && <a href={`mailto:${cliente.email}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" aria-label="E-mail" title="E-mail"><Mail className="h-4 w-4" /></a>}
+              {canWrite && <FormDrawerButton action={updateCliente} fields={clienteFields(consultores, canTransfer)} values={{ ...cliente, tags: cliente.tags.join(", ") }} hidden={{ id }} title="Editar cliente" label="Editar" icon="edit" variant="secondary" />}
+              {drive.ativo && <DrivePastaButton tipo="cliente" id={id} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-fg hover:bg-surface-2 hover:no-underline dark:text-fg" />}
+              {can(profile, "lgpd.exportar") && (
+                <a href={`/api/lgpd/cliente/${id}`} download className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" title="Relatório de dados pessoais do titular (LGPD, art. 18)">
+                  <FileJson className="h-4 w-4" /> Dados LGPD
+                </a>
+              )}
+              {can(profile, "lgpd.anonimizar") && (
+                <ConfirmAction
+                  action={anonimizarCliente}
+                  id={id}
+                  title="Anonimizar dados pessoais do titular?"
+                  message="Irreversível. Nome, CPF/CNPJ, contatos, endereço e observações serão apagados; atendimentos e anotações terão o conteúdo removido; arquivos do armazenamento serão excluídos. Bloqueado se houver processo ativo ou contrato vigente. Use apenas para atender pedido do titular sem dever legal de guarda."
+                  confirmLabel="Anonimizar"
+                  label="Anonimizar dados (LGPD)"
+                  icon={<UserX className="h-4 w-4" />}
+                  variant="secondary"
+                />
+              )}
+              {can(profile, "clientes.delete") && <ConfirmAction action={deleteCliente} id={id} title="Excluir cliente?" label="Excluir cliente" message="O cliente vai para a lixeira (o administrador pode restaurar). O histórico é preservado." redirectTo="/clientes" variant="secondary" />}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700"><MessageCircle className="h-4 w-4" /> WhatsApp</a>}
-            {cliente.telefone && <a href={`tel:${cliente.telefone}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" aria-label="Ligar"><Phone className="h-4 w-4" /></a>}
-            {cliente.email && <a href={`mailto:${cliente.email}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" aria-label="E-mail"><Mail className="h-4 w-4" /></a>}
-            {canWrite && <FormDrawerButton action={updateCliente} fields={clienteFields(consultores, canTransfer)} values={{ ...cliente, tags: cliente.tags.join(", ") }} hidden={{ id }} title="Editar cliente" label="Editar" icon="edit" variant="secondary" />}
-            {drive.ativo && <DrivePastaButton tipo="cliente" id={id} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-fg hover:bg-surface-2 hover:no-underline dark:text-fg" />}
-            {can(profile, "lgpd.exportar") && (
-              <a href={`/api/lgpd/cliente/${id}`} download className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" title="Relatório de dados pessoais do titular (LGPD, art. 18)">
-                <FileJson className="h-4 w-4" /> Dados LGPD
-              </a>
+          {/* linha 2: nome, situação e dados principais */}
+          <div className="mt-4 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight">{cliente.nome}</h1>
+              <StatusBadge options={CADASTRO_STATUS} value={cliente.status_cadastro} />
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
+              {cliente.documento && <span>CPF/CNPJ: <b className="font-medium text-fg">{maskDocumento(cliente.documento)}</b></span>}
+              {(cliente.whatsapp || cliente.telefone) && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{maskPhone(cliente.whatsapp || cliente.telefone)}</span>}
+              {cliente.cidade && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{cliente.cidade}{cliente.uf ? `/${cliente.uf}` : ""}</span>}
+              <span>Consultor: <b className="font-medium text-fg">{consultor?.full_name ?? "—"}</b></span>
+            </div>
+            {cliente.tags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Etiquetas">
+                {cliente.tags.map((t) => <Badge key={t} tone={tagAlerta(t) ? "amber" : "slate"}>{tagLabel(t)}</Badge>)}
+              </div>
             )}
-            {can(profile, "lgpd.anonimizar") && (
-              <ConfirmAction
-                action={anonimizarCliente}
-                id={id}
-                title="Anonimizar dados pessoais do titular?"
-                message="Irreversível. Nome, CPF/CNPJ, contatos, endereço e observações serão apagados; atendimentos e anotações terão o conteúdo removido; arquivos do armazenamento serão excluídos. Bloqueado se houver processo ativo ou contrato vigente. Use apenas para atender pedido do titular sem dever legal de guarda."
-                confirmLabel="Anonimizar"
-                label="Anonimizar (LGPD)"
-                variant="secondary"
-              />
-            )}
-            {can(profile, "clientes.delete") && <ConfirmAction action={deleteCliente} id={id} title="Excluir cliente?" message="O cliente vai para a lixeira (o administrador pode restaurar). O histórico é preservado." redirectTo="/clientes" variant="secondary" />}
           </div>
         </div>
         <div className="grid grid-cols-2 border-t border-line sm:grid-cols-4">
@@ -160,10 +171,9 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
               ].map(([label, value]) => (
                 <div key={label as string} className="flex justify-between gap-4 border-b border-line pb-3 last:border-0 last:pb-0">
                   <span className="text-muted">{label as string}</span>
-                  <span className="text-right font-medium">{(value as string) || "—"}</span>
+                  <span className="min-w-0 break-words text-right font-medium">{(value as string) || "—"}</span>
                 </div>
               ))}
-              {cliente.observacoes && <div className="rounded-xl bg-surface-2 p-3 text-sm"><p className="mb-1 text-xs font-semibold text-muted">Observações</p><p className="whitespace-pre-wrap">{cliente.observacoes}</p></div>}
             </CardBody>
           </Card>
           <Card>
@@ -199,6 +209,8 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
           </Card>
         </div>
       )}
+
+      {tab === "geral" && cliente.observacoes && <ObservacoesCard texto={cliente.observacoes} />}
 
       {tab === "processos" && canProcessos && (
         <Card>
