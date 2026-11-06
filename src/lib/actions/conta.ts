@@ -219,7 +219,10 @@ const COLUNAS: Record<string, string> = {
   cpf: "documento", cnpj: "documento", documento: "documento", "cpf/cnpj": "documento",
   telefone: "telefone", celular: "whatsapp", whatsapp: "whatsapp",
   email: "email", "e-mail": "email", cidade: "cidade", uf: "uf", estado: "uf", origem: "origem", observacoes: "observacoes", "observações": "observacoes",
+  endereco: "endereco", "endereço": "endereco", logradouro: "endereco", bairro: "bairro", tags: "tags", etiquetas: "tags",
 };
+const LIMITE_CELULA: Record<string, number> = { observacoes: 20000, tags: 600, endereco: 400 };
+type LinhaImportada = Record<string, string | string[] | null>;
 
 export async function importarClientes(_: ActionState, formData: FormData): Promise<ActionState> {
   const g = await guard("clientes.write");
@@ -233,22 +236,25 @@ export async function importarClientes(_: ActionState, formData: FormData): Prom
   const linhas = parseCsv(new TextDecoder("utf-8").decode(await file.arrayBuffer()));
   if (linhas.length < 2) return { error: "O arquivo não tem linhas de dados." };
   const cab = linhas[0].map((h) => COLUNAS[h.trim().toLowerCase()] ?? null);
-  if (!cab.includes("nome")) return { error: "A primeira linha precisa ter a coluna \"nome\" (e, se houver, cpf, telefone, whatsapp, email, cidade, uf, origem)." };
+  if (!cab.includes("nome")) return { error: "A primeira linha precisa ter a coluna \"nome\" (e, se houver, cpf, telefone, whatsapp, email, endereco, bairro, cidade, uf, origem, tags, observacoes)." };
   const erros: string[] = [];
-  const rows: Record<string, string | null>[] = [];
+  const rows: LinhaImportada[] = [];
   const docs = new Set<string>();
   for (const [i, l] of linhas.slice(1, 5001).entries()) {
     if (l.every((c) => !c.trim())) continue;
-    const r: Record<string, string | null> = {};
+    const r: LinhaImportada = {};
     cab.forEach((k, j) => {
-      if (k) r[k] = (l[j] ?? "").trim().slice(0, 300) || null;
+      if (!k) return;
+      const v = (l[j] ?? "").trim().slice(0, LIMITE_CELULA[k] ?? 300) || null;
+      // tags: separadas por | (a coluna do CSV já usa ; ou ,); sempre uma lista, nunca nula
+      r[k] = k === "tags" ? (v ?? "").split("|").map((t) => t.trim().slice(0, 40)).filter(Boolean).slice(0, 20) : v;
     });
     const n = i + 2;
-    if (!r.nome || r.nome.length < 2) {
+    if (typeof r.nome !== "string" || r.nome.length < 2) {
       erros.push(`linha ${n}: nome vazio`);
       continue;
     }
-    if (r.documento) {
+    if (typeof r.documento === "string") {
       const d = onlyDigits(r.documento);
       if (!(d.length === 11 ? isValidCPF(d) : d.length === 14 && isValidCNPJ(d))) {
         erros.push(`linha ${n}: CPF/CNPJ inválido`);
@@ -261,8 +267,8 @@ export async function importarClientes(_: ActionState, formData: FormData): Prom
       docs.add(d);
       r.documento = d;
     }
-    if (r.email && !z.string().email().safeParse(r.email).success) r.email = null;
-    if (r.uf) r.uf = r.uf.slice(0, 2).toUpperCase();
+    if (typeof r.email === "string" && !z.string().email().safeParse(r.email).success) r.email = null;
+    if (typeof r.uf === "string") r.uf = r.uf.slice(0, 2).toUpperCase();
     r.origem = r.origem ?? "importacao";
     rows.push(r);
   }
@@ -273,7 +279,7 @@ export async function importarClientes(_: ActionState, formData: FormData): Prom
     const { data } = await supabase.from("clientes").select("documento").in("documento", lista.slice(i, i + 500));
     for (const c of data ?? []) existentes.add(c.documento as string);
   }
-  const novos = rows.filter((r) => !r.documento || !existentes.has(r.documento));
+  const novos = rows.filter((r) => typeof r.documento !== "string" || !existentes.has(r.documento));
   let inseridos = 0;
   for (let i = 0; i < novos.length; i += 200) {
     const { data, error } = await supabase.from("clientes").insert(novos.slice(i, i + 200)).select("id");

@@ -59,7 +59,7 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
           <>
             {can(profile, "clientes.write") && can(profile, "clientes.ver_todos") && (
               <FormDrawerButton action={importarClientes} title="Importar clientes (CSV)" label="Importar CSV" icon="none" variant="secondary" submitLabel="Importar"
-                description="Primeira linha com os nomes das colunas: nome, cpf, telefone, whatsapp, email, cidade, uf, origem. Separador ; ou ,. CPF/CNPJ já cadastrados são ignorados."
+                description="Primeira linha com os nomes das colunas: nome, cpf, telefone, whatsapp, email, endereco, bairro, cidade, uf, origem, tags (separadas por |), observacoes. Separador ; ou ,. CPF/CNPJ já cadastrados são ignorados."
                 fields={[{ name: "arquivo", label: "Arquivo CSV (até 5 MB, 5.000 linhas)", type: "file", placeholder: ".csv,text/csv", required: true, span: 6 }]} />
             )}
             {can(profile, "clientes.exportar") && <LinkButton href="/api/exportar/clientes" variant="secondary" prefetch={false}>Exportar CSV</LinkButton>}
