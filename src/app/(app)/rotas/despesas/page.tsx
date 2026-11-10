@@ -28,7 +28,9 @@ export default async function DespesasPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const { page, size, from, to } = pageRange(sp.page, 30);
   const supabase = await createClient();
-  const status = sp.status && DESPESA_STATUS.some((s) => s.value === sp.status) ? sp.status : aprova ? "lancada" : null;
+  // quem aprova abre na fila "aguardando aprovação"; "todas" mostra tudo
+  const padrao = aprova ? "lancada" : undefined;
+  const status = sp.status === "todas" ? null : sp.status && DESPESA_STATUS.some((s) => s.value === sp.status) ? sp.status : padrao ?? null;
   let q = supabase.from("despesas_rota").select("*, rotas(nome)", { count: "estimated" }).order("data", { ascending: false }).range(from, to);
   if (status) q = q.eq("status", status);
   if (!aprova) q = q.eq("consultor_id", userId);
@@ -64,7 +66,7 @@ export default async function DespesasPage({ searchParams }: { searchParams: Pro
       />
       <Card>
         <CardHeader title={`${despesas.length} despesa(s) · ${brl(total)}`} icon={<Receipt className="h-4 w-4" />} />
-        <div className="border-b border-line p-4"><Suspense><FilterSelect param="status" options={DESPESA_STATUS} allLabel="Todas as situações" /></Suspense></div>
+        <div className="border-b border-line p-4"><Suspense><FilterSelect param="status" options={DESPESA_STATUS} allLabel="Todas as situações" defaultValue={padrao} /></Suspense></div>
         {despesas.length === 0 ? <EmptyState title="Nenhuma despesa" /> : (
           <div className="overflow-x-auto"><table className="table-base">
             <thead><tr><th>Data</th><th>Consultor</th><th>Rota</th><th>Tipo</th><th className="text-right">Valor</th><th>Comprovante</th><th>Situação</th><th /></tr></thead>

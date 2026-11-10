@@ -43,11 +43,16 @@ export function SearchInput({ placeholder = "Buscar…", param = "q", className 
   );
 }
 
-export function FilterSelect({ param, options, allLabel = "Todos", className }: { param: string; options: Option[]; allLabel?: string; className?: string }) {
+/**
+ * Filtro por parâmetro de URL. Com `defaultValue`, a tela já abre filtrada nesse valor (o seletor mostra isso)
+ * e "todos" vira o valor explícito `todas` na URL.
+ */
+export function FilterSelect({ param, options, allLabel = "Todos", className, defaultValue }: { param: string; options: Option[]; allLabel?: string; className?: string; defaultValue?: string }) {
   const { set, params } = useParamSetter();
+  const todos = defaultValue ? "todas" : "";
   return (
-    <select value={params.get(param) ?? ""} onChange={(e) => set(param, e.target.value || null)} className={cn("input h-10 w-auto min-w-[150px] pr-8", className)} aria-label={allLabel}>
-      <option value="">{allLabel}</option>
+    <select value={params.get(param) ?? defaultValue ?? ""} onChange={(e) => set(param, e.target.value || null)} className={cn("input h-10 w-auto min-w-[150px] pr-8", className)} aria-label={allLabel}>
+      <option value={todos}>{allLabel}</option>
       {options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}

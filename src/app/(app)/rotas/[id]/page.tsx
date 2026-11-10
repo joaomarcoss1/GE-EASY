@@ -78,6 +78,7 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
   const combReal = resumo ? custoPercurso(Number(resumo.km), regra) : null;
   const TOM_PARADA: Record<string, TomMapa> = { pendente: "brand", visitada: "green", nao_realizada: "red", reagendada: "slate" };
   const chegadas = checkins.filter((c) => c.tipo === "chegada");
+  const revisoesPendentes = checkins.filter((c) => c.revisao === "pendente").length;
   const marcadores: Marcador[] = [
     ...paradas.filter((p) => p.lat != null && p.lng != null).map((p) => ({ lat: Number(p.lat), lng: Number(p.lng), rotulo: p.ordem, titulo: `${p.ordem}. ${p.titulo}`, tom: TOM_PARADA[p.status] ?? "brand" })),
     ...chegadas.map((c) => ({ lat: c.lat, lng: c.lng, pequeno: true, tom: (c.dentro_do_raio === false ? "red" : "green") as TomMapa, titulo: `Check-in ${time(c.registrado_em)}${c.parada_id ? ` · ${tituloParada.get(c.parada_id) ?? ""}` : ""}${c.dentro_do_raio === false ? ` · fora do raio (${c.distancia_m} m)` : ""}` })),
@@ -115,7 +116,11 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
                 ]} />
             )}
             {planeja && rota.status === "planejada" && <ConfirmAction action={cancelarRota} id={rota.id} title="Cancelar rota?" message="A rota sai do app do consultor. As paradas ficam no histórico." confirmLabel="Cancelar rota" label="Cancelar" size="sm" variant="ghost" />}
-            {aprova && rota.status === "concluida" && !meu && <ActionButton action={aprovarRota.bind(null, rota.id)} label="Aprovar rota" variant="primary" size="md" icon={<Check className="h-4 w-4" />} />}
+            {aprova && rota.status === "concluida" && !meu && (revisoesPendentes > 0 ? (
+              <span className="inline-flex h-10 items-center rounded-xl border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200" title="Aceite ou rejeite os check-ins fora do raio antes de aprovar">
+                Revise {revisoesPendentes} check-in(s) para aprovar
+              </span>
+            ) : <ActionButton action={aprovarRota.bind(null, rota.id)} label="Aprovar rota" variant="primary" size="md" icon={<Check className="h-4 w-4" />} />)}
           </>
         }
       />
