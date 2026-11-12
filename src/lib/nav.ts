@@ -65,6 +65,7 @@ const ALL_NAV: NavGroup[] = [
       { href: "/administrativo", label: "Painel administrativo", icon: "ClipboardList", permission: "clientes.ver_todos" },
       { href: "/administrativo/documentacao", label: "Central de documentação", icon: "FileCheck2", permission: "documentacao.analisar" },
       { href: "/administrativo/base", label: "Base de clientes", icon: "Database", permission: "clientes.ver_todos" },
+      { href: "/administrativo/processos", label: "Processos dos clientes", icon: "FolderSearch", permission: "clientes.ver_todos" },
       { href: "/rotas", label: "Rotas", icon: "Route", permission: "rotas.ver" },
       { href: "/rotas/mapa", label: "Mapa do campo", icon: "Map", permission: "rotas.ver" },
       { href: "/rotas/despesas", label: "Despesas de rota", icon: "Receipt", permission: "despesas.aprovar" },

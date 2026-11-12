@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { consultorOptions, getProfileMap, pageRange, searchTerm } from "@/lib/data";
-import { CADASTRO_STATUS, CARTEIRAS, ORIGENS } from "@/lib/constants";
+import { CADASTRO_STATUS, CARTEIRAS, CASO_STATUS, ORIGENS } from "@/lib/constants";
 import { date, maskDocumento, maskPhone, whatsappLink } from "@/lib/format";
 import { PageHeader } from "@/components/ui/page-header";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
@@ -17,15 +17,25 @@ import { BaseTabela, type LinhaBase } from "@/components/clientes/base-tabela";
 
 export const metadata: Metadata = { title: "Base de clientes" };
 
+interface BaseRow {
+  id: string; nome: string; documento: string | null; telefone: string | null; whatsapp: string | null; cidade: string | null; uf: string | null;
+  carteira: string; status_cadastro: string; consultor_id: string | null; responsavel_admin_id: string | null; prazo_documentacao: string | null; origem: string | null;
+}
+
 /** Base completa da empresa (clientes.ver_todos): filtros por carteira, situação, consultor, cidade e origem; redistribuição em lote. */
 export default async function BaseClientesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { profile } = await requirePermission("clientes.ver_todos");
   const sp = await searchParams;
   const { page, size, from, to } = pageRange(sp.page, 50);
   const supabase = await createClient();
+  // filtros pelos processos do cliente (situação, tipo e consultor da planilha)
+  const pStatus = CASO_STATUS.some((o) => o.value === sp.processo) ? sp.processo : null;
+  const pTipo = sp.tipo?.trim().slice(0, 80) || null;
+  const pCorretor = sp.corretor?.trim().slice(0, 80).toUpperCase() || null;
+  const filtraCaso = !!(pStatus || pTipo || pCorretor);
   let q = supabase
     .from("clientes")
-    .select("id, nome, documento, telefone, whatsapp, cidade, uf, carteira, status_cadastro, consultor_id, responsavel_admin_id, prazo_documentacao, origem", { count: "estimated" })
+    .select(`id, nome, documento, telefone, whatsapp, cidade, uf, carteira, status_cadastro, consultor_id, responsavel_admin_id, prazo_documentacao, origem${filtraCaso ? ", cliente_casos!inner(status, tipo, corretores)" : ""}`, { count: "exact" })
     .order("updated_at", { ascending: false })
     .range(from, to);
   const termo = searchTerm(sp.q);
@@ -37,8 +47,14 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
   if (sp.cadastro && CADASTRO_STATUS.some((o) => o.value === sp.cadastro)) q = q.eq("status_cadastro", sp.cadastro);
   if (sp.consultor && /^[0-9a-f-]{36}$/i.test(sp.consultor)) q = q.eq("consultor_id", sp.consultor);
   if (sp.origem && ORIGENS.some((o) => o.value === sp.origem)) q = q.eq("origem", sp.origem);
-  const [{ data, count }, nomes, consultores] = await Promise.all([q, getProfileMap(), consultorOptions()]);
-  const linhas: LinhaBase[] = (data ?? []).map((c) => ({
+  if (sp.cidade) q = q.eq("cidade", sp.cidade.slice(0, 80));
+  if (pStatus) q = q.eq("cliente_casos.status", pStatus);
+  if (pTipo) q = q.eq("cliente_casos.tipo", pTipo);
+  if (pCorretor) q = q.contains("cliente_casos.corretores", [pCorretor]);
+  const [{ data, count }, nomes, consultores, { data: opData }] = await Promise.all([q, getProfileMap(), consultorOptions(), supabase.rpc("cliente_casos_opcoes")]);
+  const op = (opData ?? { tipos: [], cidades: [], corretores: [] }) as { tipos: string[]; cidades: string[]; corretores: string[] };
+  const lista = (xs: string[]) => xs.map((x) => ({ value: x, label: x }));
+  const linhas: LinhaBase[] = ((data ?? []) as unknown as BaseRow[]).map((c) => ({
     id: c.id,
     nome: c.nome,
     documento: c.documento ? maskDocumento(c.documento) : "",
@@ -75,6 +91,10 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
           <FilterSelect param="cadastro" options={CADASTRO_STATUS} allLabel="Toda situação" />
           <FilterSelect param="consultor" options={consultores} allLabel="Todos os consultores" />
           <FilterSelect param="origem" options={ORIGENS} allLabel="Todas as origens" />
+          <FilterSelect param="cidade" options={lista(op.cidades)} allLabel="Todas as cidades" />
+          <FilterSelect param="processo" options={CASO_STATUS} allLabel="Situação do processo" />
+          <FilterSelect param="tipo" options={lista(op.tipos)} allLabel="Tipo de processo" />
+          <FilterSelect param="corretor" options={lista(op.corretores)} allLabel="Consultor da planilha" />
         </div>
         {linhas.length === 0 ? (
           <EmptyState icon={<Database className="h-6 w-6" />} title="Nenhum cliente encontrado" />

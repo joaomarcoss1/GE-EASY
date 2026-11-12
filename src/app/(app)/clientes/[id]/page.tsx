@@ -7,7 +7,7 @@ import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { consultorOptions, getProfileMap } from "@/lib/data";
-import { CADASTRO_STATUS, PROCESSO_AREAS, PROCESSO_FASES, PROCESSO_STATUS, APOLICE_STATUS, COTA_STATUS, ETAPAS, EVENTO_TIPOS, INTERACAO_TIPOS, ORIGENS, RAMOS_SEGURO, CATEGORIAS_CONSORCIO, TAREFA_STATUS, PRIORIDADES } from "@/lib/constants";
+import { CADASTRO_STATUS, CASO_PENDENCIAS, CASO_STATUS, PROCESSO_AREAS, PROCESSO_FASES, PROCESSO_STATUS, APOLICE_STATUS, COTA_STATUS, ETAPAS, EVENTO_TIPOS, INTERACAO_TIPOS, ORIGENS, RAMOS_SEGURO, CATEGORIAS_CONSORCIO, TAREFA_STATUS, PRIORIDADES } from "@/lib/constants";
 import { brl, date, dateTime, maskDocumento, maskPhone, onlyDigits, relative, tagAlerta, tagLabel, whatsappLink } from "@/lib/format";
 import type { AgendaEvento, Cliente, ConsorcioCota, Interacao, Oportunidade, SeguroApolice, Tarefa } from "@/lib/types";
 import { addInteracao, deleteCliente, deleteInteracao, updateCliente } from "@/lib/actions/clientes";
@@ -48,6 +48,8 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
     supabase.from("tarefas").select("*").eq("cliente_id", id).order("vencimento", { ascending: true }).limit(50),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("cliente_id", id),
   ]);
+  const { data: casosData } = await supabase.from("cliente_casos").select("id, ano, item, tipo, corretor, recebido_em, habilitado_em, pericia_em, avaliacao_em, status, pendencia, exigencia_cumprida, situacao_planilha, observacoes").eq("cliente_id", id).order("recebido_em", { ascending: false, nullsFirst: false });
+  const casos = casosData ?? [];
   const canProcessos = can(profile, "processos.view");
   const { data: processosData } = canProcessos
     ? await supabase.from("processos").select("id, titulo, numero_cnj, area, fase, status, parte_contraria, updated_at").eq("cliente_id", id).order("updated_at", { ascending: false })
@@ -208,6 +210,36 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
             </CardBody>
           </Card>
         </div>
+      )}
+
+      {tab === "geral" && casos.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader icon={<FolderOpen className="h-4 w-4" />} title={`Processos do cliente (${casos.length})`} description="Benefícios em andamento e histórico, com a situação de cada um" action={<Link href="/administrativo/processos" className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-300">Ver todos os processos</Link>} />
+          <div className="overflow-x-auto">
+            <table className="table-base">
+              <thead><tr><th>Tipo</th><th>Consultor</th><th>Recebido</th><th>Habilitado</th><th>Perícia / avaliação</th><th>Situação</th></tr></thead>
+              <tbody>
+                {casos.map((c) => (
+                  <tr key={c.id}>
+                    <td className="font-medium">{c.tipo}<div className="text-xs font-normal text-muted">{c.ano ? `planilha ${c.ano}${c.item ? `, item ${c.item}` : ""}` : "manual"}</div></td>
+                    <td className="text-sm">{c.corretor ?? "—"}</td>
+                    <td className="whitespace-nowrap text-sm">{c.recebido_em ? date(c.recebido_em) : "—"}</td>
+                    <td className="whitespace-nowrap text-sm">{c.habilitado_em ? date(c.habilitado_em) : "—"}</td>
+                    <td className="whitespace-nowrap text-sm">{[c.pericia_em, c.avaliacao_em].filter(Boolean).map((x) => date(x as string)).join(" · ") || "—"}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-1">
+                        <StatusBadge options={CASO_STATUS} value={c.status} />
+                        {c.pendencia && <Badge tone="amber">{optionLabel(CASO_PENDENCIAS, c.pendencia)}</Badge>}
+                        {c.exigencia_cumprida && <Badge tone="green">exigência cumprida</Badge>}
+                      </div>
+                      {c.observacoes && <p className="mt-1 max-w-sm text-xs text-muted">{c.observacoes}</p>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
       {tab === "geral" && cliente.observacoes && <ObservacoesCard texto={cliente.observacoes} />}

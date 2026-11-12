@@ -600,3 +600,22 @@ export const SITUACOES_ENCAMINHAMENTO: Option[] = [
   { value: "cancelado", label: "Cancelado", tone: "red" },
   { value: "pendente_confirmacao", label: "Falta confirmação", tone: "amber" },
 ];
+
+/** Situação do processo administrativo (benefício INSS) — calculada pelo banco a partir dos dados do processo. */
+export const CASO_STATUS: Option[] = [
+  { value: "em_preparacao", label: "Em preparação", tone: "sky" },
+  { value: "habilitado", label: "Habilitado", tone: "green" },
+  { value: "pericia", label: "Perícia / avaliação agendada", tone: "violet" },
+  { value: "exigencia", label: "Exigência em aberto", tone: "red" },
+  { value: "pendencia", label: "Com pendência", tone: "amber" },
+  { value: "aguardando_idade", label: "Aguardando idade", tone: "brand" },
+  { value: "comercial", label: "Devolvido ao comercial", tone: "accent" },
+  { value: "arquivo_morto", label: "Arquivo morto", tone: "slate" },
+];
+
+export const CASO_PENDENCIAS: Option[] = [
+  { value: "assinatura", label: "Falta assinatura (contrato/procuração)", tone: "amber" },
+  { value: "documentacao", label: "Documentação", tone: "amber" },
+  { value: "contato", label: "Sem contato / sem retorno", tone: "amber" },
+  { value: "desistencia", label: "Desistência", tone: "red" },
+];
