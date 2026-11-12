@@ -28,11 +28,11 @@ export async function GET(req: NextRequest) {
   const sn = (v: unknown) => (v === true ? "Sim" : v === false ? "Não" : "");
   const d = (v: unknown) => (v ? date(String(v)) : "");
   const csv = toCsv(
-    ["Cliente", "CPF", "Telefone", "Tipo", "Consultor", "Cidade", "UF", "Ano", "Recebido", "Habilitado", "Perícia", "Avaliação", "Situação", "Pendência", "Exigência cumprida", "Contrato assinado", "Procuração assinada", "Retroativo", "Situação na planilha", "Observações"],
+    ["Cliente", "CPF", "Telefone", "Tipo", "Consultor", "Consultor principal", "Cidade", "UF", "Ano", "Recebido", "Habilitado", "Perícia", "Avaliação", "Situação", "Pendência", "Exigência", "Contrato assinado", "Procuração assinada", "Retroativo", "Situação na planilha", "Observações"],
     linhas.map((r) => {
       const c = r.clientes as { nome: string; documento: string | null; whatsapp: string | null; telefone: string | null };
-      return [c.nome, c.documento ? maskDocumento(c.documento) : "", maskPhone(c.whatsapp || c.telefone), r.tipo as string, r.corretor as string, r.cidade as string, r.uf as string, r.ano as number,
-        d(r.recebido_em), d(r.habilitado_em), d(r.pericia_em), d(r.avaliacao_em), rot(CASO_STATUS, r.status), rot(CASO_PENDENCIAS, r.pendencia), r.exigencia_cumprida ? "Sim" : "",
+      return [c.nome, c.documento ? maskDocumento(c.documento) : "", maskPhone(c.whatsapp || c.telefone), r.tipo as string, r.corretor as string, r.corretor_principal as string, r.cidade as string, r.uf as string, r.ano as number,
+        d(r.recebido_em), d(r.habilitado_em), d(r.pericia_em), d(r.avaliacao_em), rot(CASO_STATUS, r.status), rot(CASO_PENDENCIAS, r.pendencia), r.exigencia_estado === "aberta" ? "Em aberto" : r.exigencia_estado === "cumprida" ? "Cumprida" : "",
         sn(r.contrato_assinado), sn(r.procuracao_assinada), r.retroativo as string, r.situacao_planilha as string, r.observacoes as string];
     }),
   );

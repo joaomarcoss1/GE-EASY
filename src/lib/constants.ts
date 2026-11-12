@@ -603,7 +603,7 @@ export const SITUACOES_ENCAMINHAMENTO: Option[] = [
 
 /** Situação do processo administrativo (benefício INSS) — calculada pelo banco a partir dos dados do processo. */
 export const CASO_STATUS: Option[] = [
-  { value: "em_preparacao", label: "Em preparação", tone: "sky" },
+  { value: "em_preparacao", label: "Aguardando habilitação", tone: "sky" },
   { value: "habilitado", label: "Habilitado", tone: "green" },
   { value: "pericia", label: "Perícia / avaliação agendada", tone: "violet" },
   { value: "exigencia", label: "Exigência em aberto", tone: "red" },

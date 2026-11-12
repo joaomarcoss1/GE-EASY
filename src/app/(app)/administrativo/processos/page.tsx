@@ -30,6 +30,8 @@ interface Caso {
   recebido_em: string | null;
   habilitado_em: string | null;
   exigencia_cumprida: boolean;
+  exigencia_estado: string | null;
+  corretor_principal: string | null;
   pericia_em: string | null;
   avaliacao_em: string | null;
   status: string;
@@ -63,10 +65,21 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
     supabase.rpc("cliente_casos_opcoes"),
   ]);
   const casos = (data ?? []) as unknown as Caso[];
-  const resumo = (resumoData ?? { total: 0, clientes: 0, por_status: {}, por_tipo: [], por_corretor: [], por_cidade: [], por_ano: {}, por_pendencia: {}, sem_assinatura: 0 }) as ResumoCasos;
-  const op = (opcoesData ?? { tipos: [], cidades: [], corretores: [], anos: [] }) as { tipos: string[]; cidades: string[]; corretores: string[]; anos: number[] };
+  const vazio = { habilitados: 0, exigencia_aberta: 0, exigencia_cumprida: 0, sem_assinatura: 0, pericia_agendada: 0, arquivo_morto: 0 };
+  const resumo = (resumoData ?? { total: 0, clientes: 0, por_status: {}, indicadores: vazio, por_tipo: [], por_corretor: [], por_cidade: [], por_ano: {}, por_pendencia: {}, sem_assinatura: 0 }) as ResumoCasos;
+  const op = (opcoesData ?? { tipos: [], cidades: [], corretores: [], anos: [] }) as { tipos: string[]; cidades: string[]; corretores: { nome: string; n: number }[]; anos: number[] };
   const opcoes = (xs: (string | number)[]): Option[] => xs.map((x) => ({ value: String(x), label: String(x) }));
-  const filtrando = !!(f.q || f.status || f.tipo || f.corretor || f.cidade || f.ano || f.pendencia);
+  const consultores: Option[] = op.corretores.map((c) => ({ value: c.nome, label: `${c.nome} (${c.n})` }));
+  const filtrando = !!(f.q || f.status || f.tipo || f.corretor || f.cidade || f.ano || f.pendencia || f.habilitado !== null || f.exigencia || f.assinaturas);
+  const ind = resumo.indicadores ?? vazio;
+  const sufAba = aba === "relatorios" ? "&aba=relatorios" : "";
+  const indicadores = [
+    { l: "Habilitados (data de habilitação)", n: ind.habilitados, extra: { habilitado: f.habilitado === true ? null : "sim" }, on: f.habilitado === true },
+    { l: "Exigências cumpridas", n: ind.exigencia_cumprida, extra: { exigencia: f.exigencia === "cumprida" ? null : "cumprida" }, on: f.exigencia === "cumprida" },
+    { l: "Exigências em aberto", n: ind.exigencia_aberta, extra: { exigencia: f.exigencia === "aberta" ? null : "aberta" }, on: f.exigencia === "aberta" },
+    { l: "Sem contrato ou procuração", n: ind.sem_assinatura, extra: { assinaturas: f.assinaturas === "faltando" ? null : "faltando" }, on: f.assinaturas === "faltando" },
+    { l: "Perícia / avaliação agendada", n: ind.pericia_agendada, extra: { status: null }, on: false },
+  ];
 
   return (
     <>
@@ -101,16 +114,30 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
         })}
       </div>
 
+      <p className="-mt-3 mb-3 text-xs text-muted">Situação principal: cada processo conta uma vez. Os indicadores abaixo vêm direto das colunas da planilha e podem se sobrepor (ex.: um habilitado que foi para o arquivo morto).</p>
+      <div className="mb-6 flex flex-wrap gap-2">
+        {indicadores.map((i) => (
+          <Link key={i.l} href={`/administrativo/processos${qs(f, { ...i.extra, page: null })}${sufAba}`} scroll={false}
+            className={cn("inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition hover:border-brand-300", i.on ? "border-accent-500 bg-accent-50 text-accent-800 dark:bg-accent-900/30 dark:text-accent-100" : "border-line bg-surface")}>
+            <b className="tabular-nums">{num(i.n)}</b> <span className="text-muted">{i.l}</span>
+          </Link>
+        ))}
+      </div>
+
       <Card>
         <div className="flex flex-col flex-wrap gap-3 border-b border-line p-4 sm:flex-row sm:items-center">
           <Suspense>
-            <SearchInput placeholder="Nome ou CPF do cliente…" />
+            <SearchInput placeholder="Nome (com ou sem acento) ou CPF…" />
             <FilterSelect param="status" options={CASO_STATUS} allLabel="Toda situação" />
             <FilterSelect param="tipo" options={opcoes(op.tipos)} allLabel="Todos os tipos" />
-            <FilterSelect param="corretor" options={opcoes(op.corretores)} allLabel="Todos os consultores" />
+            <FilterSelect param="corretor" options={consultores} allLabel="Todos os consultores" />
+            <FilterSelect param="papel" options={[{ value: "principal", label: "Só como consultor principal" }]} allLabel="Consultor principal ou parceiro" />
             <FilterSelect param="cidade" options={opcoes(op.cidades)} allLabel="Todas as cidades" />
             <FilterSelect param="ano" options={opcoes(op.anos)} allLabel="Todos os anos" />
             <FilterSelect param="pendencia" options={CASO_PENDENCIAS} allLabel="Qualquer pendência" />
+            <FilterSelect param="habilitado" options={[{ value: "sim", label: "Com data de habilitação" }, { value: "nao", label: "Sem data de habilitação" }]} allLabel="Habilitação" />
+            <FilterSelect param="exigencia" options={[{ value: "aberta", label: "Exigência em aberto" }, { value: "cumprida", label: "Exigência cumprida" }, { value: "nenhuma", label: "Sem exigência" }]} allLabel="Exigência" />
+            <FilterSelect param="assinaturas" options={[{ value: "faltando", label: "Falta contrato ou procuração" }, { value: "completas", label: "Contrato e procuração assinados" }]} allLabel="Assinaturas" />
           </Suspense>
           {filtrando && <Link href={`/administrativo/processos${aba === "relatorios" ? "?aba=relatorios" : ""}`} className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-300">Limpar filtros</Link>}
         </div>
@@ -151,7 +178,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
                           <div className="text-xs text-muted">{c.clientes.documento ? maskDocumento(c.clientes.documento) : "sem CPF"}{c.ano ? ` · planilha ${c.ano}` : ""}</div>
                         </td>
                         <td className="whitespace-nowrap text-sm">{c.tipo}</td>
-                        <td className="text-sm">{c.corretor ?? "—"}</td>
+                        <td className="text-sm">{c.corretor ?? "—"}{c.corretor?.includes("/") && <div className="text-[11px] text-muted">principal: {c.corretor_principal}</div>}</td>
                         <td className="whitespace-nowrap text-sm">{c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : "—"}</td>
                         <td className="whitespace-nowrap text-xs text-muted">{c.recebido_em ? date(c.recebido_em) : "—"}</td>
                         <td className="whitespace-nowrap text-xs text-muted">{c.habilitado_em ? date(c.habilitado_em) : "—"}</td>
@@ -159,7 +186,9 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
                           <div className="flex flex-wrap items-center gap-1">
                             <StatusBadge options={CASO_STATUS} value={c.status} />
                             {c.pendencia && <Badge tone="amber">{optionLabel(CASO_PENDENCIAS, c.pendencia)}</Badge>}
-                            {c.exigencia_cumprida && <Badge tone="green">exigência cumprida</Badge>}
+                            {c.exigencia_estado === "cumprida" && <Badge tone="green">exigência cumprida</Badge>}
+                            {c.exigencia_estado === "aberta" && <Badge tone="red">exigência em aberto</Badge>}
+                            {c.habilitado_em && c.status !== "habilitado" && <Badge tone="green">habilitado</Badge>}
                           </div>
                           {c.observacoes && <div className="mt-1 max-w-xs truncate text-xs text-muted" title={c.observacoes}>{c.observacoes}</div>}
                         </td>
@@ -190,8 +219,8 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
 function Relatorios({ resumo, f }: { resumo: ResumoCasos; f: FiltrosCasos }) {
   const blocos: { titulo: string; desc: string; linhas: LinhaResumo[]; param: keyof FiltrosCasos; limite?: number }[] = [
     { titulo: "Por tipo de processo", desc: "Quantidade e situação de cada tipo de benefício", linhas: resumo.por_tipo, param: "tipo" },
-    { titulo: "Por consultor / corretor", desc: "Carteira de processos de cada consultor (processos com mais de um consultor contam para cada um)", linhas: resumo.por_corretor, param: "corretor", limite: 40 },
-    { titulo: "Por cidade", desc: "Onde estão os processos", linhas: resumo.por_cidade, param: "cidade", limite: 40 },
+    { titulo: "Por consultor / corretor", desc: "Total = processos em que o consultor aparece (sozinho ou com parceiro, ex.: \"Mamedio/Jose\"); Como principal = o 1º nome do campo", linhas: resumo.por_corretor, param: "corretor", limite: 70 },
+    { titulo: "Por cidade", desc: "Onde estão os processos", linhas: resumo.por_cidade, param: "cidade", limite: 70 },
   ];
   return (
     <div className="space-y-6 p-4 sm:p-5">
@@ -218,6 +247,7 @@ function Relatorios({ resumo, f }: { resumo: ResumoCasos; f: FiltrosCasos }) {
                 <tr>
                   <th>{b.titulo.replace("Por ", "")}</th>
                   <th className="text-right">Total</th>
+                  {b.param === "corretor" && <th className="text-right">Como principal</th>}
                   {CASO_STATUS.map((s) => <th key={s.value} className="text-right">{s.label}</th>)}
                 </tr>
               </thead>
@@ -228,6 +258,7 @@ function Relatorios({ resumo, f }: { resumo: ResumoCasos; f: FiltrosCasos }) {
                       {l.chave.startsWith("(") ? l.chave : <Link href={`/administrativo/processos${qs(f, { [b.param]: l.chave, aba: null })}`} className="hover:text-brand-600">{l.chave}</Link>}
                     </td>
                     <td className="text-right font-bold tabular-nums">{num(l.total)}</td>
+                    {b.param === "corretor" && <td className="text-right tabular-nums">{num(l.principal ?? 0)}</td>}
                     {CASO_STATUS.map((s) => {
                       const n = l.status[s.value] ?? 0;
                       return <td key={s.value} className={cn("text-right tabular-nums", n ? "" : "text-muted/50")}>{n ? num(n) : "·"}</td>;

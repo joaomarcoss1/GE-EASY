@@ -18,6 +18,7 @@ import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { FilterSelect, Pagination, SearchInput } from "@/components/ui/filters";
 import { LinkButton } from "@/components/ui/button";
 import { clienteFields } from "./fields";
+import { filtrosNome } from "@/lib/casos";
 
 export const metadata: Metadata = { title: "Clientes" };
 
@@ -27,11 +28,14 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
   const { page, size, from, to } = pageRange(sp.page);
   const supabase = await createClient();
 
-  let query = supabase.from("clientes").select("*", { count: "estimated" }).order("created_at", { ascending: false }).range(from, to);
+  let query = supabase.from("clientes").select("*", { count: "exact" }).order("created_at", { ascending: false }).range(from, to);
   const q = searchTerm(sp.q);
   if (q) {
     const digits = q.replace(/\D/g, "");
-    query = query.or([`nome.ilike.%${q}%`, `email.ilike.%${q}%`, `cidade.ilike.%${q}%`, ...(digits.length >= 3 ? [`documento.ilike.%${digits}%`, `telefone.ilike.%${digits}%`] : [])].join(","));
+    const { palavras } = filtrosNome(q);
+    if (q.includes("@")) query = query.ilike("email", `%${q}%`);
+    else if (digits.length >= 3 && !palavras.length) query = query.or([`documento.ilike.%${digits}%`, `telefone.ilike.%${digits}%`, `whatsapp.ilike.%${digits}%`].join(","));
+    else for (const w of palavras) query = query.ilike("nome_busca", `%${w}%`);
   }
   if (sp.status) query = query.eq("status", sp.status);
   if (sp.cadastro && CADASTRO_STATUS.some((o) => o.value === sp.cadastro)) query = query.eq("status_cadastro", sp.cadastro);

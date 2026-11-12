@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { consultorOptions, getProfileMap, pageRange, searchTerm } from "@/lib/data";
 import { CADASTRO_STATUS, CARTEIRAS, CASO_STATUS, ORIGENS } from "@/lib/constants";
+import { filtrosNome } from "@/lib/casos";
 import { date, maskDocumento, maskPhone, whatsappLink } from "@/lib/format";
 import { PageHeader } from "@/components/ui/page-header";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
@@ -40,14 +41,16 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
     .range(from, to);
   const termo = searchTerm(sp.q);
   if (termo) {
-    const dig = termo.replace(/\D/g, "");
-    q = q.or([`nome.ilike.%${termo}%`, `cidade.ilike.%${termo}%`, ...(dig.length >= 3 ? [`documento.ilike.%${dig}%`] : [])].join(","));
+    // nome sem acento e com as palavras em qualquer ordem; só números = CPF
+    const { dig, palavras } = filtrosNome(termo);
+    if (dig && !palavras.length) q = q.ilike("documento", `%${dig}%`);
+    else for (const w of palavras) q = q.ilike("nome_busca", `%${w}%`);
   }
   if (sp.carteira && CARTEIRAS.some((o) => o.value === sp.carteira)) q = q.eq("carteira", sp.carteira);
   if (sp.cadastro && CADASTRO_STATUS.some((o) => o.value === sp.cadastro)) q = q.eq("status_cadastro", sp.cadastro);
   if (sp.consultor && /^[0-9a-f-]{36}$/i.test(sp.consultor)) q = q.eq("consultor_id", sp.consultor);
   if (sp.origem && ORIGENS.some((o) => o.value === sp.origem)) q = q.eq("origem", sp.origem);
-  if (sp.cidade) q = q.eq("cidade", sp.cidade.slice(0, 80));
+  if (sp.cidade) q = q.ilike("cidade", sp.cidade.slice(0, 80).replace(/[%_]/g, ""));
   if (pStatus) q = q.eq("cliente_casos.status", pStatus);
   if (pTipo) q = q.eq("cliente_casos.tipo", pTipo);
   if (pCorretor) q = q.contains("cliente_casos.corretores", [pCorretor]);
