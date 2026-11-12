@@ -55,7 +55,7 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
   if (pTipo) q = q.eq("cliente_casos.tipo", pTipo);
   if (pCorretor) q = q.contains("cliente_casos.corretores", [pCorretor]);
   const [{ data, count }, nomes, consultores, { data: opData }] = await Promise.all([q, getProfileMap(), consultorOptions(), supabase.rpc("cliente_casos_opcoes")]);
-  const op = (opData ?? { tipos: [], cidades: [], corretores: [] }) as { tipos: string[]; cidades: string[]; corretores: string[] };
+  const op = (opData ?? { tipos: [], cidades: [], corretores: [] }) as { tipos: string[]; cidades: string[]; corretores: { nome: string; n: number }[] };
   const lista = (xs: string[]) => xs.map((x) => ({ value: x, label: x }));
   const linhas: LinhaBase[] = ((data ?? []) as unknown as BaseRow[]).map((c) => ({
     id: c.id,
@@ -97,7 +97,7 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
           <FilterSelect param="cidade" options={lista(op.cidades)} allLabel="Todas as cidades" />
           <FilterSelect param="processo" options={CASO_STATUS} allLabel="Situação do processo" />
           <FilterSelect param="tipo" options={lista(op.tipos)} allLabel="Tipo de processo" />
-          <FilterSelect param="corretor" options={lista(op.corretores)} allLabel="Consultor da planilha" />
+          <FilterSelect param="corretor" options={op.corretores.map((c) => ({ value: c.nome, label: `${c.nome} (${c.n})` }))} allLabel="Consultor da planilha" />
         </div>
         {linhas.length === 0 ? (
           <EmptyState icon={<Database className="h-6 w-6" />} title="Nenhum cliente encontrado" />
