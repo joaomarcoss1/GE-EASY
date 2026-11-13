@@ -93,6 +93,13 @@ export async function requestPasswordReset(_: ActionState, formData: FormData): 
   const email = z.string().trim().toLowerCase().email().safeParse(formData.get("email"));
   if (!email.success) return { error: "Informe um e-mail válido." };
   const supabase = await createClient();
+  // limite por IP e por e-mail (5 pedidos a cada 15 min): evita disparo em massa de e-mails de redefinição
+  const ip = await ipDaRequisicao();
+  const [porIp, porEmail] = await Promise.all([
+    supabase.rpc("tentativa_login", { p_hash: chaveLogin("reset-ip", ip), p_max: 5 }),
+    supabase.rpc("tentativa_login", { p_hash: chaveLogin("reset-email", email.data), p_max: 5 }),
+  ]);
+  if (porIp.data === false || porEmail.data === false) return { error: "Muitos pedidos em pouco tempo. Aguarde 15 minutos e tente novamente." };
   await supabase.auth.resetPasswordForEmail(email.data, { redirectTo: `${env.siteUrl}/auth/callback?next=/redefinir-senha` });
   // Resposta sempre igual para não revelar se o e-mail existe
   return { ok: true, message: "Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha." };
