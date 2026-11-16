@@ -3,7 +3,7 @@ import { CopyPlus, Crown, Medal, Target, Trophy, Users } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can, isBackofficeRole } from "@/lib/rbac";
-import { consultorOptions, getProfileMap } from "@/lib/data";
+import { getProfileMap, userOptions } from "@/lib/data";
 import { META_TIPOS, ROLE_LABEL } from "@/lib/constants";
 import { brl, brlShort, num, pct, todayISO } from "@/lib/format";
 import type { MetaTipo } from "@/lib/types";
@@ -18,9 +18,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { MonthPicker } from "@/components/comissoes/month-picker";
-import { fetchAll } from "@/components/dashboard/fetch-all";
-import { addMonths, currentMonth, firstDay, lastDay, monthLong, monthParam, monthShort, spDateOf, spStartOf, sum } from "@/components/dashboard/periods";
-import { COTA_STATUS_META, isCountMeta, realizadoMeta, type RealizadoRows } from "@/components/metas/realizado";
+import { addMonths, currentMonth, firstDay, lastDay, monthLong, monthParam, monthShort, sum } from "@/components/dashboard/periods";
+import { isCountMeta, realizadoMeta } from "@/components/metas/realizado";
+import { carregarRealizado } from "@/components/metas/carregar";
 import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = { title: "Metas & ranking" };
@@ -30,8 +30,8 @@ interface MetaRow { id: string; consultor_id: string | null; tipo: MetaTipo; val
 
 const metaFields = (consultores: { value: string; label: string }[]): FieldDef[] => [
   { name: "tipo", label: "Tipo de meta", type: "select", options: META_TIPOS, required: true, span: 6 },
-  { name: "consultor_id", label: "Assessor", type: "select", options: consultores, emptyOption: "Equipe (meta geral da corretora)", span: 6 },
-  { name: "valor_meta", label: "Valor da meta", required: true, span: 6, placeholder: "Ex.: 500.000,00 ou 12", help: "Em R$ para crédito, prêmio e comissão; quantidade para novos clientes" },
+  { name: "consultor_id", label: "Pessoa", type: "select", options: consultores, emptyOption: "Equipe (meta geral da empresa)", span: 6 },
+  { name: "valor_meta", label: "Valor da meta", required: true, span: 6, placeholder: "Ex.: 500.000,00 ou 12", help: "Em R$ para crédito, prêmio e comissão; quantidade para novos clientes e processos analisados" },
 ];
 
 function MetaCard({
@@ -93,24 +93,13 @@ export default async function MetasPage({ searchParams }: { searchParams: Promis
   const de = firstDay(mes);
   const ate = lastDay(mes);
 
-  const [cotas, apolices, clientes, comissoes, metasRes, profiles, consultores] = await Promise.all([
-    fetchAll<RealizadoRows["cotas"][number]>((f, t) =>
-      supabase.from("consorcio_cotas").select("valor_credito, consultor_id, status").gte("data_adesao", de).lte("data_adesao", ate).in("status", COTA_STATUS_META).order("id").range(f, t),
-    ),
-    fetchAll<RealizadoRows["apolices"][number]>((f, t) =>
-      supabase.from("seguro_apolices").select("premio_liquido, consultor_id").gte("inicio_vigencia", de).lte("inicio_vigencia", ate).in("status", ["vigente", "renovada"]).order("id").range(f, t),
-    ),
-    fetchAll<{ consultor_id: string | null; created_at: string }>((f, t) =>
-      supabase.from("clientes").select("consultor_id, created_at").gte("created_at", spStartOf(de)).lt("created_at", spStartOf(firstDay(addMonths(mes, 1)))).order("id").range(f, t),
-    ),
-    fetchAll<RealizadoRows["comissoes"][number]>((f, t) =>
-      supabase.from("comissoes").select("valor_corretora, consultor_id").eq("competencia", de).neq("status", "estornada").order("id").range(f, t),
-    ),
+  const [rows, metasRes, profiles, consultores] = await Promise.all([
+    carregarRealizado(mes),
     supabase.from("metas").select("id, consultor_id, tipo, valor_meta").eq("periodo", de),
     getProfileMap(),
-    manage ? consultorOptions() : Promise.resolve([]),
+    manage ? userOptions() : Promise.resolve([]),
   ]);
-  const rows: RealizadoRows = { cotas, apolices, clientes: clientes.filter((c) => spDateOf(c.created_at).startsWith(mes)), comissoes };
+  const { cotas, apolices, comissoes } = rows;
   const metas = ((metasRes.data ?? []) as MetaRow[]).sort((a, b) => META_TIPOS.findIndex((t) => t.value === a.tipo) - META_TIPOS.findIndex((t) => t.value === b.tipo));
 
   // Ritmo esperado (só para o mês corrente)

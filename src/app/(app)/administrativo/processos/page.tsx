@@ -17,6 +17,7 @@ import { FilterSelect, Pagination, SearchInput } from "@/components/ui/filters";
 import { LinkButton } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { StatusCasoSelect } from "@/components/clientes/status-caso-select";
+import { ExigenciaPrazo } from "@/components/processos/exigencia-prazo";
 
 export const metadata: Metadata = { title: "Processos dos clientes" };
 
@@ -37,6 +38,8 @@ interface Caso {
   avaliacao_em: string | null;
   status: string;
   pendencia: string | null;
+  exigencia_prazo: string | null;
+  exigencia_prorrogada: boolean;
   situacao_planilha: string | null;
   observacoes: string | null;
   clientes: { id: string; nome: string; documento: string | null; whatsapp: string | null; telefone: string | null };
@@ -190,6 +193,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
                         <td>
                           <div className="flex flex-wrap items-center gap-1">
                             {podeEditar ? <StatusCasoSelect casoId={c.id} status={c.status} podeRestritos={podeRestritos} /> : <StatusBadge options={CASO_STATUS} value={c.status} />}
+                            {c.status === "exigencia" && <ExigenciaPrazo casoId={c.id} prazo={c.exigencia_prazo} prorrogada={c.exigencia_prorrogada} podeProrrogar={podeEditar} />}
                             {c.pendencia && <Badge tone="amber">{optionLabel(CASO_PENDENCIAS, c.pendencia)}</Badge>}
                             {c.exigencia_estado === "cumprida" && <Badge tone="green">exigência cumprida</Badge>}
                             {c.exigencia_estado === "aberta" && <Badge tone="red">exigência em aberto</Badge>}

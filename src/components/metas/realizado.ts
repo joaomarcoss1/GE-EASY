@@ -7,12 +7,14 @@ import type { MetaTipo } from "@/lib/types";
  * - seguro_premio: apólices vigente/renovada com inicio_vigencia no mês
  * - novos_clientes: clientes criados no mês
  * - comissao: valor_corretora das comissões (não estornadas) da competência
+ * - analises: processos que saíram de "em análise" no mês (por quem mudou o status)
  */
 export interface RealizadoRows {
   cotas: { valor_credito: number | string; consultor_id: string | null; status: string }[];
   apolices: { premio_liquido: number | string; consultor_id: string | null }[];
   clientes: { consultor_id: string | null }[];
   comissoes: { valor_corretora: number | string; consultor_id: string | null }[];
+  analises?: { consultor_id: string | null }[];
 }
 
 export const COTA_STATUS_META = ["ativa", "contemplada", "quitada"];
@@ -35,8 +37,11 @@ export function realizadoMeta(tipo: MetaTipo, consultorId: string | null, rows: 
     case "comissao":
       v = own(rows.comissoes).reduce((a, c) => a + Number(c.valor_corretora), 0);
       break;
+    case "analises":
+      v = own(rows.analises ?? []).length;
+      break;
   }
   return Math.round(v * 100) / 100;
 }
 
-export const isCountMeta = (tipo: MetaTipo) => tipo === "novos_clientes";
+export const isCountMeta = (tipo: MetaTipo) => tipo === "novos_clientes" || tipo === "analises";

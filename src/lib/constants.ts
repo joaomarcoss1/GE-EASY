@@ -163,6 +163,7 @@ export const META_TIPOS: Option[] = [
   { value: "seguro_premio", label: "Prêmio emitido (seguros)" },
   { value: "novos_clientes", label: "Novos clientes" },
   { value: "comissao", label: "Comissão gerada" },
+  { value: "analises", label: "Processos analisados (saíram de “em análise”)" },
 ];
 
 export const EVENTO_TIPOS: Option[] = [

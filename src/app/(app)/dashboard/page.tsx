@@ -38,8 +38,9 @@ import { fetchAll } from "@/components/dashboard/fetch-all";
 import { addDays, currentMonth, lastMonths, monthShort, spDateOf, spStartOf, sum, TZ } from "@/components/dashboard/periods";
 import { FluxoProcessosChart, type FluxoPoint } from "@/components/juridico/charts";
 import { DueChip } from "@/components/juridico/due-chip";
-import { AgendaCard, ComercialLink, ComercialResumoCard, CustasResumoCard, greeting, MinhasTarefasCard, todayLong } from "@/components/juridico/dashboard-widgets";
+import { ComercialResumoCard, greeting, MinhasTarefasCard, todayLong } from "@/components/juridico/dashboard-widgets";
 import { depSigla, depTone } from "@/components/departamentos/tone";
+import { PainelEscritorio } from "@/components/dashboard/painel-escritorio";
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -105,10 +106,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </Suspense>
     ) : null;
 
-  if (!isJuridicoRole(profile.role)) {
-    return <PainelGeral alert={alert} firstName={firstName} session={session} />;
+  // Painel principal (processos, prazos, metas, reuniões e tarefas). Quem só atua no jurídico mantém o painel jurídico.
+  if (isJuridicoRole(profile.role) && !can(profile, "clientes.view")) {
+    return <PainelJuridico alert={alert} firstName={firstName} session={session} />;
   }
-  return <PainelJuridico alert={alert} firstName={firstName} session={session} />;
+  return <PainelEscritorio alert={alert} firstName={firstName} session={session} />;
 }
 
 type Session = Awaited<ReturnType<typeof requireSession>>;
@@ -465,52 +467,6 @@ async function PainelJuridico({ alert, firstName, session }: { alert: React.Reac
           Valor provisionado total da carteira ativa: {brl(provisionado)}. Indicadores calculados sobre os processos que você tem permissão para acessar.
         </p>
       )}
-    </>
-  );
-}
-
-// =====================================================================================
-// Painel geral (consultores, financeiro)
-// =====================================================================================
-async function PainelGeral({ alert, firstName, session }: { alert: React.ReactNode; firstName: string; session: Session }) {
-  const { profile, userId } = session;
-  const comercial = can(profile, "comercial.view");
-  const financeiro = profile.role === "financeiro";
-  return (
-    <>
-      {alert}
-      <PageHeader
-        eyebrow={todayLong()}
-        title={`${greeting()}, ${firstName}`}
-        description="Seu resumo do dia: tarefas, compromissos e indicadores."
-        actions={
-          <>
-            <LinkButton href="/agenda?novo=1" variant="secondary" size="sm">
-              <CalendarPlus className="h-4 w-4" /> Agendar
-            </LinkButton>
-            <LinkButton href="/tarefas?novo=1" variant="accent" size="sm">
-              <ListPlus className="h-4 w-4" /> Nova tarefa
-            </LinkButton>
-          </>
-        }
-      />
-
-      {(comercial || financeiro) && (
-        <div className={cn("mb-6 grid gap-6", comercial && financeiro ? "xl:grid-cols-2" : "")}>
-          {comercial && (
-            <div className="space-y-4">
-              <ComercialResumoCard />
-              <ComercialLink />
-            </div>
-          )}
-          {financeiro && <CustasResumoCard />}
-        </div>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <MinhasTarefasCard userId={userId} />
-        <AgendaCard userId={userId} />
-      </div>
     </>
   );
 }

@@ -232,7 +232,7 @@ export interface Comissao {
   created_at: string;
 }
 
-export type MetaTipo = "consorcio_credito" | "seguro_premio" | "novos_clientes" | "comissao";
+export type MetaTipo = "consorcio_credito" | "seguro_premio" | "novos_clientes" | "comissao" | "analises";
 
 export type EventoTipo = "reuniao" | "visita" | "ligacao" | "assembleia" | "renovacao" | "tarefa" | "audiencia" | "prazo" | "outro";
 export interface AgendaEvento {

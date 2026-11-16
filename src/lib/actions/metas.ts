@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
-const TIPOS = ["consorcio_credito", "seguro_premio", "novos_clientes", "comissao"] as const;
+const TIPOS = ["consorcio_credito", "seguro_premio", "novos_clientes", "comissao", "analises"] as const;
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 function revalidate() {
@@ -21,8 +21,8 @@ const metaSchema = z
     valor_meta: zs.money().refine((v) => v !== null && v > 0, "Informe um valor maior que zero"),
   })
   .superRefine((v, ctx) => {
-    if (v.tipo === "novos_clientes" && v.valor_meta !== null && !Number.isInteger(v.valor_meta)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["valor_meta"], message: "Informe um número inteiro de clientes" });
+    if ((v.tipo === "novos_clientes" || v.tipo === "analises") && v.valor_meta !== null && !Number.isInteger(v.valor_meta)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["valor_meta"], message: "Informe um número inteiro" });
     }
   })
   .transform((v) => ({

@@ -227,6 +227,7 @@ const assessorSchema = z
     acordo_comercial: zs.enumOf(["sim", "nao"], "Informe se tem acordo comercial"),
     ativo: zs.bool(),
     observacoes: zs.text(2000),
+    user_id: zs.uuid(),
   })
   .superRefine((v, ctx) => {
     if (!isValidCPF(v.cpf)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cpf"], message: "CPF inválido" });
@@ -254,6 +255,7 @@ export async function salvarAssessor(_: ActionState, formData: FormData): Promis
     acordo_comercial: v.acordo_comercial === "sim",
     ativo: v.ativo,
     observacoes: v.observacoes,
+    user_id: v.user_id ?? null,
   };
   const res = v.id
     ? await supabase.from("assessores").update(dados).eq("id", v.id).select("id, comprovante_path").maybeSingle()
@@ -306,4 +308,27 @@ export async function excluirAssessor(id: string): Promise<ActionState> {
   if (data[0].comprovante_path && hasServiceRole()) await createAdminClient().storage.from(BUCKET).remove([data[0].comprovante_path as string]);
   revalidatePath("/assessores");
   return { ok: true, message: "Assessor excluído. Os clientes dele ficam sem assessor." };
+}
+
+// ------------------------------------------------------------------ prazo da exigência
+/** Prorroga uma única vez o prazo da exigência (+7 dias; o banco calcula e impede a segunda prorrogação). */
+export async function prorrogarExigencia(casoId: string): Promise<ActionState> {
+  const g = await guard("clientes.write");
+  if ("denied" in g) return g.denied;
+  if (!isUuid(casoId)) return { error: "Processo inválido." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("cliente_casos")
+    .update({ exigencia_prorrogada: true })
+    .eq("id", casoId)
+    .eq("status", "exigencia")
+    .eq("exigencia_prorrogada", false)
+    .select("cliente_id, exigencia_prazo");
+  if (error) return dbError(error);
+  if (!data?.length) return { error: "Esta exigência já foi prorrogada ou não está mais em aberto." };
+  revalidatePath("/dashboard");
+  revalidatePath("/administrativo/processos");
+  revalidatePath(`/clientes/${data[0].cliente_id}`);
+  const [a, m, d] = String(data[0].exigencia_prazo).split("-");
+  return { ok: true, message: `Prazo prorrogado para ${d}/${m}/${a}.` };
 }

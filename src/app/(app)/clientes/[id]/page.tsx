@@ -28,6 +28,7 @@ import { CicloCard } from "@/components/clientes/ciclo-card";
 import { ObservacoesCard } from "@/components/clientes/observacoes-card";
 import { RevelarSenhaGov } from "@/components/clientes/revelar-senha-gov";
 import { StatusCasoSelect } from "@/components/clientes/status-caso-select";
+import { ExigenciaPrazo } from "@/components/processos/exigencia-prazo";
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -53,7 +54,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
     supabase.from("tarefas").select("*").eq("cliente_id", id).order("vencimento", { ascending: true }).limit(50),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("cliente_id", id),
   ]);
-  const { data: casosData } = await supabase.from("cliente_casos").select("id, ano, item, tipo, corretor, recebido_em, habilitado_em, pericia_em, avaliacao_em, status, pendencia, exigencia_cumprida, situacao_planilha, observacoes").eq("cliente_id", id).order("recebido_em", { ascending: false, nullsFirst: false });
+  const { data: casosData } = await supabase.from("cliente_casos").select("id, ano, item, tipo, corretor, recebido_em, habilitado_em, pericia_em, avaliacao_em, status, pendencia, exigencia_cumprida, exigencia_prazo, exigencia_prorrogada, situacao_planilha, observacoes").eq("cliente_id", id).order("recebido_em", { ascending: false, nullsFirst: false });
   const casos = casosData ?? [];
   const canProcessos = can(profile, "processos.view");
   const { data: processosData } = canProcessos
@@ -246,6 +247,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
                     <td>
                       <div className="flex flex-wrap gap-1">
                         {canWrite ? <StatusCasoSelect casoId={c.id} status={c.status} podeRestritos={can(profile, "processos.status_restritos")} /> : <StatusBadge options={CASO_STATUS} value={c.status} />}
+                        {c.status === "exigencia" && <ExigenciaPrazo casoId={c.id} prazo={c.exigencia_prazo} prorrogada={c.exigencia_prorrogada} podeProrrogar={canWrite} />}
                         {c.pendencia && <Badge tone="amber">{optionLabel(CASO_PENDENCIAS, c.pendencia)}</Badge>}
                         {c.exigencia_cumprida && <Badge tone="green">exigência cumprida</Badge>}
                       </div>

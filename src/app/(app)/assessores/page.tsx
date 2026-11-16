@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { UserCheck } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { searchTerm } from "@/lib/data";
+import { searchTerm, userOptions } from "@/lib/data";
 import { maskDocumento, maskPhone } from "@/lib/format";
 import { excluirAssessor, salvarAssessor } from "@/lib/actions/comercial";
 import type { FieldDef } from "@/components/ui/form";
@@ -23,13 +23,14 @@ const ACORDO = [
   { value: "nao", label: "Não" },
 ];
 
-function assessorFields(edit: boolean, temComprovante = false): FieldDef[] {
+function assessorFields(usuarios: { value: string; label: string }[], edit: boolean, temComprovante = false): FieldDef[] {
   return [
     { name: "nome", label: "Nome completo", required: true, span: 6 },
     { name: "cpf", label: "CPF", type: "documento", required: true, span: 3 },
     { name: "telefone", label: "Telefone", type: "tel", required: true, span: 3 },
     { name: "email", label: "E-mail", type: "email", span: 6 },
     { name: "acordo_comercial", label: "Tem acordo comercial?", type: "select", options: ACORDO, required: true, emptyOption: false, span: 3 },
+    { name: "user_id", label: "Usuário no sistema", type: "select", options: usuarios, emptyOption: "Sem acesso ao sistema", span: 6, help: "Ligue ao usuário do assessor para o resumo diário trazer as rotas dele e ele receber o resumo." },
     ...(edit ? [{ name: "ativo", label: "Ativo (aparece no cadastro de clientes)", type: "checkbox", span: 3 } as FieldDef] : []),
     {
       name: "comprovante",
@@ -53,6 +54,7 @@ interface Assessor {
   ativo: boolean;
   comprovante_path: string | null;
   observacoes: string | null;
+  user_id: string | null;
 }
 
 /** Cadastro dos assessores (quem traz o cliente): CPF, contato, comprovante de residência e acordo comercial. */
@@ -60,16 +62,17 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
   await requirePermission("consultores.manage");
   const sp = await searchParams;
   const supabase = await createClient();
-  let query = supabase.from("assessores").select("id, nome, cpf, telefone, email, acordo_comercial, ativo, comprovante_path, observacoes").order("ativo", { ascending: false }).order("nome");
+  let query = supabase.from("assessores").select("id, nome, cpf, telefone, email, acordo_comercial, ativo, comprovante_path, observacoes, user_id").order("ativo", { ascending: false }).order("nome");
   const q = searchTerm(sp.q);
   if (q) {
     const digits = q.replace(/\D/g, "");
     query = digits.length >= 3 ? query.or(`cpf.ilike.%${digits}%,telefone.ilike.%${digits}%`) : query.ilike("nome", `%${q}%`);
   }
   if (sp.acordo === "sim" || sp.acordo === "nao") query = query.eq("acordo_comercial", sp.acordo === "sim");
-  const [{ data }, { data: vinculos }] = await Promise.all([
+  const [{ data }, { data: vinculos }, usuarios] = await Promise.all([
     query,
     supabase.from("clientes").select("assessor_id").not("assessor_id", "is", null).range(0, 9999),
+    userOptions(),
   ]);
   const lista = (data ?? []) as Assessor[];
   const clientesPor = new Map<string, number>();
@@ -82,7 +85,7 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
         eyebrow="Comercial"
         title="Assessores"
         description={`Quem traz os clientes. ${lista.filter((a) => a.ativo).length} ativo(s), ${comAcordo} com acordo comercial.`}
-        actions={<FormDrawerButton action={salvarAssessor} fields={assessorFields(false)} values={{ acordo_comercial: "nao" }} title="Novo assessor" label="Novo assessor" variant="accent" width="max-w-lg" />}
+        actions={<FormDrawerButton action={salvarAssessor} fields={assessorFields(usuarios, false)} values={{ acordo_comercial: "nao" }} title="Novo assessor" label="Novo assessor" variant="accent" width="max-w-lg" />}
       />
       <Card>
         <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center">
@@ -112,7 +115,7 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
                       <div className="flex justify-end gap-1">
                         <FormDrawerButton
                           action={salvarAssessor}
-                          fields={assessorFields(true, !!a.comprovante_path)}
+                          fields={assessorFields(usuarios, true, !!a.comprovante_path)}
                           values={{ ...a, acordo_comercial: a.acordo_comercial ? "sim" : "nao", comprovante_path: null }}
                           hidden={{ id: a.id }}
                           title="Editar assessor"

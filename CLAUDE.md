@@ -25,6 +25,13 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   aguardando_idade, judicializado, arquivo_morto, outros. Definidos pela equipe (`alterarStatusCaso`).
   `pendencia`/`exigencia`/`em_analise` só com `processos.status_restritos` (política RLS restritiva).
 - Funcionalidades da área `financeiro` só valem para o administrador master (`permissoes_de`).
+- Exigência: ao entrar em `exigencia` o banco grava prazo = hoje + 7 (corridos); `prorrogarExigencia` liga
+  `exigencia_prorrogada` (+7, uma vez; o gatilho ignora outras mudanças de prazo). Alertas: `alertas_exigencias()` (8h).
+- `cliente_casos_historico` (gatilho) guarda cada troca de status; meta `analises` = processos que saíram de `em_analise`
+  no mês, por quem mudou (`components/metas/carregar.ts`).
+- Resumo diário dos assessores: `resumo_assessores_dia(data)` (só números; gestão vê todos, assessor vê o dele via
+  `assessores.user_id`), tela `/comercial/resumo-diario` e notificação `resumo_diario_assessores()` (20h30).
+- Painel (`/dashboard`): `components/dashboard/painel-escritorio.tsx` (processos, prazos, metas, reuniões e tarefas).
 
 ## Permissões
 - `can(profile, "chave")` com as funcionalidades efetivas da sessão (`src/lib/rbac.ts` = catálogo de
