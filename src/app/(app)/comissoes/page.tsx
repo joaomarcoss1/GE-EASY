@@ -105,11 +105,11 @@ export default async function ComissoesPage({ searchParams }: { searchParams: Pr
     { name: "linha", label: "Linha", type: "select", options: LINHAS, emptyOption: false, span: 2, required: true },
     { name: "descricao", label: "Descrição", required: true, span: 4, placeholder: "Ex.: Bônus de campanha, ajuste de comissão…" },
     { name: "cliente_id", label: "Cliente", type: "select", options: clientes, emptyOption: "Sem cliente", span: 3 },
-    { name: "consultor_id", label: "Consultor", type: "select", options: consultores, emptyOption: "Sem consultor", span: 3 },
+    { name: "consultor_id", label: "Assessor", type: "select", options: consultores, emptyOption: "Sem assessor", span: 3 },
     { name: "competencia", label: "Competência", type: "date", required: true, span: 2, help: "Qualquer dia do mês" },
     { name: "base_calculo", label: "Base de cálculo", type: "money", required: true, span: 4 },
     { name: "percentual_corretora", label: "% da corretora", type: "percent", required: true, span: 3, help: "Sobre a base de cálculo" },
-    { name: "percentual_consultor", label: "% do consultor", type: "percent", span: 3, help: "Sobre o valor da corretora. Vazio = % do cadastro do consultor" },
+    { name: "percentual_consultor", label: "% do assessor", type: "percent", span: 3, help: "Sobre o valor da corretora. Vazio = % do cadastro do assessor" },
     { name: "status", label: "Status", type: "select", options: COMISSAO_STATUS, emptyOption: false, span: 3 },
     { name: "observacoes", label: "Observações", type: "textarea", rows: 3, span: 6 },
   ];
@@ -121,7 +121,7 @@ export default async function ComissoesPage({ searchParams }: { searchParams: Pr
         title={backoffice ? "Comissões" : "Meu extrato de comissões"}
         description={
           backoffice
-            ? `Recebimentos das administradoras/seguradoras e repasses aos consultores · ${monthLong(mes)}`
+            ? `Recebimentos das administradoras/seguradoras e repasses aos assessores · ${monthLong(mes)}`
             : `Suas comissões da competência ${monthLong(mes)}`
         }
         actions={
@@ -161,7 +161,7 @@ export default async function ComissoesPage({ searchParams }: { searchParams: Pr
             hint={`${num(by("recebida", "paga").length)} comissão(ões) recebida(s)`}
           />
           <StatCard
-            label="Pago aos consultores"
+            label="Pago aos assessores"
             value={brl(sum(by("paga"), (r) => r.valor_consultor))}
             icon={<HandCoins className="h-5 w-5" />}
             tone="accent"
@@ -186,7 +186,7 @@ export default async function ComissoesPage({ searchParams }: { searchParams: Pr
         <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:flex-wrap sm:items-center">
           <FilterSelect param="status" options={COMISSAO_STATUS} allLabel="Todos os status" />
           <FilterSelect param="linha" options={LINHAS} allLabel="Todas as linhas" />
-          {backoffice && <FilterSelect param="consultor" options={consultores} allLabel="Todos os consultores" />}
+          {backoffice && <FilterSelect param="consultor" options={consultores} allLabel="Todos os assessores" />}
           {canManage && rows.length > 0 && <p className="text-xs text-muted sm:ml-auto">Selecione linhas para marcar como recebidas ou pagas em lote.</p>}
         </div>
         {rows.length === 0 ? (

@@ -53,7 +53,7 @@ export default async function RotasPage({ searchParams }: { searchParams: Promis
       <PageHeader
         eyebrow="Campo"
         title="Rotas"
-        description="Planeje as rotas dos consultores (cidades, clientes, endereços), acompanhe os check-ins e aprove km, tempos e despesas."
+        description="Planeje as rotas dos assessores (cidades, clientes, endereços), acompanhe os check-ins e aprove km, tempos e despesas."
         actions={
           <>
             {can(profile, "rotas.ver") && <LinkButton href="/rotas/mapa" variant="secondary"><MapIcon className="h-4 w-4" />Mapa do campo</LinkButton>}
@@ -65,7 +65,7 @@ export default async function RotasPage({ searchParams }: { searchParams: Promis
                 fields={[
                   { name: "nome", label: "Nome", required: true, span: 6, placeholder: "Ex.: Rota Centro — documentação" },
                   { name: "data", label: "Data", type: "date", required: true, span: 3 },
-                  { name: "consultor_id", label: "Consultor", type: "select", options: consultores, required: true, span: 3 },
+                  { name: "consultor_id", label: "Assessor", type: "select", options: consultores, required: true, span: 3 },
                   { name: "veiculo_id", label: "Veículo", type: "select", options: opVeic, span: 6 },
                   { name: "objetivo", label: "Objetivo", type: "textarea", rows: 3, span: 6 },
                 ]} />
@@ -79,12 +79,12 @@ export default async function RotasPage({ searchParams }: { searchParams: Promis
           <Suspense>
             <FilterSelect param="periodo" options={[{ value: "hoje", label: "Hoje" }, { value: "futuras", label: "De hoje em diante" }]} allLabel="Todo o período" />
             <FilterSelect param="status" options={ROTA_STATUS} allLabel="Todas as situações" />
-            {consultores.length > 1 && <FilterSelect param="consultor" options={consultores} allLabel="Todos os consultores" />}
+            {consultores.length > 1 && <FilterSelect param="consultor" options={consultores} allLabel="Todos os assessores" />}
           </Suspense>
         </div>
         {rotas.length === 0 ? <EmptyState icon={<Route className="h-6 w-6" />} title="Nenhuma rota" description={planeja ? "Crie a primeira rota e inclua as paradas." : "As rotas planejadas para você aparecem aqui e no app de campo."} /> : (
           <div className="overflow-x-auto"><table className="table-base">
-            <thead><tr><th>Data</th><th>Rota</th><th>Consultor</th><th>Situação</th><th className="text-right">Km plan./real.</th><th className="text-right">Visitas</th><th className="text-right">Custo</th></tr></thead>
+            <thead><tr><th>Data</th><th>Rota</th><th>Assessor</th><th>Situação</th><th className="text-right">Km plan./real.</th><th className="text-right">Visitas</th><th className="text-right">Custo</th></tr></thead>
             <tbody>
               {rotas.map((r) => (
                 <tr key={r.id}>

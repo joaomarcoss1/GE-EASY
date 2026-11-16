@@ -6,7 +6,7 @@ import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { pageRange } from "@/lib/data";
-import { CASO_PENDENCIAS, CASO_STATUS, type Option } from "@/lib/constants";
+import { CASO_PENDENCIAS, CASO_STATUS, CASO_STATUS_RESTRITOS, type Option } from "@/lib/constants";
 import { date, maskDocumento, num, whatsappLink } from "@/lib/format";
 import { aplicarFiltros, argsResumo, lerFiltros, qs, SELECT_CASOS, type FiltrosCasos, type LinhaResumo, type ResumoCasos } from "@/lib/casos";
 import { PageHeader } from "@/components/ui/page-header";
@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FilterSelect, Pagination, SearchInput } from "@/components/ui/filters";
 import { LinkButton } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { StatusCasoSelect } from "@/components/clientes/status-caso-select";
 
 export const metadata: Metadata = { title: "Processos dos clientes" };
 
@@ -42,8 +43,9 @@ interface Caso {
 }
 
 const TONS: Record<string, string> = {
-  em_preparacao: "bg-sky-500", habilitado: "bg-emerald-500", pericia: "bg-violet-500", exigencia: "bg-red-500",
-  pendencia: "bg-amber-500", aguardando_idade: "bg-brand-500", comercial: "bg-accent-500", arquivo_morto: "bg-slate-400",
+  em_analise: "bg-sky-500", pendencia: "bg-amber-500", exigencia: "bg-red-500", habilitado: "bg-emerald-500",
+  deferido: "bg-green-600", indeferido: "bg-rose-600", aguardando_idade: "bg-brand-500", judicializado: "bg-violet-500",
+  arquivo_morto: "bg-slate-400", outros: "bg-slate-300",
 };
 
 /** Base de processos administrativos (benefícios) com busca por consultor, cidade, tipo e situação, e relatórios para a gestão. */
@@ -72,6 +74,9 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
   const consultores: Option[] = op.corretores.map((c) => ({ value: c.nome, label: `${c.nome} (${c.n})` }));
   const filtrando = !!(f.q || f.status || f.tipo || f.corretor || f.cidade || f.ano || f.pendencia || f.habilitado !== null || f.exigencia || f.assinaturas);
   const ind = resumo.indicadores ?? vazio;
+  const podeRestritos = can(profile, "processos.status_restritos");
+  const podeEditar = can(profile, "clientes.write");
+  const statusVisiveis = CASO_STATUS.filter((s) => podeRestritos || !(CASO_STATUS_RESTRITOS as readonly string[]).includes(s.value));
   const sufAba = aba === "relatorios" ? "&aba=relatorios" : "";
   const indicadores = [
     { l: "Habilitados (data de habilitação)", n: ind.habilitados, extra: { habilitado: f.habilitado === true ? null : "sim" }, on: f.habilitado === true },
@@ -86,7 +91,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
       <PageHeader
         eyebrow="Administrativo"
         title="Processos dos clientes"
-        description="Todos os processos (benefícios) da base, com a situação de cada um. Filtre por consultor, cidade, tipo e situação; veja os relatórios ou exporte."
+        description="Todos os processos (benefícios) da base, com a situação de cada um. Filtre por assessor, cidade, tipo e situação; veja os relatórios ou exporte."
         actions={can(profile, "clientes.exportar") && (
           <LinkButton href={`/api/casos/exportar${qs(f)}`} variant="secondary" prefetch={false}>
             <Download className="h-4 w-4" /> Exportar CSV
@@ -95,8 +100,8 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
       />
 
       {/* situação: cartões clicáveis (filtram a lista) */}
-      <div className="stagger mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
-        {CASO_STATUS.map((s) => {
+      <div className="stagger mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {statusVisiveis.map((s) => {
           const n = resumo.por_status[s.value] ?? 0;
           const ativo = f.status === s.value;
           return (
@@ -114,7 +119,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
         })}
       </div>
 
-      <p className="-mt-3 mb-3 text-xs text-muted">Situação principal: cada processo conta uma vez. Os indicadores abaixo vêm direto das colunas da planilha e podem se sobrepor (ex.: um habilitado que foi para o arquivo morto).</p>
+      <p className="-mt-3 mb-3 text-xs text-muted">Situação principal: cada processo conta uma vez e é definida pela equipe (troque na lista).{podeRestritos ? "" : " Processos em análise, pendência ou exigência só aparecem para os funcionários autorizados."} Os indicadores abaixo vêm das colunas da planilha e podem se sobrepor.</p>
       <div className="mb-6 flex flex-wrap gap-2">
         {indicadores.map((i) => (
           <Link key={i.l} href={`/administrativo/processos${qs(f, { ...i.extra, page: null })}${sufAba}`} scroll={false}
@@ -128,10 +133,10 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
         <div className="flex flex-col flex-wrap gap-3 border-b border-line p-4 sm:flex-row sm:items-center">
           <Suspense>
             <SearchInput placeholder="Nome (com ou sem acento) ou CPF…" />
-            <FilterSelect param="status" options={CASO_STATUS} allLabel="Toda situação" />
+            <FilterSelect param="status" options={statusVisiveis} allLabel="Toda situação" />
             <FilterSelect param="tipo" options={opcoes(op.tipos)} allLabel="Todos os tipos" />
-            <FilterSelect param="corretor" options={consultores} allLabel="Todos os consultores" />
-            <FilterSelect param="papel" options={[{ value: "principal", label: "Só como consultor principal" }]} allLabel="Consultor principal ou parceiro" />
+            <FilterSelect param="corretor" options={consultores} allLabel="Todos os assessores" />
+            <FilterSelect param="papel" options={[{ value: "principal", label: "Só como assessor principal" }]} allLabel="Assessor principal ou parceiro" />
             <FilterSelect param="cidade" options={opcoes(op.cidades)} allLabel="Todas as cidades" />
             <FilterSelect param="ano" options={opcoes(op.anos)} allLabel="Todos os anos" />
             <FilterSelect param="pendencia" options={CASO_PENDENCIAS} allLabel="Qualquer pendência" />
@@ -166,7 +171,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
             <div className="overflow-x-auto">
               <table className="table-base">
                 <thead>
-                  <tr><th>Cliente</th><th>Tipo</th><th>Consultor</th><th>Cidade</th><th>Recebido</th><th>Habilitado</th><th>Situação</th><th /></tr>
+                  <tr><th>Cliente</th><th>Tipo</th><th>Assessor</th><th>Cidade</th><th>Recebido</th><th>Habilitado</th><th>Situação</th><th /></tr>
                 </thead>
                 <tbody>
                   {casos.map((c) => {
@@ -184,7 +189,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
                         <td className="whitespace-nowrap text-xs text-muted">{c.habilitado_em ? date(c.habilitado_em) : "—"}</td>
                         <td>
                           <div className="flex flex-wrap items-center gap-1">
-                            <StatusBadge options={CASO_STATUS} value={c.status} />
+                            {podeEditar ? <StatusCasoSelect casoId={c.id} status={c.status} podeRestritos={podeRestritos} /> : <StatusBadge options={CASO_STATUS} value={c.status} />}
                             {c.pendencia && <Badge tone="amber">{optionLabel(CASO_PENDENCIAS, c.pendencia)}</Badge>}
                             {c.exigencia_estado === "cumprida" && <Badge tone="green">exigência cumprida</Badge>}
                             {c.exigencia_estado === "aberta" && <Badge tone="red">exigência em aberto</Badge>}
@@ -207,7 +212,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
             </div>
           )
         ) : (
-          <Relatorios resumo={resumo} f={f} />
+          <Relatorios resumo={resumo} f={f} statusVisiveis={statusVisiveis} />
         )}
         {aba === "lista" && <Suspense><Pagination page={page} pageSize={size} total={count ?? 0} /></Suspense>}
       </Card>
@@ -216,10 +221,10 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
 }
 
 /** Tabelas cruzadas (dimensão × situação). Cada linha leva à lista filtrada. */
-function Relatorios({ resumo, f }: { resumo: ResumoCasos; f: FiltrosCasos }) {
+function Relatorios({ resumo, f, statusVisiveis }: { resumo: ResumoCasos; f: FiltrosCasos; statusVisiveis: Option[] }) {
   const blocos: { titulo: string; desc: string; linhas: LinhaResumo[]; param: keyof FiltrosCasos; limite?: number }[] = [
     { titulo: "Por tipo de processo", desc: "Quantidade e situação de cada tipo de benefício", linhas: resumo.por_tipo, param: "tipo" },
-    { titulo: "Por consultor / corretor", desc: "Total = processos em que o consultor aparece (sozinho ou com parceiro, ex.: \"Mamedio/Jose\"); Como principal = o 1º nome do campo", linhas: resumo.por_corretor, param: "corretor", limite: 70 },
+    { titulo: "Por assessor / corretor", desc: "Total = processos em que o assessor aparece (sozinho ou com parceiro, ex.: \"Mamedio/Jose\"); Como principal = o 1º nome do campo", linhas: resumo.por_corretor, param: "corretor", limite: 70 },
     { titulo: "Por cidade", desc: "Onde estão os processos", linhas: resumo.por_cidade, param: "cidade", limite: 70 },
   ];
   return (
@@ -248,7 +253,7 @@ function Relatorios({ resumo, f }: { resumo: ResumoCasos; f: FiltrosCasos }) {
                   <th>{b.titulo.replace("Por ", "")}</th>
                   <th className="text-right">Total</th>
                   {b.param === "corretor" && <th className="text-right">Como principal</th>}
-                  {CASO_STATUS.map((s) => <th key={s.value} className="text-right">{s.label}</th>)}
+                  {statusVisiveis.map((s) => <th key={s.value} className="text-right">{s.label}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -259,7 +264,7 @@ function Relatorios({ resumo, f }: { resumo: ResumoCasos; f: FiltrosCasos }) {
                     </td>
                     <td className="text-right font-bold tabular-nums">{num(l.total)}</td>
                     {b.param === "corretor" && <td className="text-right tabular-nums">{num(l.principal ?? 0)}</td>}
-                    {CASO_STATUS.map((s) => {
+                    {statusVisiveis.map((s) => {
                       const n = l.status[s.value] ?? 0;
                       return <td key={s.value} className={cn("text-right tabular-nums", n ? "" : "text-muted/50")}>{n ? num(n) : "·"}</td>;
                     })}

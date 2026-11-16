@@ -37,7 +37,7 @@ export default async function MapaCampoPage() {
   const checkins = (cRows ?? []) as CheckinRota[];
   const paradas = (pRows ?? []) as { id: string; rota_id: string; titulo: string; status: string; lat: number | null; lng: number | null }[];
   const TOM: Record<string, TomMapa> = { pendente: "brand", visitada: "green", nao_realizada: "red", reagendada: "slate" };
-  const nomeDe = (r: Rota) => profiles.get(r.consultor_id)?.full_name ?? "Consultor";
+  const nomeDe = (r: Rota) => profiles.get(r.consultor_id)?.full_name ?? "Assessor";
   const marcadores: Marcador[] = [
     ...paradas.filter((p) => p.lat != null && p.lng != null).map((p) => {
       const r = rotas.find((x) => x.id === p.rota_id);
@@ -53,11 +53,11 @@ export default async function MapaCampoPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Campo" title="Mapa do campo" description="Rotas de hoje, último check-in de cada consultor e inconsistências — atualizado em tempo quase real." actions={<RealtimeRefresh tabelas={["checkins", "rotas"]} />} />
+      <PageHeader eyebrow="Campo" title="Mapa do campo" description="Rotas de hoje, último check-in de cada assessor e inconsistências — atualizado em tempo quase real." actions={<RealtimeRefresh tabelas={["checkins", "rotas"]} />} />
       {rotas.length === 0 ? <Card><EmptyState icon={<MapPin className="h-6 w-6" />} title="Nenhuma rota hoje" /></Card> : (
         <>
         <Card className="mb-6">
-          <CardHeader title="Campo agora" description="Laranja: último check-in de cada consultor (inicial do nome). Pontos: paradas — azul pendente, verde visitada, vermelho não realizada." icon={<MapPin className="h-4 w-4" />} />
+          <CardHeader title="Campo agora" description="Laranja: último check-in de cada assessor (inicial do nome). Pontos: paradas — azul pendente, verde visitada, vermelho não realizada." icon={<MapPin className="h-4 w-4" />} />
           <div className="px-5 pb-5"><Mapa marcadores={marcadores} className="h-96 lg:h-[28rem]" /></div>
         </Card>
         <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-3">
@@ -71,7 +71,7 @@ export default async function MapaCampoPage() {
             return (
               <Card key={r.id}>
                 <CardHeader
-                  title={<Link href={`/rotas/${r.id}`} className="hover:text-brand-600">{profiles.get(r.consultor_id)?.full_name ?? "Consultor"}</Link>}
+                  title={<Link href={`/rotas/${r.id}`} className="hover:text-brand-600">{profiles.get(r.consultor_id)?.full_name ?? "Assessor"}</Link>}
                   description={r.nome}
                   action={<StatusBadge options={ROTA_STATUS} value={r.status} />}
                 />

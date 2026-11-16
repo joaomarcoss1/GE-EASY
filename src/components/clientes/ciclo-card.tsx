@@ -57,7 +57,7 @@ export async function CicloCard({ cliente, profile, consultores, nomes }: { clie
         action={
           <div className="flex flex-wrap justify-end gap-2">
             {s === "pre_cadastro" && can(profile, "clientes.write") && (
-              <ConfirmAction action={enviarParaDocumentacao} id={cliente.id} danger={false} variant="secondary" size="sm" icon={<Send className="h-4 w-4" />} label="Coletar documentação" title="Iniciar a coleta de documentos?" message="Na carteira de um consultor, o prazo da documentação começa a contar agora." confirmLabel="Iniciar" />
+              <ConfirmAction action={enviarParaDocumentacao} id={cliente.id} danger={false} variant="secondary" size="sm" icon={<Send className="h-4 w-4" />} label="Coletar documentação" title="Iniciar a coleta de documentos?" message="Na carteira de um assessor, o prazo da documentação começa a contar agora." confirmLabel="Iniciar" />
             )}
             {s === "documentacao_completa" && can(profile, "documentacao.analisar") && (
               <ConfirmAction action={ativarCliente} id={cliente.id} danger={false} variant="primary" size="sm" icon={<CheckCircle2 className="h-4 w-4" />} label="Ativar cliente" title="Ativar o cliente?" message="A documentação obrigatória está aprovada." confirmLabel="Ativar" />
@@ -70,9 +70,9 @@ export async function CicloCard({ cliente, profile, consultores, nomes }: { clie
             {can(profile, "clientes.transfer") && (
               <FormDrawerButton action={redistribuirClientes} hidden={{ id: cliente.id }} title={s === "transferido_administrativo" ? "Devolver / redistribuir cliente" : "Redistribuir cliente"} label={s === "transferido_administrativo" ? "Devolver" : "Redistribuir"} icon="none" size="sm" variant="secondary" width="max-w-md"
                 fields={[
-                  { name: "consultor_id", label: "Para", type: "select", options: consultores, emptyOption: "Base administrativa", span: 6, help: "Com documentação pendente, o consultor recebe um novo prazo." },
+                  { name: "consultor_id", label: "Para", type: "select", options: consultores, emptyOption: "Base administrativa", span: 6, help: "Com documentação pendente, o assessor recebe um novo prazo." },
                   { name: "motivo", label: "Motivo", type: "textarea", rows: 3, required: true, span: 6 },
-                  { name: "devolucao", label: "Devolução ao consultor original", type: "checkbox", span: 6 },
+                  { name: "devolucao", label: "Devolução ao assessor original", type: "checkbox", span: 6 },
                 ]}
                 values={{ consultor_id: cliente.consultor_original_id ?? "", devolucao: !!cliente.consultor_original_id }} />
             )}
@@ -97,8 +97,8 @@ export async function CicloCard({ cliente, profile, consultores, nomes }: { clie
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between gap-3"><dt className="text-muted">Situação</dt><dd><StatusBadge options={CADASTRO_STATUS} value={s} /></dd></div>
             <div className="flex justify-between gap-3"><dt className="text-muted">Carteira</dt><dd><StatusBadge options={CARTEIRAS} value={cliente.carteira} /></dd></div>
-            {cliente.carteira === "consultor" && <div className="flex justify-between gap-3"><dt className="text-muted">Consultor</dt><dd className="font-medium">{nome(cliente.consultor_id)}</dd></div>}
-            {cliente.consultor_original_id && <div className="flex justify-between gap-3"><dt className="text-muted">Consultor original</dt><dd className="font-medium">{nome(cliente.consultor_original_id)}</dd></div>}
+            {cliente.carteira === "consultor" && <div className="flex justify-between gap-3"><dt className="text-muted">Assessor</dt><dd className="font-medium">{nome(cliente.consultor_id)}</dd></div>}
+            {cliente.consultor_original_id && <div className="flex justify-between gap-3"><dt className="text-muted">Assessor original</dt><dd className="font-medium">{nome(cliente.consultor_original_id)}</dd></div>}
             {s === "pendente_documentacao" && cliente.prazo_documentacao && dias !== null && (
               <div className={cn("flex items-center gap-2 rounded-xl px-3 py-2", dias <= 3 ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-200" : dias <= 7 ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-100" : "bg-surface-2")}>
                 <AlarmClock className="h-4 w-4" />

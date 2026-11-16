@@ -54,7 +54,7 @@ export default async function DocumentacaoPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <PageHeader eyebrow="Administrativo" title="Central de documentação" description="Analise os documentos enviados por consultores e clientes. Ao aprovar o último obrigatório, o cadastro fica completo e sai do prazo." />
+      <PageHeader eyebrow="Administrativo" title="Central de documentação" description="Analise os documentos enviados por assessores e clientes. Ao aprovar o último obrigatório, o cadastro fica completo e sai do prazo." />
       <Card>
         <div className="border-b border-line p-4"><SegmentTabs param="fila" options={FILAS} /></div>
         {docs.length === 0 ? (

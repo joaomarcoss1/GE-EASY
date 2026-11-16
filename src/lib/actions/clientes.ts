@@ -19,6 +19,10 @@ const clienteSchema = z
     email: zs.text(160).refine((v) => !v || z.string().email().safeParse(v).success, "E-mail inválido"),
     telefone: zs.text(20),
     whatsapp: zs.text(20),
+    telefone_recado: zs.text(20),
+    tipo_acao: zs.text(80),
+    assessor_id: zs.uuid(),
+    senha_gov: zs.text(100),
     cep: zs.text(10),
     endereco: zs.text(200),
     numero: zs.text(20),
@@ -46,6 +50,7 @@ const clienteSchema = z
     documento: v.documento ? onlyDigits(v.documento) : null,
     telefone: v.telefone ? onlyDigits(v.telefone) : null,
     whatsapp: v.whatsapp ? onlyDigits(v.whatsapp) : null,
+    telefone_recado: v.telefone_recado ? onlyDigits(v.telefone_recado) : null,
     cep: v.cep ? onlyDigits(v.cep) : null,
     uf: v.uf ? v.uf.toUpperCase() : null,
     tags: v.tags ? v.tags.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 15) : [],
@@ -56,7 +61,7 @@ const novoSchema = z.object({
   lgpd_consentimento: zs.bool(),
 });
 
-const CARTEIRA_LABEL: Record<string, string> = { consultor: "de um consultor", administrativo: "administrativa", juridico: "jurídica" };
+const CARTEIRA_LABEL: Record<string, string> = { consultor: "de um assessor", administrativo: "administrativa", juridico: "jurídica" };
 
 /** Mensagem de duplicidade: diz onde o cliente está sem expor dados de outra carteira. */
 async function mensagemDuplicado(documento: string | null): Promise<ActionState> {
@@ -78,8 +83,11 @@ export async function createCliente(_: ActionState, formData: FormData): Promise
   if (!novo.success) return zodErrors(novo.error);
   if (!novo.data.lgpd_consentimento) return { error: "Registre o consentimento do titular para o tratamento dos dados.", fieldErrors: { lgpd_consentimento: "Obrigatório" } };
   const h = await headers();
+  const { senha_gov, ...dadosCliente } = parsed.data;
+  const { encrypt } = await import("@/lib/crypto");
   const data = {
-    ...parsed.data,
+    ...dadosCliente,
+    senha_gov_enc: senha_gov ? encrypt(senha_gov) : null,
     consultor_id: parsed.data.consultor_id ?? g.session.userId,
     status_cadastro: novo.data.status_cadastro,
     lgpd_consentimento_em: new Date().toISOString(),
@@ -100,8 +108,14 @@ export async function updateCliente(_: ActionState, formData: FormData): Promise
   if (!isUuid(id)) return { error: "Cliente inválido." };
   const parsed = clienteSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
+  const { senha_gov, ...dados } = parsed.data;
+  const patch: Record<string, unknown> = { ...dados };
+  if (senha_gov) {
+    const { encrypt } = await import("@/lib/crypto");
+    patch.senha_gov_enc = encrypt(senha_gov);
+  }
   const supabase = await createClient();
-  const { error } = await supabase.from("clientes").update(parsed.data).eq("id", id);
+  const { error } = await supabase.from("clientes").update(patch).eq("id", id);
   if (error) return error.code === "23505" ? mensagemDuplicado(parsed.data.documento) : dbError(error);
   revalidatePath(`/clientes/${id}`);
   revalidatePath("/clientes");

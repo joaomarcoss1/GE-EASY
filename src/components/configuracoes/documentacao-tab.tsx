@@ -30,17 +30,17 @@ export async function DocumentacaoTab() {
   return (
     <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
       <Card className="self-start">
-        <CardHeader title="Prazo da documentação" description="Cliente em 'documentação pendente' na carteira de um consultor vai para a base administrativa ao fim do prazo." icon={<AlarmClock className="h-4 w-4" />} />
+        <CardHeader title="Prazo da documentação" description="Cliente em 'documentação pendente' na carteira de um assessor vai para a base administrativa ao fim do prazo." icon={<AlarmClock className="h-4 w-4" />} />
         <SettingsForm
           action={salvarParametrosDocumentacao}
           values={{ ...v, avisos: (v.avisos as number[]).join(", ") } as Record<string, string | number | boolean>}
           fields={[
             { name: "prazo_dias", label: "Prazo (dias)", type: "number", min: 5, max: 365, required: true, span: 3 },
             { name: "contagem", label: "Contagem", type: "select", options: [{ value: "corridos", label: "Dias corridos" }, { value: "uteis", label: "Dias úteis (seg–sex)" }], emptyOption: false, span: 3 },
-            { name: "avisos", label: "Avisar faltando (dias)", required: true, span: 6, help: "Consultor e supervisão são avisados nesses dias. Ex.: 15, 7, 3, 1" },
+            { name: "avisos", label: "Avisar faltando (dias)", required: true, span: 6, help: "Assessor e supervisão são avisados nesses dias. Ex.: 15, 7, 3, 1" },
             { name: "max_prorrogacoes", label: "Máximo de prorrogações", type: "number", min: 0, max: 10, span: 3 },
             { name: "prorrogacao_dias", label: "Dias por prorrogação", type: "number", min: 1, max: 90, span: 3 },
-            { name: "comissao_apos_transferencia", label: "Consultor mantém comissão se o administrativo concluir", type: "checkbox", span: 6 },
+            { name: "comissao_apos_transferencia", label: "Assessor mantém comissão se o administrativo concluir", type: "checkbox", span: 6 },
           ]}
         />
       </Card>

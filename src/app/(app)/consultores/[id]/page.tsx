@@ -18,7 +18,7 @@ import { consultorEditFields } from "@/components/configuracoes/usuario-fields";
 import { emptyStats, mesAtual, statsPorConsultor } from "@/components/consultores/stats";
 import { VISITA_RESULTADOS, duration, mapsLink } from "@/components/visitas/options";
 
-export const metadata: Metadata = { title: "Consultor" };
+export const metadata: Metadata = { title: "Assessor" };
 
 export default async function ConsultorPage({ params }: { params: Promise<{ id: string }> }) {
   const { profile: me } = await requirePermission("consultores.manage");
@@ -46,7 +46,7 @@ export default async function ConsultorPage({ params }: { params: Promise<{ id: 
   return (
     <>
       <Link href="/consultores" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg">
-        <ArrowLeft className="h-4 w-4" /> Consultores
+        <ArrowLeft className="h-4 w-4" /> Produção dos assessores
       </Link>
       <Card className="mb-6 overflow-hidden">
         <div className="brand-gradient h-20" />
@@ -86,7 +86,7 @@ export default async function ConsultorPage({ params }: { params: Promise<{ id: 
             fields={consultorEditFields(me.role === "admin")}
             values={{ territorio: c.territorio, cargo: c.cargo, comissao_percentual: c.comissao_percentual }}
             hidden={{ id }}
-            title="Editar consultor"
+            title="Editar assessor"
             label="Editar"
             icon="edit"
             variant="secondary"

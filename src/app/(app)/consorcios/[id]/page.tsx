@@ -169,7 +169,7 @@ export default async function CotaPage({ params }: { params: Promise<{ id: strin
                 ["Fundo de reserva", pct(cota.fundo_reserva, 3)],
                 ["Data de adesão", date(cota.data_adesao)],
                 ["Dia de vencimento", cota.dia_vencimento ? `Dia ${cota.dia_vencimento}` : null],
-                ["Consultor", consultor?.full_name],
+                ["Assessor", consultor?.full_name],
               ] as [string, string | null | undefined][]
             ).map(([label, value]) => (
               <div key={label} className="flex justify-between gap-4 border-b border-line pb-3 last:border-0 last:pb-0">

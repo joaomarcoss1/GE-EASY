@@ -1,5 +1,5 @@
 import type { FieldDef } from "@/components/ui/form";
-import { CLIENTE_STATUS, ORIGENS, UFS, type Option } from "@/lib/constants";
+import { CLIENTE_STATUS, ORIGENS, TIPOS_ACAO, UFS, type Option } from "@/lib/constants";
 
 export const TERMO_LGPD_VERSAO = "2026-10";
 
@@ -9,7 +9,7 @@ const SITUACAO_INICIAL: Option[] = [
   { value: "pendente_documentacao", label: "Coletar documentação (abre o prazo)" },
 ];
 
-export function clienteFields(consultores: Option[], canTransfer: boolean, novo = false): FieldDef[] {
+export function clienteFields(consultores: Option[], canTransfer: boolean, novo = false, assessores: Option[] = []): FieldDef[] {
   return [
     { name: "tipo_pessoa", label: "Tipo", type: "select", options: [{ value: "PF", label: "Pessoa física" }, { value: "PJ", label: "Pessoa jurídica" }], emptyOption: false, span: 2, section: "Identificação" },
     { name: "nome", label: "Nome / Razão social", required: true, span: 4 },
@@ -19,7 +19,11 @@ export function clienteFields(consultores: Option[], canTransfer: boolean, novo 
     { name: "email", label: "E-mail", type: "email", span: 3, section: "Contato" },
     { name: "telefone", label: "Telefone", type: "tel", span: 3 },
     { name: "whatsapp", label: "WhatsApp", type: "tel", span: 3 },
+    { name: "telefone_recado", label: "Telefone de recado", type: "tel", span: 3 },
     { name: "origem", label: "Origem do contato", type: "select", options: ORIGENS, span: 3 },
+    { name: "tipo_acao", label: "Tipo de ação", type: "select", options: TIPOS_ACAO, span: 3 },
+    { name: "assessor_id", label: "Assessor", type: "select", options: assessores, emptyOption: "Sem assessor", span: 3 },
+    { name: "senha_gov", label: "Senha gov.br", type: "password", span: 6, help: "Guardada criptografada. Deixe em branco para manter a atual; preencha só para trocar." },
     { name: "cep", label: "CEP", type: "cep", span: 2, section: "Endereço" },
     { name: "endereco", label: "Logradouro", span: 4 },
     { name: "numero", label: "Número", span: 1 },
@@ -32,7 +36,7 @@ export function clienteFields(consultores: Option[], canTransfer: boolean, novo 
     { name: "renda_mensal", label: "Renda / Faturamento mensal", type: "money", span: 3 },
     { name: "status", label: "Status comercial", type: "select", options: CLIENTE_STATUS, emptyOption: false, span: 2 },
     ...(novo ? [{ name: "status_cadastro", label: "Situação do cadastro", type: "select", options: SITUACAO_INICIAL, emptyOption: false, span: 4 } as FieldDef] : []),
-    ...(canTransfer ? [{ name: "consultor_id", label: "Consultor responsável", type: "select", options: consultores, emptyOption: "Eu mesmo", span: 4 } as FieldDef] : []),
+    ...(canTransfer ? [{ name: "consultor_id", label: "Assessor responsável", type: "select", options: consultores, emptyOption: "Eu mesmo", span: 4 } as FieldDef] : []),
     { name: "tags", label: "Etiquetas", placeholder: "Ex.: VIP, indicação João, frota", help: "Separe por vírgula", span: 6 },
     { name: "observacoes", label: "Observações", type: "textarea", rows: 4, span: 6 },
     ...(novo

@@ -26,7 +26,7 @@ const rotaSchema = z.object({
   id: zs.uuid(),
   nome: zs.required("Nome", 160),
   data: zs.date().refine((v) => !!v, "Informe a data"),
-  consultor_id: zs.requiredUuid("o consultor"),
+  consultor_id: zs.requiredUuid("o assessor"),
   veiculo_id: zs.uuid(),
   objetivo: zs.text(2000),
 });

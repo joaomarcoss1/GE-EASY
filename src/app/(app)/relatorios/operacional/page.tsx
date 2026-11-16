@@ -74,7 +74,7 @@ export default async function OperacionalPage({ searchParams }: { searchParams: 
         <Card>
           <CardHeader title={cfg.titulo} />
           <div className="overflow-x-auto"><table className="table-base">
-            <thead><tr><th>Consultor</th>{cfg.colunas.map(([t]) => <th key={t} className="text-right">{t}</th>)}</tr></thead>
+            <thead><tr><th>Assessor</th>{cfg.colunas.map(([t]) => <th key={t} className="text-right">{t}</th>)}</tr></thead>
             <tbody>
               {r.consultores.map((c) => <tr key={c.consultor_id}><td className="font-medium">{c.nome}</td>{cfg.colunas.map(([t, f]) => <td key={t} className="text-right text-sm">{f(c.m)}</td>)}</tr>)}
               <tr className="bg-surface-2 font-semibold"><td>Total da empresa</td>{cfg.colunas.map(([t, f]) => <td key={t} className="text-right text-sm">{f(r.total)}</td>)}</tr>

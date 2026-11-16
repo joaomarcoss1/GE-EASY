@@ -237,7 +237,7 @@ export default async function ComercialPage({ searchParams }: { searchParams: Pr
         actions={
           <>
             {canCliente && (
-              <LinkButton href="/clientes?novo=1" variant="secondary" size="sm">
+              <LinkButton href="/comercial/clientes/novo" variant="secondary" size="sm">
                 <UserPlus className="h-4 w-4" /> Novo cliente
               </LinkButton>
             )}
@@ -373,7 +373,7 @@ export default async function ComercialPage({ searchParams }: { searchParams: Pr
           <Card>
             <CardHeader
               icon={<Crown className="h-4 w-4" />}
-              title="Ranking de consultores"
+              title="Ranking de assessores"
               description={`Comissão gerada em ${monthLong(mes)}`}
               action={
                 <Link href="/metas" className="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300">

@@ -30,7 +30,7 @@ interface MetaRow { id: string; consultor_id: string | null; tipo: MetaTipo; val
 
 const metaFields = (consultores: { value: string; label: string }[]): FieldDef[] => [
   { name: "tipo", label: "Tipo de meta", type: "select", options: META_TIPOS, required: true, span: 6 },
-  { name: "consultor_id", label: "Consultor", type: "select", options: consultores, emptyOption: "Equipe (meta geral da corretora)", span: 6 },
+  { name: "consultor_id", label: "Assessor", type: "select", options: consultores, emptyOption: "Equipe (meta geral da corretora)", span: 6 },
   { name: "valor_meta", label: "Valor da meta", required: true, span: 6, placeholder: "Ex.: 500.000,00 ou 12", help: "Em R$ para crédito, prêmio e comissão; quantidade para novos clientes" },
 ];
 
@@ -273,14 +273,14 @@ export default async function MetasPage({ searchParams }: { searchParams: Promis
           <Card className="mt-6">
             <CardHeader icon={<Users className="h-4 w-4" />} title="Classificação completa" description="Ordenada pela comissão gerada para a corretora; desempate por produção" />
             {ranking.length === 0 ? (
-              <EmptyState title="Nenhum consultor ativo" />
+              <EmptyState title="Nenhum assessor ativo" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="table-base">
                   <thead>
                     <tr>
                       <th className="w-12">#</th>
-                      <th>Consultor</th>
+                      <th>Assessor</th>
                       <th className="text-right">Cotas</th>
                       <th className="text-right">Crédito</th>
                       <th className="text-right">Apólices</th>
@@ -330,14 +330,14 @@ export default async function MetasPage({ searchParams }: { searchParams: Promis
           <Card className="mt-6">
             <CardHeader icon={<Medal className="h-4 w-4" />} title="Metas individuais" description={`${num(individuais.length)} meta(s) em ${monthShort(mes)}`} />
             {individuais.length === 0 ? (
-              <EmptyState icon={<Medal className="h-6 w-6" />} title="Nenhuma meta individual" description={manage ? "Use “Nova meta” e escolha um consultor." : undefined} />
+              <EmptyState icon={<Medal className="h-6 w-6" />} title="Nenhuma meta individual" description={manage ? "Use “Nova meta” e escolha um assessor." : undefined} />
             ) : (
               <CardBody className="p-0">
                 <div className="overflow-x-auto">
                   <table className="table-base">
                     <thead>
                       <tr>
-                        <th>Consultor</th>
+                        <th>Assessor</th>
                         <th>Meta</th>
                         <th className="text-right">Alvo</th>
                         <th className="text-right">Realizado</th>

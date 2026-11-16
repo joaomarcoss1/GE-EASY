@@ -100,6 +100,10 @@ export interface Cliente {
   motivo_perda: string | null;
   lgpd_consentimento_em: string | null;
   lgpd_termo_versao: string | null;
+  telefone_recado: string | null;
+  senha_gov_enc?: string | null;
+  tipo_acao: string | null;
+  assessor_id: string | null;
 }
 
 export interface Interacao {

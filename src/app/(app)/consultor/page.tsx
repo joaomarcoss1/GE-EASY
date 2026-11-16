@@ -37,14 +37,14 @@ export default async function ConsultorPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Área do consultor"
+        eyebrow="Comercial"
         title={`Olá, ${profile.full_name.split(" ")[0] || "consultor"}`}
         description="Sua carteira, a documentação pendente e o que fazer hoje."
         actions={
           <>
             {(can(profile, "rotas.executar") || can(profile, "clientes.write")) && <LinkButton href="/campo" variant="primary"><Smartphone className="h-4 w-4" />App de campo</LinkButton>}
             {can(profile, "visitas.checkin") && <LinkButton href="/visitas" variant="secondary"><MapPin className="h-4 w-4" />Check-in</LinkButton>}
-            {can(profile, "clientes.write") && <LinkButton href="/clientes?novo=1" variant="accent"><UserPlus className="h-4 w-4" />Pré-cadastro</LinkButton>}
+            {can(profile, "clientes.write") && <LinkButton href="/comercial/clientes/novo" variant="accent"><UserPlus className="h-4 w-4" />Cadastrar cliente</LinkButton>}
           </>
         }
       />

@@ -103,7 +103,7 @@ export default async function RhPage({ searchParams }: { searchParams: Promise<R
                       <FormDrawerButton action={desligarFuncionario} hidden={{ user_id: f.user_id }} title={`Desligar ${f.nome}`} label="Desligar" icon="none" size="sm" variant="ghost" width="max-w-md" submitLabel="Confirmar desligamento"
                         description="O acesso termina na hora. Clientes, tarefas, negócios, leads e conversas vão para quem você escolher (ou para a base administrativa)."
                         fields={[
-                          { name: "destino", label: "Transferir para", type: "select", options: destinos.filter((d) => d.value !== f.user_id), emptyOption: "Base administrativa (sem consultor)", span: 6 },
+                          { name: "destino", label: "Transferir para", type: "select", options: destinos.filter((d) => d.value !== f.user_id), emptyOption: "Base administrativa (sem assessor)", span: 6 },
                           { name: "motivo", label: "Motivo", type: "textarea", rows: 3, required: true, span: 6 },
                         ]} />
                     )}

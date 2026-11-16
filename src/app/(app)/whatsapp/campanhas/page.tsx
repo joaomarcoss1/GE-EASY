@@ -39,7 +39,7 @@ export default async function CampanhasPage() {
     { name: "limite_hora", label: "Limite de envios por hora", type: "number", min: 1, max: 10000, span: 3 },
     { name: "cidade", label: "Filtro: cidade do cliente", span: 3, section: "Público (sempre só quem autorizou)" },
     { name: "etiqueta", label: "Filtro: etiqueta do contato", span: 3 },
-    { name: "carteira", label: "Filtro: carteira", type: "select", options: [{ value: "consultor", label: "Consultor" }, { value: "administrativo", label: "Administrativo" }, { value: "juridico", label: "Jurídico" }], span: 3 },
+    { name: "carteira", label: "Filtro: carteira", type: "select", options: [{ value: "consultor", label: "Comercial" }, { value: "administrativo", label: "Administrativo" }, { value: "juridico", label: "Jurídico" }], span: 3 },
     { name: "pendencia", label: "Só clientes com documentação pendente", type: "checkbox", span: 3 },
   ];
   return (

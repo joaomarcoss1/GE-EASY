@@ -279,7 +279,7 @@ export function KanbanBoard({
             <p className="text-xs text-muted">
               Criada em {date(selected.created_at)}
               {selected.fechado_em ? ` · fechada em ${date(selected.fechado_em)}` : ""}
-              {selected.consultor_nome ? ` · consultor: ${selected.consultor_nome}` : ""}
+              {selected.consultor_nome ? ` · assessor: ${selected.consultor_nome}` : ""}
             </p>
             {canWrite ? (
               <ResourceForm
@@ -522,7 +522,7 @@ function OpCard({
           )}
         </div>
         {showConsultor && (
-          <span title={item.consultor_nome ?? "Sem consultor"}>
+          <span title={item.consultor_nome ?? "Sem assessor"}>
             <Avatar name={item.consultor_nome ?? "?"} size={26} />
           </span>
         )}

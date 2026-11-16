@@ -35,7 +35,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   ]);
   const { data: empresa } = await supabase.from("configuracoes").select("valor").eq("chave", "empresa").maybeSingle();
 
-  const dadosCadastrais = Object.fromEntries(Object.entries(cliente as Record<string, unknown>).filter(([k]) => !["id", "drive_folder_id", "created_by"].includes(k)));
+  const dadosCadastrais: Record<string, unknown> = Object.fromEntries(Object.entries(cliente as Record<string, unknown>).filter(([k]) => !["id", "drive_folder_id", "created_by", "senha_gov_enc", "nome_busca"].includes(k)));
+  // a senha gov não sai no relatório (o titular é quem a conhece); só informamos que está guardada, cifrada
+  if ((cliente as { senha_gov_enc?: string | null }).senha_gov_enc) dadosCadastrais.senha_gov = "cadastrada (guardada criptografada)";
   const relatorio = {
     titulo: "Relatório de dados pessoais do titular (LGPD, art. 18)",
     gerado_em: new Date().toISOString(),

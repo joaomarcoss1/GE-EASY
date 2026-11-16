@@ -75,7 +75,7 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
       <PageHeader
         eyebrow="Administrativo"
         title="Base de clientes"
-        description="Todos os clientes da empresa. Selecione para redistribuir entre consultores ou para a base administrativa."
+        description="Todos os clientes da empresa. Selecione para redistribuir entre assessores ou para a base administrativa."
         actions={
           <>
             {can(profile, "clientes.write") && can(profile, "clientes.ver_todos") && (
@@ -92,12 +92,12 @@ export default async function BaseClientesPage({ searchParams }: { searchParams:
           <SearchInput placeholder="Nome, CPF/CNPJ ou cidade…" />
           <FilterSelect param="carteira" options={CARTEIRAS} allLabel="Todas as carteiras" />
           <FilterSelect param="cadastro" options={CADASTRO_STATUS} allLabel="Toda situação" />
-          <FilterSelect param="consultor" options={consultores} allLabel="Todos os consultores" />
+          <FilterSelect param="consultor" options={consultores} allLabel="Todos os assessores" />
           <FilterSelect param="origem" options={ORIGENS} allLabel="Todas as origens" />
           <FilterSelect param="cidade" options={lista(op.cidades)} allLabel="Todas as cidades" />
           <FilterSelect param="processo" options={CASO_STATUS} allLabel="Situação do processo" />
           <FilterSelect param="tipo" options={lista(op.tipos)} allLabel="Tipo de processo" />
-          <FilterSelect param="corretor" options={op.corretores.map((c) => ({ value: c.nome, label: `${c.nome} (${c.n})` }))} allLabel="Consultor da planilha" />
+          <FilterSelect param="corretor" options={op.corretores.map((c) => ({ value: c.nome, label: `${c.nome} (${c.n})` }))} allLabel="Assessor da planilha" />
         </div>
         {linhas.length === 0 ? (
           <EmptyState icon={<Database className="h-6 w-6" />} title="Nenhum cliente encontrado" />

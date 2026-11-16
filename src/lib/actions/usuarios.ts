@@ -198,7 +198,7 @@ export async function definirSenhaUsuario(_: ActionState, formData: FormData): P
 }
 
 const consultorSchema = z.object({
-  id: zs.requiredUuid("o consultor"),
+  id: zs.requiredUuid("o assessor"),
   territorio: zs.text(120),
   cargo: zs.text(80),
   comissao_percentual: zs.number(0, 100),
@@ -218,7 +218,7 @@ export async function updateConsultor(_: ActionState, formData: FormData): Promi
   const v = parsed.data;
   const supabase = await createClient();
   const { data: target } = await supabase.from("membros").select("id, role").eq("id", v.id).maybeSingle();
-  if (!target) return { error: "Consultor não encontrado nesta empresa." };
+  if (!target) return { error: "Assessor não encontrado nesta empresa." };
 
   if (g.session.profile.role === "admin" || g.session.profile.admin_master) {
     const patch: Record<string, unknown> = { territorio: v.territorio, cargo: v.cargo };
@@ -227,11 +227,11 @@ export async function updateConsultor(_: ActionState, formData: FormData): Promi
     if (error) return dbError(error);
     if (!data) return { error: "Sem permissão para alterar este perfil." };
   } else {
-    if (!["consultor", "consultor_externo"].includes(target.role)) return { error: "Gestores só podem alterar dados de consultores." };
+    if (!["consultor", "consultor_externo"].includes(target.role)) return { error: "Gestores só podem alterar dados de assessores." };
     if (!hasServiceRole()) return { error: "Para gestores editarem território, configure SUPABASE_SERVICE_ROLE_KEY (ou peça a um administrador)." };
     const { error } = await createAdminClient().from("profiles").update({ territorio: v.territorio, cargo: v.cargo }).eq("id", v.id);
     if (error) return dbError(error);
   }
   revalidateUsers(v.id);
-  return { ok: true, message: "Consultor atualizado.", id: v.id };
+  return { ok: true, message: "Assessor atualizado.", id: v.id };
 }

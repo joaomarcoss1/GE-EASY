@@ -49,7 +49,7 @@ export default async function DespesasPage({ searchParams }: { searchParams: Pro
       <PageHeader
         eyebrow="Campo"
         title="Despesas de rota"
-        description={aprova ? "Aprove ou recuse as despesas lançadas pelos consultores. Aprovadas entram no custo da rota e viram reembolso no financeiro." : "Suas despesas de rota e a situação de cada uma."}
+        description={aprova ? "Aprove ou recuse as despesas lançadas pelos assessores. Aprovadas entram no custo da rota e viram reembolso no financeiro." : "Suas despesas de rota e a situação de cada uma."}
         actions={can(profile, "despesas.lancar") && (
           <FormDrawerButton action={lancarDespesa} title="Lançar despesa" label="Lançar despesa" variant="accent" width="max-w-md"
             description="Pelo app de campo você anexa a foto do comprovante."
@@ -69,7 +69,7 @@ export default async function DespesasPage({ searchParams }: { searchParams: Pro
         <div className="border-b border-line p-4"><Suspense><FilterSelect param="status" options={DESPESA_STATUS} allLabel="Todas as situações" defaultValue={padrao} /></Suspense></div>
         {despesas.length === 0 ? <EmptyState title="Nenhuma despesa" /> : (
           <div className="overflow-x-auto"><table className="table-base">
-            <thead><tr><th>Data</th><th>Consultor</th><th>Rota</th><th>Tipo</th><th className="text-right">Valor</th><th>Comprovante</th><th>Situação</th><th /></tr></thead>
+            <thead><tr><th>Data</th><th>Assessor</th><th>Rota</th><th>Tipo</th><th className="text-right">Valor</th><th>Comprovante</th><th>Situação</th><th /></tr></thead>
             <tbody>
               {despesas.map((d) => (
                 <tr key={d.id}>

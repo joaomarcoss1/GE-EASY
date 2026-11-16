@@ -65,7 +65,7 @@ export default async function WhatsAppPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <RealtimeRefresh tabelas={["wa_conversas", "wa_mensagens"]} intervaloSeg={30} />
-      <PageHeader eyebrow="Atendimento" title="WhatsApp" description="Conversas do número oficial da empresa. Cliente com dono na carteira cai direto com o consultor; os demais seguem as regras de distribuição." />
+      <PageHeader eyebrow="Atendimento" title="WhatsApp" description="Conversas do número oficial da empresa. Cliente com dono na carteira cai direto com o assessor; os demais seguem as regras de distribuição." />
       <div className="grid min-h-[70vh] gap-4 lg:grid-cols-[340px_1fr]">
         <aside className="card flex flex-col overflow-hidden">
           <nav className="flex gap-1 border-b border-line p-2 text-sm">

@@ -30,6 +30,8 @@ export interface FieldDef {
   disabled?: boolean;
   emptyOption?: string | false;
   section?: string;
+  /** Arquivo: permite escolher vários */
+  multiple?: boolean;
 }
 
 export type Values = Record<string, string | number | boolean | string[] | null | undefined>;
@@ -123,7 +125,7 @@ function Field({ field, defaultValue, error }: { field: FieldDef; defaultValue?:
     );
   } else if (t === "file") {
     // placeholder = tipos aceitos (accept); o servidor confere a assinatura do arquivo
-    control = <input {...common} type="file" accept={field.placeholder} className="input py-2 file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-sm" />;
+    control = <input {...common} type="file" multiple={field.multiple} accept={field.placeholder} className="input py-2 file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-sm" />;
   } else if (t === "textarea") {
     control = <textarea {...common} defaultValue={dv} rows={field.rows ?? 3} placeholder={field.placeholder} className="input resize-y" maxLength={5000} />;
   } else if (t === "checkbox") {

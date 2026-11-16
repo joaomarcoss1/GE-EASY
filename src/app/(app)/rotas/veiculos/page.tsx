@@ -53,7 +53,7 @@ export default async function VeiculosPage() {
       <PageHeader
         eyebrow="Campo"
         title="Veículos e combustível"
-        description="Cadastre os carros (da empresa ou dos consultores) com o consumo. O km planejado e o realizado das rotas viram litros e gasto de combustível."
+        description="Cadastre os carros (da empresa ou dos assessores) com o consumo. O km planejado e o realizado das rotas viram litros e gasto de combustível."
         actions={<FormDrawerButton action={salvarVeiculo} title="Novo veículo" label="Novo veículo" variant="accent" width="max-w-md" fields={campos} values={{ ativo: true }} />}
       />
 
@@ -68,7 +68,7 @@ export default async function VeiculosPage() {
         <Card className="self-start">
           <CardHeader title="Veículos" description="O consumo do veículo substitui o padrão da empresa nos cálculos." icon={<Car className="h-4 w-4" />} />
           {(veiculos ?? []).length === 0 ? (
-            <EmptyState icon={<Car className="h-6 w-6" />} title="Nenhum veículo" description="Cadastre o carro de cada consultor ou da frota para calcular o combustível pelo consumo real." />
+            <EmptyState icon={<Car className="h-6 w-6" />} title="Nenhum veículo" description="Cadastre o carro de cada assessor ou da frota para calcular o combustível pelo consumo real." />
           ) : (
             <div className="overflow-x-auto"><table className="table-base">
               <thead><tr><th>Veículo</th><th>Responsável</th><th className="text-right">Consumo</th><th className="text-right">Rotas no mês</th><th className="text-right">Km</th><th className="text-right">Litros</th><th className="text-right">Combustível</th><th /></tr></thead>

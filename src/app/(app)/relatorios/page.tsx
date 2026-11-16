@@ -156,7 +156,7 @@ async function RelatorioComercial({ de, ate }: { de: string; ate: string }) {
     parceiroMap(),
   ]);
 
-  const nomeConsultor = (id: string | null) => (id ? (profiles.get(id)?.full_name ?? "—") : "Sem consultor");
+  const nomeConsultor = (id: string | null) => (id ? (profiles.get(id)?.full_name ?? "—") : "Sem assessor");
   const nomeParceiro = (id: string | null) => (id ? (parceiros.get(id) ?? "—") : "Não informada");
 
   // ---------------------------------------------------------------- 1. Produção por consultor
@@ -235,7 +235,7 @@ async function RelatorioComercial({ de, ate }: { de: string; ate: string }) {
       </div>
 
       {/* 1 ---------------------------------------------------------------- */}
-      <SectionTitle n={1}>Produção por consultor</SectionTitle>
+      <SectionTitle n={1}>Produção por assessor</SectionTitle>
       <div className="grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2 print:break-inside-avoid">
           {porConsultor.length === 0 ? (
@@ -245,7 +245,7 @@ async function RelatorioComercial({ de, ate }: { de: string; ate: string }) {
               <table className="table-base">
                 <thead>
                   <tr>
-                    <th>Consultor</th>
+                    <th>Assessor</th>
                     <th className="text-right">Cotas</th>
                     <th className="text-right">Crédito</th>
                     <th className="text-right">Apólices</th>
@@ -283,7 +283,7 @@ async function RelatorioComercial({ de, ate }: { de: string; ate: string }) {
           )}
         </Card>
         <Card className="print:break-inside-avoid">
-          <CardHeader title="Comissão gerada por consultor" description="Top 8 do período" />
+          <CardHeader title="Comissão gerada por assessor" description="Top 8 do período" />
           <CardBody>
             <HBarChart
               data={porConsultor.slice(0, 8).map((r) => ({ label: r.nome.split(" ").slice(0, 2).join(" "), value: r.comissao, display: brlShort(r.comissao), detail: "Comissão" }))}
@@ -429,7 +429,7 @@ async function RelatorioComercial({ de, ate }: { de: string; ate: string }) {
                   <th>Grupo / cota</th>
                   <th className="text-right">Crédito</th>
                   <th className="text-right">Parcela</th>
-                  <th>Consultor</th>
+                  <th>Assessor</th>
                   <th>Situação</th>
                 </tr>
               </thead>

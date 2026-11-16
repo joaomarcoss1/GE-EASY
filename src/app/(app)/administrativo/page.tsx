@@ -56,15 +56,15 @@ export default async function AdministrativoPage() {
         <StatCard label="Documentos para analisar" value={fila ?? 0} icon={<FileCheck2 className="h-5 w-5" />} tone={fila ? "amber" : "green"} />
         <StatCard label="Transferidos (prazo esgotado)" value={transferidos ?? 0} icon={<ArrowRightLeft className="h-5 w-5" />} tone="accent" hint="Na base administrativa" />
         <StatCard label="Prazos vencendo em 7 dias" value={vencendo ?? 0} icon={<AlarmClock className="h-5 w-5" />} tone={vencendo ? "amber" : "brand"} />
-        <StatCard label="Pendências com consultores" value={pendentes.length} icon={<Database className="h-5 w-5" />} />
+        <StatCard label="Pendências com assessores" value={pendentes.length} icon={<Database className="h-5 w-5" />} />
       </div>
       <div className="grid gap-6 xl:grid-cols-3">
         <Card>
-          <CardHeader title="Pendências por consultor" />
+          <CardHeader title="Pendências por assessor" />
           {ranking.length === 0 ? <EmptyState title="Sem pendências" /> : (
             <ul className="divide-y divide-line text-sm">
               {ranking.map(([id, n]) => (
-                <li key={id} className="flex justify-between px-5 py-2.5"><Link href={`/administrativo/base?consultor=${id}&cadastro=pendente_documentacao`} className="hover:text-brand-600">{nomes.get(id)?.full_name ?? "Consultor"}</Link><b>{n}</b></li>
+                <li key={id} className="flex justify-between px-5 py-2.5"><Link href={`/administrativo/base?consultor=${id}&cadastro=pendente_documentacao`} className="hover:text-brand-600">{nomes.get(id)?.full_name ?? "Assessor"}</Link><b>{n}</b></li>
               ))}
             </ul>
           )}

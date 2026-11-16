@@ -144,7 +144,7 @@ export default async function VisitasPage({ searchParams }: { searchParams: Prom
             action={
               isManager ? (
                 <Suspense>
-                  <FilterSelect param="consultor" options={consultores} allLabel="Todos os consultores" className="h-9 min-w-[180px]" />
+                  <FilterSelect param="consultor" options={consultores} allLabel="Todos os assessores" className="h-9 min-w-[180px]" />
                 </Suspense>
               ) : undefined
             }

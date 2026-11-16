@@ -171,7 +171,7 @@ export default async function ApolicePage({ params }: { params: Promise<{ id: st
                   ["Nº da proposta", apolice.numero_proposta],
                   ["Item segurado", apolice.item_segurado],
                   ["Forma de pagamento", apolice.forma_pagamento],
-                  ["Consultor", consultor?.full_name],
+                  ["Assessor", consultor?.full_name],
                 ] as [string, string | null | undefined][]
               ).map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-4 border-b border-line pb-3 last:border-0 last:pb-0">
@@ -186,7 +186,7 @@ export default async function ApolicePage({ params }: { params: Promise<{ id: st
                     <StatusBadge options={COMISSAO_STATUS} value={comissao.status} />
                   </div>
                   <p className="mt-1 text-lg font-bold">{brl(comissao.valor_corretora)}</p>
-                  <p className="text-xs text-muted">Consultor: {brl(comissao.valor_consultor)}</p>
+                  <p className="text-xs text-muted">Assessor: {brl(comissao.valor_consultor)}</p>
                 </div>
               )}
               {apolice.observacoes && (

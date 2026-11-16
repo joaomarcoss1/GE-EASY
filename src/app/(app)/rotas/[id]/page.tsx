@@ -110,12 +110,12 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
                 fields={[
                   { name: "nome", label: "Nome", required: true, span: 6 },
                   { name: "data", label: "Data", type: "date", required: true, span: 3 },
-                  { name: "consultor_id", label: "Consultor", type: "select", options: consultores, required: true, span: 3 },
+                  { name: "consultor_id", label: "Assessor", type: "select", options: consultores, required: true, span: 3 },
                   { name: "veiculo_id", label: "Veículo", type: "select", options: opVeic, span: 6 },
                   { name: "objetivo", label: "Objetivo", type: "textarea", rows: 3, span: 6 },
                 ]} />
             )}
-            {planeja && rota.status === "planejada" && <ConfirmAction action={cancelarRota} id={rota.id} title="Cancelar rota?" message="A rota sai do app do consultor. As paradas ficam no histórico." confirmLabel="Cancelar rota" label="Cancelar" size="sm" variant="ghost" />}
+            {planeja && rota.status === "planejada" && <ConfirmAction action={cancelarRota} id={rota.id} title="Cancelar rota?" message="A rota sai do app do assessor. As paradas ficam no histórico." confirmLabel="Cancelar rota" label="Cancelar" size="sm" variant="ghost" />}
             {aprova && rota.status === "concluida" && !meu && (revisoesPendentes > 0 ? (
               <span className="inline-flex h-10 items-center rounded-xl border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200" title="Aceite ou rejeite os check-ins fora do raio antes de aprovar">
                 Revise {revisoesPendentes} check-in(s) para aprovar
@@ -168,7 +168,7 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
                     { name: "cidade", label: "Cidade", span: 6 },
                     { name: "status_cadastro", label: "Situação do cadastro", type: "select", options: CADASTRO_STATUS, span: 3 },
                     { name: "carteira", label: "Carteira", type: "select", options: CARTEIRAS, span: 3 },
-                    { name: "consultor_id", label: "Consultor dono", type: "select", options: consultores, span: 4 },
+                    { name: "consultor_id", label: "Assessor dono", type: "select", options: consultores, span: 4 },
                     { name: "limite", label: "Máximo", type: "number", min: 1, max: 100, span: 2 },
                   ]} />
                 <FormDrawerButton action={adicionarParada} hidden={{ rota_id: rota.id }} title="Nova parada" label="Parada" size="sm" variant="accent" width="max-w-lg"

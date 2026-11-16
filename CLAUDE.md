@@ -15,6 +15,17 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
 - DELETE em clientes/processos/documentos/oportunidades é lógico (lixeira); use `excluirRegistro()`.
 - Testes do banco: `wsl -d Ubuntu -u postgres -- bash /mnt/c/Users/joaom/Projetos/GE-EASY/scripts/db-test.sh`.
 
+## Comercial, assessores e processos (reestruturação 2026-11)
+- A área `consultor` (enum) aparece como **Comercial**; pessoas que trazem clientes são **assessores** (tabela `assessores`,
+  CPF, contato, comprovante em `empresas/<id>/assessores/<id>/`, `acordo_comercial`). Gerir: `consultores.manage`.
+- Cadastro enxuto do cliente: `/comercial/clientes/novo` → `cadastrarClienteComercial` (`actions/comercial.ts`): senha gov
+  cifrada em `clientes.senha_gov_enc` (nunca enviar ao navegador; ver com `verSenhaGov`, auditado), anexos só PDF/JPEG,
+  e abre o processo em `cliente_casos` com status `em_analise`.
+- Status de `cliente_casos` (`CASO_STATUS`): em_analise, pendencia, exigencia, habilitado, deferido, indeferido,
+  aguardando_idade, judicializado, arquivo_morto, outros. Definidos pela equipe (`alterarStatusCaso`).
+  `pendencia`/`exigencia`/`em_analise` só com `processos.status_restritos` (política RLS restritiva).
+- Funcionalidades da área `financeiro` só valem para o administrador master (`permissoes_de`).
+
 ## Permissões
 - `can(profile, "chave")` com as funcionalidades efetivas da sessão (`src/lib/rbac.ts` = catálogo de
   `public.funcionalidades`; o teste `rbac.test.ts` confere os dois). Níveis/exceções: tela `/acessos` (admin master).

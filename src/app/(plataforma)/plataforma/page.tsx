@@ -23,7 +23,7 @@ const STATUS = [
   { value: "cancelada", label: "Cancelada", tone: "slate" as const },
 ];
 const MODULOS = [
-  { value: "consultor", label: "Consultor" },
+  { value: "consultor", label: "Comercial" },
   { value: "administrativo", label: "Administrativo" },
   { value: "juridico", label: "Jurídico" },
   { value: "rh", label: "RH" },

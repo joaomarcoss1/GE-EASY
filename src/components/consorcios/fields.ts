@@ -37,7 +37,7 @@ export function cotaFields({ clientes, administradoras, produtos, consultores, c
         ] satisfies FieldDef[])
       : []),
     ...(canTransfer
-      ? ([{ name: "consultor_id", label: "Consultor responsável", type: "select", options: consultores, emptyOption: edit ? "Manter o atual" : "Consultor do cliente", span: 6, section: "Responsável" }] satisfies FieldDef[])
+      ? ([{ name: "consultor_id", label: "Assessor responsável", type: "select", options: consultores, emptyOption: edit ? "Manter o atual" : "Assessor do cliente", span: 6, section: "Responsável" }] satisfies FieldDef[])
       : []),
     { name: "observacoes", label: "Observações", type: "textarea", rows: 3, span: 6, section: canTransfer ? undefined : "Observações" },
   ];

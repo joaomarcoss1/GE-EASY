@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const sn = (v: unknown) => (v === true ? "Sim" : v === false ? "Não" : "");
   const d = (v: unknown) => (v ? date(String(v)) : "");
   const csv = toCsv(
-    ["Cliente", "CPF", "Telefone", "Tipo", "Consultor", "Consultor principal", "Cidade", "UF", "Ano", "Recebido", "Habilitado", "Perícia", "Avaliação", "Situação", "Pendência", "Exigência", "Contrato assinado", "Procuração assinada", "Retroativo", "Situação na planilha", "Observações"],
+    ["Cliente", "CPF", "Telefone", "Tipo", "Assessor", "Assessor principal", "Cidade", "UF", "Ano", "Recebido", "Habilitado", "Perícia", "Avaliação", "Situação", "Pendência", "Exigência", "Contrato assinado", "Procuração assinada", "Retroativo", "Situação na planilha", "Observações"],
     linhas.map((r) => {
       const c = r.clientes as { nome: string; documento: string | null; whatsapp: string | null; telefone: string | null };
       return [c.nome, c.documento ? maskDocumento(c.documento) : "", maskPhone(c.whatsapp || c.telefone), r.tipo as string, r.corretor as string, r.corretor_principal as string, r.cidade as string, r.uf as string, r.ano as number,

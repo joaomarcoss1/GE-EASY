@@ -32,7 +32,7 @@ const metaSchema = z
     valor_meta: v.valor_meta as number,
   }));
 
-const DUP = { error: "Já existe uma meta deste tipo para este consultor/equipe no mês.", fieldErrors: { tipo: "Meta já cadastrada" } };
+const DUP = { error: "Já existe uma meta deste tipo para este assessor/equipe no mês.", fieldErrors: { tipo: "Meta já cadastrada" } };
 
 export async function createMeta(_: ActionState, formData: FormData): Promise<ActionState> {
   const g = await guard("metas.manage");

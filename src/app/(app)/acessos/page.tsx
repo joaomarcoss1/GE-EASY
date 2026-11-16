@@ -231,7 +231,7 @@ export default async function AcessosPage({ searchParams }: { searchParams: Prom
             action={<FormDrawerButton action={salvarEquipe} title="Montar equipe" label="Nova equipe" size="sm" variant="accent" width="max-w-xl"
               fields={[{ name: "supervisor_id", label: "Supervisor", type: "select", options: opcoesTodos, required: true, span: 6 }, { name: "membros", label: "Membros", type: "multiselect", options: opcoesTodos, span: 6 }]} />}
           />
-          {equipesPorSup.size === 0 ? <EmptyState title="Nenhuma equipe" description="Sem equipe, cada consultor vê só a própria carteira e a gestão vê tudo." /> : (
+          {equipesPorSup.size === 0 ? <EmptyState title="Nenhuma equipe" description="Sem equipe, cada assessor vê só a própria carteira e a gestão vê tudo." /> : (
             <ul className="divide-y divide-line">
               {[...equipesPorSup].map(([sup, mem]) => (
                 <li key={sup} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
@@ -248,7 +248,7 @@ export default async function AcessosPage({ searchParams }: { searchParams: Prom
       {tab === "dispositivos" && (
         <Card>
           <CardHeader title="Aparelhos do app" description="Revogar um aparelho corta o acesso na próxima sincronização e apaga os dados guardados nele." icon={<Smartphone className="h-4 w-4" />} />
-          {(aparelhos ?? []).length === 0 ? <EmptyState title="Nenhum aparelho registrado" description="Os aparelhos aparecem quando o consultor abre o app de campo." /> : (
+          {(aparelhos ?? []).length === 0 ? <EmptyState title="Nenhum aparelho registrado" description="Os aparelhos aparecem quando o assessor abre o app de campo." /> : (
             <div className="overflow-x-auto"><table className="table-base">
               <thead><tr><th>Funcionário</th><th>Aparelho</th><th>Versão</th><th className="text-right">Fila</th><th>Última sincronização</th><th>Situação</th><th /></tr></thead>
               <tbody>

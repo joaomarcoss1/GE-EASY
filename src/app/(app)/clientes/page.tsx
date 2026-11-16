@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Users, Phone, Mail, MessageCircle } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -8,16 +9,13 @@ import { consultorOptions, getProfileMap, pageRange, searchTerm } from "@/lib/da
 import { CADASTRO_STATUS, CLIENTE_STATUS } from "@/lib/constants";
 import { maskDocumento, maskPhone, date, tagAlerta, tagLabel, whatsappLink } from "@/lib/format";
 import type { Cliente } from "@/lib/types";
-import { createCliente } from "@/lib/actions/clientes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { StatusBadge, Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
-import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { FilterSelect, Pagination, SearchInput } from "@/components/ui/filters";
 import { LinkButton } from "@/components/ui/button";
-import { clienteFields } from "./fields";
 import { filtrosNome } from "@/lib/casos";
 
 export const metadata: Metadata = { title: "Clientes" };
@@ -25,6 +23,7 @@ export const metadata: Metadata = { title: "Clientes" };
 export default async function ClientesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { profile } = await requirePermission("clientes.view");
   const sp = await searchParams;
+  if (sp.novo === "1") redirect("/comercial/clientes/novo");
   const { page, size, from, to } = pageRange(sp.page);
   const supabase = await createClient();
 
@@ -60,7 +59,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
                 Exportar CSV
               </LinkButton>
             )}
-            {canWrite && <FormDrawerButton action={createCliente} fields={clienteFields(consultores, canTransfer, true)} values={{ tipo_pessoa: "PF", status: "lead", status_cadastro: "pre_cadastro" }} title="Novo cliente" label="Novo cliente" variant="accent" redirectTo="/clientes/:id" defaultOpen={sp.novo === "1"} />}
+            {canWrite && <LinkButton href="/comercial/clientes/novo" variant="accent">Novo cliente</LinkButton>}
           </>
         }
       />
@@ -69,7 +68,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
           <SearchInput placeholder="Nome, CPF/CNPJ, e-mail, telefone…" />
           <FilterSelect param="status" options={CLIENTE_STATUS} allLabel="Todos os status" />
           <FilterSelect param="cadastro" options={CADASTRO_STATUS} allLabel="Toda situação do cadastro" />
-          {canTransfer && <FilterSelect param="consultor" options={consultores} allLabel="Todos os consultores" />}
+          {canTransfer && <FilterSelect param="consultor" options={consultores} allLabel="Todos os assessores" />}
         </div>
         {clientes.length === 0 ? (
           <EmptyState icon={<Users className="h-6 w-6" />} title="Nenhum cliente encontrado" description={sp.q || sp.status ? "Ajuste os filtros para ver mais resultados." : "Cadastre seu primeiro cliente para começar."} />
@@ -81,7 +80,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
                   <th>Cliente</th>
                   <th>Contato</th>
                   <th>Cidade</th>
-                  <th>Consultor</th>
+                  <th>Assessor</th>
                   <th>Status</th>
                   <th>Cadastro</th>
                 </tr>

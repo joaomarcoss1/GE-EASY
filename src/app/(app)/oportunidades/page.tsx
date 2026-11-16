@@ -30,7 +30,7 @@ function oportunidadeFields(clientes: Option[], produtos: Option[], consultores:
     { name: "previsao_fechamento", label: "Previsão de fechamento", type: "date", span: 3 },
     { name: "situacao_venda", label: "Situação da venda", type: "select", options: SITUACOES_VENDA, emptyOption: "Pela etapa do funil", span: 3, help: "Use \"pendente de confirmação\" quando faltar o aceite do cliente ou da administradora" },
     { name: "campanha", label: "Campanha", span: 3 },
-    ...(canTransfer ? [{ name: "consultor_id", label: "Consultor", type: "select", options: consultores, emptyOption: "Eu mesmo", span: 6 } as FieldDef] : []),
+    ...(canTransfer ? [{ name: "consultor_id", label: "Assessor", type: "select", options: consultores, emptyOption: "Eu mesmo", span: 6 } as FieldDef] : []),
     { name: "observacoes", label: "Observações", type: "textarea", rows: 3, span: 6 },
   ];
 }
@@ -116,7 +116,7 @@ export default async function OportunidadesPage({ searchParams }: { searchParams
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
           <SearchInput placeholder="Buscar por título…" />
           <FilterSelect param="linha" options={LINHAS} allLabel="Consórcio e seguro" />
-          {canTransfer && <FilterSelect param="consultor" options={consultores} allLabel="Todos os consultores" />}
+          {canTransfer && <FilterSelect param="consultor" options={consultores} allLabel="Todos os assessores" />}
         </div>
       </Card>
       <Suspense>

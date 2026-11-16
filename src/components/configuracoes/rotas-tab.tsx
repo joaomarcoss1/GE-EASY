@@ -15,7 +15,7 @@ export const veiculoFields = (usuarios: Option[]): FieldDef[] => [
   { name: "descricao", label: "Descrição", required: true, span: 4, placeholder: "Ex.: Onix 1.0 prata" },
   { name: "placa", label: "Placa", span: 2 },
   { name: "consumo_km_l", label: "Consumo (km/l)", type: "number", min: 1, max: 100, step: "0.1", span: 3, help: "Vazio = consumo padrão da empresa" },
-  { name: "responsavel_id", label: "Responsável", type: "select", options: usuarios, span: 3, help: "Rotas desse consultor já vêm com este veículo" },
+  { name: "responsavel_id", label: "Responsável", type: "select", options: usuarios, span: 3, help: "Rotas desse assessor já vêm com este veículo" },
   { name: "ativo", label: "Ativo", type: "checkbox", span: 6 },
 ];
 
@@ -36,7 +36,7 @@ export async function ParametrosRotasForm() {
         { name: "fator_rodoviario", label: "Fator rodoviário", type: "number", min: 1, max: 3, step: "0.05", span: 3, help: "Converte a distância em linha reta em estimativa por estrada (padrão 1,3)" },
         { name: "exigir_hodometro", label: "Exigir hodômetro no início e no fim", type: "checkbox", span: 6 },
         { name: "exigir_selfie", label: "Exigir foto no check-in", type: "checkbox", span: 6 },
-        { name: "rastreio", label: "Rastrear o trajeto durante a rota (somente com a rota ativa)", type: "checkbox", span: 6, help: "Desligado por padrão (LGPD). O app avisa o consultor enquanto rastreia." },
+        { name: "rastreio", label: "Rastrear o trajeto durante a rota (somente com a rota ativa)", type: "checkbox", span: 6, help: "Desligado por padrão (LGPD). O app avisa o assessor enquanto rastreia." },
       ]}
     />
   );

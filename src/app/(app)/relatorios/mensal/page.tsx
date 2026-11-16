@@ -73,7 +73,7 @@ export default async function RelatorioMensalPage({ searchParams }: { searchPara
               values={{ ...Object.fromEntries(PESOS.map(([k]) => [k, p.pesos?.[k] ?? { clientes_novos: 3, vendas_aprovadas: 5, paradas_visitadas: 1, leads_convertidos: 2, checkins_fora_raio: -1, transferidos_45: -2 }[k]])),
                 limite_fora_raio_pct: p.limite_fora_raio_pct ?? 20, fator_custo_cliente: p.fator_custo_cliente ?? 2, destinatarios: (p.destinatarios ?? []).join(", ") }}
               fields={[
-                ...PESOS.map(([k, l]) => ({ name: k, label: `Peso: ${l}`, type: "number" as const, min: -100, max: 100, span: 2 as const, section: k === "clientes_novos" ? "Ranking de consultores" : undefined })),
+                ...PESOS.map(([k, l]) => ({ name: k, label: `Peso: ${l}`, type: "number" as const, min: -100, max: 100, span: 2 as const, section: k === "clientes_novos" ? "Ranking de assessores" : undefined })),
                 { name: "limite_fora_raio_pct", label: "Alerta: check-ins fora do raio acima de (%)", type: "number", min: 1, max: 100, span: 3, section: "Pontos de atenção" },
                 { name: "fator_custo_cliente", label: "Alerta: custo por cliente acima de (× média)", type: "number", min: 1, max: 10, span: 3 },
                 { name: "destinatarios", label: "Enviar por e-mail para", type: "textarea", rows: 2, span: 6, help: "Separe por vírgula. Vazio = administradores master. Requer RESEND_API_KEY no servidor.", section: "Envio" },
@@ -128,10 +128,10 @@ export default async function RelatorioMensalPage({ searchParams }: { searchPara
             </Card>
           </div>
           <Card>
-            <CardHeader title="Ranking de consultores" description={`Pontos = ${PESOS.map(([k, l]) => `${l} × ${d.pesos?.[k] ?? 0}`).join(" + ")}`} icon={<Trophy className="h-4 w-4" />} />
-            {!d.ranking.length ? <EmptyState title="Sem atividade de consultores" /> : (
+            <CardHeader title="Ranking de assessores" description={`Pontos = ${PESOS.map(([k, l]) => `${l} × ${d.pesos?.[k] ?? 0}`).join(" + ")}`} icon={<Trophy className="h-4 w-4" />} />
+            {!d.ranking.length ? <EmptyState title="Sem atividade de assessores" /> : (
               <div className="overflow-x-auto"><table className="table-base">
-                <thead><tr><th>#</th><th>Consultor</th><th className="text-right">Pontos</th><th className="text-right">Clientes</th><th className="text-right">Vendas</th><th className="text-right">Visitas</th><th className="text-right">Km</th><th className="text-right">Custo/cliente</th></tr></thead>
+                <thead><tr><th>#</th><th>Assessor</th><th className="text-right">Pontos</th><th className="text-right">Clientes</th><th className="text-right">Vendas</th><th className="text-right">Visitas</th><th className="text-right">Km</th><th className="text-right">Custo/cliente</th></tr></thead>
                 <tbody>{d.ranking.map((c, k) => (
                   <tr key={c.consultor_id}><td>{k + 1}</td><td className="font-medium">{c.nome}</td><td className="text-right font-semibold">{c.pontos}</td><td className="text-right">{n("clientes_novos", c.m)}</td><td className="text-right">{n("vendas_aprovadas", c.m)}</td>
                     <td className="text-right">{n("paradas_visitadas", c.m)}</td><td className="text-right">{num(n("km", c.m))}</td><td className="text-right">{c.custo_por_cliente != null ? brl(c.custo_por_cliente) : "—"}</td></tr>

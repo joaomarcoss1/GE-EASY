@@ -17,13 +17,13 @@ export const ROLES: Option[] = [
   { value: "advogado", label: "Advogado(a)", tone: "brand" },
   { value: "assistente_juridico", label: "Assistente jurídico", tone: "sky" },
   { value: "administrativo", label: "Administrativo", tone: "slate" },
-  { value: "consultor", label: "Consultor interno", tone: "sky" },
-  { value: "consultor_externo", label: "Consultor externo", tone: "accent" },
+  { value: "consultor", label: "Assessor interno", tone: "sky" },
+  { value: "consultor_externo", label: "Assessor externo", tone: "accent" },
 ];
 export const ROLE_LABEL: Record<AppRole, string> = Object.fromEntries(ROLES.map((r) => [r.value, r.label])) as Record<AppRole, string>;
 
 export const AREAS: (Option & { value: Area; href: string; descricao: string })[] = [
-  { value: "consultor", label: "Consultor", href: "/consultor", tone: "accent", descricao: "Carteira, pré-cadastro, documentos e visitas" },
+  { value: "consultor", label: "Comercial", href: "/consultor", tone: "accent", descricao: "Cadastro de clientes, assessores, documentos e visitas" },
   { value: "administrativo", label: "Administrativo", href: "/administrativo", tone: "slate", descricao: "Documentação, base de clientes e encaminhamentos" },
   { value: "juridico", label: "Jurídico", href: "/juridico", tone: "brand", descricao: "Processos, intimações e audiências" },
   { value: "rh", label: "RH", href: "/rh", tone: "sky", descricao: "Funcionários, acessos e jornada" },
@@ -41,7 +41,7 @@ export const CADASTRO_STATUS: Option[] = [
 ];
 
 export const CARTEIRAS: Option[] = [
-  { value: "consultor", label: "Consultor", tone: "accent" },
+  { value: "consultor", label: "Comercial", tone: "accent" },
   { value: "administrativo", label: "Administrativa", tone: "slate" },
   { value: "juridico", label: "Jurídica", tone: "brand" },
 ];
@@ -154,7 +154,7 @@ export const FORMAS_PAGAMENTO: Option[] = ["Boleto", "Cartão de crédito", "Dé
 export const COMISSAO_STATUS: Option[] = [
   { value: "prevista", label: "Prevista", tone: "amber" },
   { value: "recebida", label: "Recebida", tone: "brand" },
-  { value: "paga", label: "Paga ao consultor", tone: "green" },
+  { value: "paga", label: "Paga ao assessor", tone: "green" },
   { value: "estornada", label: "Estornada", tone: "red" },
 ];
 
@@ -214,7 +214,21 @@ export const DOC_CATEGORIAS: Option[] = [
   { value: "apolice", label: "Apólice" },
   { value: "boleto", label: "Boleto" },
   { value: "vistoria", label: "Vistoria" },
+  { value: "documentos_pessoais", label: "Documentos pessoais" },
+  { value: "contrato_assinado", label: "Contrato assinado" },
   { value: "outros", label: "Outros" },
+];
+
+/** Tipos de ação do cadastro comercial (o valor é o mesmo usado na base de processos). */
+export const TIPOS_ACAO: Option[] = [
+  { value: "Salário Materno", label: "Salário-maternidade" },
+  { value: "Aposentadoria", label: "Aposentadoria" },
+  { value: "Auxílio Doença", label: "Auxílio-doença" },
+  { value: "Pensão por Morte", label: "Pensão por morte" },
+  { value: "BPC Deficiente", label: "BPC – pessoa com deficiência" },
+  { value: "BPC Idoso", label: "BPC – idoso" },
+  { value: "Trabalhista", label: "Trabalhista" },
+  { value: "Outro", label: "Outro" },
 ];
 
 export const INTERACAO_TIPOS: Option[] = [
@@ -503,7 +517,7 @@ export const LEAD_ORIGENS: Option[] = [
   { value: "site", label: "Site / formulário" },
   { value: "lead_ads", label: "Facebook / Instagram" },
   { value: "indicacao", label: "Indicação" },
-  { value: "consultor", label: "Consultor" },
+  { value: "consultor", label: "Assessor" },
   { value: "importacao", label: "Importação" },
   { value: "outro", label: "Outro" },
 ];
@@ -603,15 +617,20 @@ export const SITUACOES_ENCAMINHAMENTO: Option[] = [
 
 /** Situação do processo administrativo (benefício INSS) — calculada pelo banco a partir dos dados do processo. */
 export const CASO_STATUS: Option[] = [
-  { value: "em_preparacao", label: "Aguardando habilitação", tone: "sky" },
+  { value: "em_analise", label: "Em análise", tone: "sky" },
+  { value: "pendencia", label: "Pendência", tone: "amber" },
+  { value: "exigencia", label: "Exigência", tone: "red" },
   { value: "habilitado", label: "Habilitado", tone: "green" },
-  { value: "pericia", label: "Perícia / avaliação agendada", tone: "violet" },
-  { value: "exigencia", label: "Exigência em aberto", tone: "red" },
-  { value: "pendencia", label: "Com pendência", tone: "amber" },
+  { value: "deferido", label: "Deferido", tone: "green" },
+  { value: "indeferido", label: "Indeferido", tone: "red" },
   { value: "aguardando_idade", label: "Aguardando idade", tone: "brand" },
-  { value: "comercial", label: "Devolvido ao comercial", tone: "accent" },
+  { value: "judicializado", label: "Judicializado", tone: "violet" },
   { value: "arquivo_morto", label: "Arquivo morto", tone: "slate" },
+  { value: "outros", label: "Outros", tone: "slate" },
 ];
+
+/** Status que só funcionários autorizados enxergam (funcionalidade processos.status_restritos). */
+export const CASO_STATUS_RESTRITOS = ["pendencia", "exigencia", "em_analise"] as const;
 
 export const CASO_PENDENCIAS: Option[] = [
   { value: "assinatura", label: "Falta assinatura (contrato/procuração)", tone: "amber" },

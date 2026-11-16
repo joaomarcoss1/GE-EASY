@@ -39,10 +39,11 @@ const ALL_NAV: NavGroup[] = [
     ],
   },
   {
-    label: "Consultor",
+    label: "Comercial",
     area: "consultor",
     items: [
-      { href: "/consultor", label: "Minha carteira", icon: "BriefcaseBusiness", permission: "clientes.view" },
+      { href: "/consultor", label: "Painel do comercial", icon: "BriefcaseBusiness", permission: "clientes.view" },
+      { href: "/comercial/clientes/novo", label: "Cadastrar cliente", icon: "UserPlus", permission: "clientes.write" },
       { href: "/campo", label: "App de campo", icon: "Smartphone", permission: "rotas.executar" },
       { href: "/rotas", label: "Minhas rotas", icon: "Route", permission: "rotas.executar" },
       { href: "/leads", label: "Meus leads", icon: "UserPlus", permission: "leads.view" },
@@ -55,7 +56,8 @@ const ALL_NAV: NavGroup[] = [
       { href: "/comissoes", label: "Comissões", icon: "BadgePercent", permission: "comissoes.view" },
       { href: "/metas", label: "Metas & ranking", icon: "Target", permission: "comercial.view" },
       { href: "/comercial", label: "Painel comercial", icon: "TrendingUp", permission: "comercial.view" },
-      { href: "/consultores", label: "Consultores externos", icon: "UserCheck", permission: "consultores.manage" },
+      { href: "/assessores", label: "Assessores", icon: "UserCheck", permission: "consultores.manage" },
+      { href: "/consultores", label: "Produção dos assessores", icon: "TrendingUp", permission: "consultores.manage" },
     ],
   },
   {

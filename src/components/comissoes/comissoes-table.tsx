@@ -34,8 +34,8 @@ export interface ComissaoView {
 const editFields: FieldDef[] = [
   { name: "status", label: "Status", type: "select", options: COMISSAO_STATUS, emptyOption: false, span: 6 },
   { name: "data_recebimento", label: "Recebida da administradora/seguradora em", type: "date", span: 3, help: "Preenchida com hoje se vazia ao marcar como recebida" },
-  { name: "data_pagamento", label: "Paga ao consultor em", type: "date", span: 3, help: "Preenchida com hoje se vazia ao marcar como paga" },
-  { name: "percentual_consultor", label: "% do consultor", type: "percent", span: 3, help: "Sobre o valor da corretora; recalcula o repasse" },
+  { name: "data_pagamento", label: "Paga ao assessor em", type: "date", span: 3, help: "Preenchida com hoje se vazia ao marcar como paga" },
+  { name: "percentual_consultor", label: "% do assessor", type: "percent", span: 3, help: "Sobre o valor da corretora; recalcula o repasse" },
   { name: "observacoes", label: "Observações", type: "textarea", rows: 3, span: 6 },
 ];
 
@@ -75,7 +75,7 @@ export function ComissoesTable({ rows, canManage }: { rows: ComissaoView[]; canM
       {canManage && selected.size > 0 && (
         <div className="sticky top-16 z-10 flex flex-wrap items-center gap-3 border-b border-brand-200 bg-brand-50/95 px-4 py-2.5 backdrop-blur dark:border-brand-800 dark:bg-brand-950/90">
           <span className="text-sm font-semibold text-brand-800 dark:text-brand-100">
-            {selected.size} selecionada(s) · corretora {brl(sumOf(selRows, "valor_corretora"))} · consultores {brl(sumOf(selRows, "valor_consultor"))}
+            {selected.size} selecionada(s) · corretora {brl(sumOf(selRows, "valor_corretora"))} · assessores {brl(sumOf(selRows, "valor_consultor"))}
           </span>
           <div className="ml-auto flex flex-wrap gap-2">
             <Button size="sm" variant="primary" loading={pending} onClick={() => apply("recebida")}>
@@ -100,10 +100,10 @@ export function ComissoesTable({ rows, canManage }: { rows: ComissaoView[]; canM
                 </th>
               )}
               <th>Negócio / cliente</th>
-              <th>Consultor</th>
+              <th>Assessor</th>
               <th className="text-right">Base</th>
               <th className="text-right">Corretora</th>
-              <th className="text-right">Consultor</th>
+              <th className="text-right">Assessor</th>
               <th>Status</th>
               <th>Datas</th>
               {canManage && <th className="w-12" />}

@@ -18,7 +18,7 @@ import { SegmentTabs } from "@/components/ui/filters";
 import { novoUsuarioFields } from "@/components/configuracoes/usuario-fields";
 import { emptyStats, statsPorConsultor } from "@/components/consultores/stats";
 
-export const metadata: Metadata = { title: "Consultores" };
+export const metadata: Metadata = { title: "Produção dos assessores" };
 
 export default async function ConsultoresPage({ searchParams }: { searchParams: Promise<{ tipo?: string }> }) {
   const { profile } = await requirePermission("consultores.manage");
@@ -40,16 +40,16 @@ export default async function ConsultoresPage({ searchParams }: { searchParams: 
     <>
       <PageHeader
         eyebrow="Gestão"
-        title="Consultores"
-        description="Equipe interna e consultores externos: carteira, produção do mês, comissões e visitas de campo."
+        title="Produção dos assessores"
+        description="Equipe interna e assessores externos: carteira, produção do mês, comissões e visitas de campo."
         actions={
           can(profile, "usuarios.manage") && (
-            <FormDrawerButton action={criarUsuario} fields={novoUsuarioFields()} values={{ role: "consultor_externo", trocar_senha: true }} title="Novo consultor" label="Novo consultor" variant="accent" width="max-w-lg" submitLabel="Criar acesso" description="O acesso é criado na hora, sem e-mail: passe o login e a senha para a pessoa." />
+            <FormDrawerButton action={criarUsuario} fields={novoUsuarioFields()} values={{ role: "consultor_externo", trocar_senha: true }} title="Novo assessor" label="Novo assessor" variant="accent" width="max-w-lg" submitLabel="Criar acesso" description="O acesso é criado na hora, sem e-mail: passe o login e a senha para a pessoa." />
           )
         }
       />
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Consultores ativos" value={tot.ativos} hint={`${externosAtivos} externo(s)`} icon={<BriefcaseBusiness className="h-5 w-5" />} />
+        <StatCard label="Assessores ativos" value={tot.ativos} hint={`${externosAtivos} externo(s)`} icon={<BriefcaseBusiness className="h-5 w-5" />} />
         <StatCard label="Crédito vendido no mês" value={brlShort(tot.credito)} icon={<Landmark className="h-5 w-5" />} tone="accent" />
         <StatCard label="Prêmios emitidos no mês" value={brlShort(tot.premio)} icon={<Wallet className="h-5 w-5" />} tone="green" />
         <StatCard label="Visitas no mês" value={tot.visitas} icon={<MapPin className="h-5 w-5" />} tone="amber" />
@@ -66,13 +66,13 @@ export default async function ConsultoresPage({ searchParams }: { searchParams: 
           />
         </div>
         {rows.length === 0 ? (
-          <EmptyState icon={<Users className="h-6 w-6" />} title="Nenhum consultor cadastrado" description="Convide consultores pelo botão acima ou em Configurações › Usuários." />
+          <EmptyState icon={<Users className="h-6 w-6" />} title="Nenhum assessor cadastrado" description="Convide assessores pelo botão acima ou em Configurações › Usuários." />
         ) : (
           <div className="overflow-x-auto">
             <table className="table-base">
               <thead>
                 <tr>
-                  <th>Consultor</th>
+                  <th>Assessor</th>
                   <th>Território</th>
                   <th className="text-right">Carteira</th>
                   <th className="text-right">Crédito (mês)</th>

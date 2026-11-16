@@ -7,7 +7,7 @@ import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { consultorOptions, getProfileMap } from "@/lib/data";
-import { CADASTRO_STATUS, CASO_PENDENCIAS, CASO_STATUS, PROCESSO_AREAS, PROCESSO_FASES, PROCESSO_STATUS, APOLICE_STATUS, COTA_STATUS, ETAPAS, EVENTO_TIPOS, INTERACAO_TIPOS, ORIGENS, RAMOS_SEGURO, CATEGORIAS_CONSORCIO, TAREFA_STATUS, PRIORIDADES } from "@/lib/constants";
+import { CADASTRO_STATUS, CASO_PENDENCIAS, CASO_STATUS, PROCESSO_AREAS, PROCESSO_FASES, PROCESSO_STATUS, APOLICE_STATUS, COTA_STATUS, ETAPAS, EVENTO_TIPOS, INTERACAO_TIPOS, ORIGENS, RAMOS_SEGURO, CATEGORIAS_CONSORCIO, TAREFA_STATUS, PRIORIDADES, TIPOS_ACAO } from "@/lib/constants";
 import { brl, date, dateTime, maskDocumento, maskPhone, onlyDigits, relative, tagAlerta, tagLabel, whatsappLink } from "@/lib/format";
 import type { AgendaEvento, Cliente, ConsorcioCota, Interacao, Oportunidade, SeguroApolice, Tarefa } from "@/lib/types";
 import { addInteracao, deleteCliente, deleteInteracao, updateCliente } from "@/lib/actions/clientes";
@@ -26,6 +26,8 @@ import { DocumentosPanel } from "@/components/documentos/documentos-panel";
 import { clienteFields } from "../fields";
 import { CicloCard } from "@/components/clientes/ciclo-card";
 import { ObservacoesCard } from "@/components/clientes/observacoes-card";
+import { RevelarSenhaGov } from "@/components/clientes/revelar-senha-gov";
+import { StatusCasoSelect } from "@/components/clientes/status-caso-select";
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -36,8 +38,11 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const supabase = await createClient();
 
-  const { data: cliente } = await supabase.from("clientes").select("*").eq("id", id).maybeSingle<Cliente>();
-  if (!cliente) notFound();
+  const { data: clienteRow } = await supabase.from("clientes").select("*").eq("id", id).maybeSingle<Cliente>();
+  if (!clienteRow) notFound();
+  // a senha gov (cifrada) nunca vai para o navegador; só se sabe se existe
+  const { senha_gov_enc, ...cliente } = clienteRow;
+  const temSenhaGov = !!senha_gov_enc;
 
   const [{ data: interacoes }, { data: oportunidades }, { data: cotas }, { data: apolices }, { data: eventos }, { data: tarefas }, { count: docCount }] = await Promise.all([
     supabase.from("interacoes").select("*").eq("cliente_id", id).order("created_at", { ascending: false }).limit(100),
@@ -55,7 +60,15 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
     ? await supabase.from("processos").select("id, titulo, numero_cnj, area, fase, status, parte_contraria, updated_at").eq("cliente_id", id).order("updated_at", { ascending: false })
     : { data: [] };
   const procs = processosData ?? [];
-  const [profiles, consultores, drive] = await Promise.all([getProfileMap(), consultorOptions(), getDriveEscritorioStatus()]);
+  const [profiles, consultores, drive, { data: assessoresData }] = await Promise.all([
+    getProfileMap(),
+    consultorOptions(),
+    getDriveEscritorioStatus(),
+    supabase.from("assessores").select("id, nome, ativo").order("nome"),
+  ]);
+  const assessoresLista = assessoresData ?? [];
+  const assessor = cliente.assessor_id ? assessoresLista.find((a) => a.id === cliente.assessor_id) : null;
+  const assessorOptions = assessoresLista.filter((a) => a.ativo || a.id === cliente.assessor_id).map((a) => ({ value: a.id as string, label: a.nome as string }));
   const consultor = cliente.consultor_id ? profiles.get(cliente.consultor_id) : null;
   const canWrite = can(profile, "clientes.write");
   const canTransfer = can(profile, "clientes.transfer");
@@ -84,7 +97,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
               {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:bg-emerald-700"><MessageCircle className="h-4 w-4" /> WhatsApp</a>}
               {(cliente.whatsapp || cliente.telefone) && <a href={`tel:${onlyDigits(cliente.whatsapp || cliente.telefone)}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" aria-label="Ligar" title="Ligar"><Phone className="h-4 w-4" /></a>}
               {cliente.email && <a href={`mailto:${cliente.email}`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" aria-label="E-mail" title="E-mail"><Mail className="h-4 w-4" /></a>}
-              {canWrite && <FormDrawerButton action={updateCliente} fields={clienteFields(consultores, canTransfer)} values={{ ...cliente, tags: cliente.tags.join(", ") }} hidden={{ id }} title="Editar cliente" label="Editar" icon="edit" variant="secondary" />}
+              {canWrite && <FormDrawerButton action={updateCliente} fields={clienteFields(consultores, canTransfer, false, assessorOptions)} values={{ ...cliente, tags: cliente.tags.join(", ") }} hidden={{ id }} title="Editar cliente" label="Editar" icon="edit" variant="secondary" />}
               {drive.ativo && <DrivePastaButton tipo="cliente" id={id} className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-fg hover:bg-surface-2 hover:no-underline dark:text-fg" />}
               {can(profile, "lgpd.exportar") && (
                 <a href={`/api/lgpd/cliente/${id}`} download className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold hover:bg-surface-2" title="Relatório de dados pessoais do titular (LGPD, art. 18)">
@@ -116,7 +129,11 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
               {cliente.documento && <span>CPF/CNPJ: <b className="font-medium text-fg">{maskDocumento(cliente.documento)}</b></span>}
               {(cliente.whatsapp || cliente.telefone) && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{maskPhone(cliente.whatsapp || cliente.telefone)}</span>}
               {cliente.cidade && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{cliente.cidade}{cliente.uf ? `/${cliente.uf}` : ""}</span>}
-              <span>Consultor: <b className="font-medium text-fg">{consultor?.full_name ?? "—"}</b></span>
+              {cliente.telefone_recado && <span className="flex items-center gap-1">Recado: <b className="font-medium text-fg">{maskPhone(cliente.telefone_recado)}</b></span>}
+              {cliente.tipo_acao && <span>Ação: <b className="font-medium text-fg">{optionLabel(TIPOS_ACAO, cliente.tipo_acao)}</b></span>}
+              <span>Assessor: <b className="font-medium text-fg">{assessor?.nome ?? "—"}</b></span>
+              <span>Responsável: <b className="font-medium text-fg">{consultor?.full_name ?? "—"}</b></span>
+              {temSenhaGov && <span className="flex items-center gap-1.5">Senha gov: {canWrite ? <RevelarSenhaGov clienteId={id} /> : <b className="font-medium text-fg">cadastrada</b>}</span>}
             </div>
             {cliente.tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Etiquetas">
@@ -217,7 +234,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
           <CardHeader icon={<FolderOpen className="h-4 w-4" />} title={`Processos do cliente (${casos.length})`} description="Benefícios em andamento e histórico, com a situação de cada um" action={<Link href="/administrativo/processos" className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-300">Ver todos os processos</Link>} />
           <div className="overflow-x-auto">
             <table className="table-base">
-              <thead><tr><th>Tipo</th><th>Consultor</th><th>Recebido</th><th>Habilitado</th><th>Perícia / avaliação</th><th>Situação</th></tr></thead>
+              <thead><tr><th>Tipo</th><th>Assessor</th><th>Recebido</th><th>Habilitado</th><th>Perícia / avaliação</th><th>Situação</th></tr></thead>
               <tbody>
                 {casos.map((c) => (
                   <tr key={c.id}>
@@ -228,7 +245,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
                     <td className="whitespace-nowrap text-sm">{[c.pericia_em, c.avaliacao_em].filter(Boolean).map((x) => date(x as string)).join(" · ") || "—"}</td>
                     <td>
                       <div className="flex flex-wrap gap-1">
-                        <StatusBadge options={CASO_STATUS} value={c.status} />
+                        {canWrite ? <StatusCasoSelect casoId={c.id} status={c.status} podeRestritos={can(profile, "processos.status_restritos")} /> : <StatusBadge options={CASO_STATUS} value={c.status} />}
                         {c.pendencia && <Badge tone="amber">{optionLabel(CASO_PENDENCIAS, c.pendencia)}</Badge>}
                         {c.exigencia_cumprida && <Badge tone="green">exigência cumprida</Badge>}
                       </div>
