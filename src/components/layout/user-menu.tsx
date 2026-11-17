@@ -1,4 +1,5 @@
 "use client";
+import { ehEmailTecnico } from "@/lib/usuario-login";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Building, LogOut, UserCog, ShieldCheck, Moon, Sun } from "lucide-react";
@@ -56,7 +57,7 @@ export function UserMenu({ profile, trocarEmpresa }: { profile: Profile; trocarE
         <div className="absolute right-0 top-12 z-50 w-60 animate-pop-in overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-pop" role="menu">
           <div className="px-3 py-2.5">
             <p className="truncate text-sm font-semibold">{profile.full_name}</p>
-            <p className="truncate text-xs text-muted">{profile.email}</p>
+            <p className="truncate text-xs text-muted">{ehEmailTecnico(profile.email) ? `usuário ${profile.email.split("@")[0]}` : profile.email}</p>
           </div>
           <div className="my-1 h-px bg-line" />
           <Link href="/configuracoes?tab=perfil" onClick={() => setOpen(false)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-surface-2" role="menuitem">

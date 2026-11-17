@@ -17,10 +17,10 @@ export function LoginForm({ next }: { next?: string }) {
         </div>
       )}
       <div>
-        <label htmlFor="email" className="label">E-mail</label>
+        <label htmlFor="email" className="label">Usuário ou e-mail</label>
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input id="email" name="email" type="email" required autoComplete="email" placeholder="voce@easyconsorcios.com.br" className="input h-12 pl-10" />
+          <input id="email" name="email" type="text" required autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="ex.: jose.silva ou voce@empresa.com.br" className="input h-12 pl-10" />
         </div>
       </div>
       <div>
@@ -37,6 +37,7 @@ export function LoginForm({ next }: { next?: string }) {
         </div>
       </div>
       <SubmitButton variant="accent" className="h-12 w-full text-[15px]">Entrar no GE EASY</SubmitButton>
+      <p className="text-center text-xs text-muted">Entrou com nome de usuário e esqueceu a senha? Peça uma nova à gestão.</p>
     </form>
   );
 }

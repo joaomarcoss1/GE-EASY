@@ -46,6 +46,9 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   (`salvarResumoDia`; ligações para clientes viram `interacoes` uma única vez), gestão em `/comercial/resumo-diario`,
   planilha `/api/resumos`, lembrete `lembrar_resumo_diario()` às 18h. Meta `ligacoes` = por dia, o maior entre o
   declarado no resumo e as ligações do histórico.
+- Login por nome de usuário: `profiles.usuario` (único, só o servidor define) e conta com e-mail técnico
+  `<usuario>@usuarios.geeasy.invalid` (`src/lib/usuario-login.ts`). `signIn` aceita e-mail ou usuário; criação em
+  `criarUsuario` (usuário e/ou e-mail) e `criarAcessoAssessor` (liga `assessores.user_id`). Senha dessas contas: pela gestão.
 
 ## Permissões
 - `can(profile, "chave")` com as funcionalidades efetivas da sessão (`src/lib/rbac.ts` = catálogo de

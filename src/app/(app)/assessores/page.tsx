@@ -4,6 +4,9 @@ import { UserCheck } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { searchTerm, userOptions } from "@/lib/data";
+import { can } from "@/lib/rbac";
+import { criarAcessoAssessor } from "@/lib/actions/usuarios";
+import { sugerirUsuario } from "@/lib/usuario-login";
 import { maskDocumento, maskPhone } from "@/lib/format";
 import { ASSESSOR_CATEGORIAS } from "@/lib/constants";
 import { excluirAssessor, salvarAssessor } from "@/lib/actions/comercial";
@@ -18,6 +21,13 @@ import { FilterSelect, SearchInput } from "@/components/ui/filters";
 import { ComprovanteButton } from "@/components/comercial/comprovante-button";
 
 export const metadata: Metadata = { title: "Assessores" };
+
+const ACESSO_FIELDS: FieldDef[] = [
+  { name: "usuario", label: "Usuário (login)", required: true, span: 6, help: "Letras, números e ponto. Ex.: jose.silva" },
+  { name: "senha", label: "Senha", type: "password", required: true, span: 3, help: "Mínimo de 10 caracteres, com maiúscula, minúscula e número" },
+  { name: "confirmar", label: "Confirmar senha", type: "password", required: true, span: 3 },
+  { name: "trocar_senha", label: "Pedir para trocar a senha no primeiro acesso", type: "checkbox", span: 6 },
+];
 
 const ACORDO = [
   { value: "sim", label: "Sim" },
@@ -64,7 +74,8 @@ interface Assessor {
 
 /** Cadastro dos assessores (quem traz o cliente): CPF, contato, comprovante de residência e acordo comercial. */
 export default async function AssessoresPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  await requirePermission("consultores.manage");
+  const { profile } = await requirePermission("consultores.manage");
+  const criaAcesso = can(profile, "usuarios.manage");
   const sp = await searchParams;
   const supabase = await createClient();
   let query = supabase.from("assessores").select("id, nome, cpf, telefone, email, acordo_comercial, ativo, comprovante_path, observacoes, user_id, categoria, apelidos").order("ativo", { ascending: false }).order("nome");
@@ -74,11 +85,13 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
     query = digits.length >= 3 ? query.or(`cpf.ilike.%${digits}%,telefone.ilike.%${digits}%`) : query.ilike("nome", `%${q}%`);
   }
   if (sp.acordo === "sim" || sp.acordo === "nao") query = query.eq("acordo_comercial", sp.acordo === "sim");
-  const [{ data }, { data: vinculos }, usuarios] = await Promise.all([
+  const [{ data }, { data: vinculos }, usuarios, { data: logins }] = await Promise.all([
     query,
     supabase.from("clientes").select("assessor_id").not("assessor_id", "is", null).range(0, 9999),
     userOptions(),
+    supabase.from("membros").select("id, usuario, email, active"),
   ]);
+  const loginDe = new Map(((logins ?? []) as { id: string; usuario: string | null; email: string | null; active: boolean }[]).map((m) => [m.id, m]));
   const lista = (data ?? []) as Assessor[];
   const clientesPor = new Map<string, number>();
   for (const v of vinculos ?? []) clientesPor.set(v.assessor_id as string, (clientesPor.get(v.assessor_id as string) ?? 0) + 1);
@@ -105,7 +118,7 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
           <div className="overflow-x-auto">
             <table className="table-base">
               <thead>
-                <tr><th>Assessor</th><th>CPF</th><th>Contato</th><th>Acordo comercial</th><th>Comprovante</th><th className="text-right">Clientes</th><th /></tr>
+                <tr><th>Assessor</th><th>CPF</th><th>Contato</th><th>Acordo comercial</th><th>Comprovante</th><th>Acesso (app)</th><th className="text-right">Clientes</th><th /></tr>
               </thead>
               <tbody>
                 {lista.map((a) => (
@@ -115,6 +128,26 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
                     <td className="text-sm">{a.telefone ? maskPhone(a.telefone) : "—"}{a.email && <div className="text-xs text-muted">{a.email}</div>}</td>
                     <td>{a.acordo_comercial ? <Badge tone="green">Sim</Badge> : <Badge tone="slate">Não</Badge>}</td>
                     <td>{a.comprovante_path ? <ComprovanteButton assessorId={a.id} /> : <span className="text-xs text-amber-700 dark:text-amber-300">pendente</span>}</td>
+                    <td className="text-sm">
+                      {a.user_id ? (
+                        <span className="text-xs">{loginDe.get(a.user_id)?.usuario ? <>usuário <b>{loginDe.get(a.user_id)?.usuario}</b></> : (loginDe.get(a.user_id)?.email ?? "com acesso")}{loginDe.get(a.user_id)?.active === false && <Badge tone="slate" className="ml-1">inativo</Badge>}</span>
+                      ) : criaAcesso ? (
+                        <FormDrawerButton
+                          action={criarAcessoAssessor}
+                          fields={ACESSO_FIELDS}
+                          values={{ usuario: sugerirUsuario(a.nome), trocar_senha: false }}
+                          hidden={{ assessor_id: a.id }}
+                          title={`Criar acesso — ${a.nome}`}
+                          description="Login simples (usuário e senha) para o sistema e o app de campo. Passe o usuário e a senha para o assessor."
+                          label="Criar acesso"
+                          icon="key"
+                          variant="secondary"
+                          size="sm"
+                          width="max-w-md"
+                          submitLabel="Criar acesso"
+                        />
+                      ) : <span className="text-xs text-muted">sem acesso</span>}
+                    </td>
                     <td className="text-right tabular-nums">{clientesPor.get(a.id) ?? 0}</td>
                     <td>
                       <div className="flex justify-end gap-1">

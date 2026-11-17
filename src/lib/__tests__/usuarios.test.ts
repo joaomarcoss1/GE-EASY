@@ -120,6 +120,26 @@ describe("criar usuário no sistema", () => {
     expect(vinculo?.args[0]).toMatchObject({ empresa_id: EMPRESA, user_id: ALVO, role: "administrativo", ativo: true, admin_master: false });
   });
 
+  it("cria acesso só com nome de usuário (sem e-mail), com e-mail técnico e o usuário gravado no perfil", async () => {
+    comoUsuario(["usuarios.manage"]);
+    const { criarUsuario } = await import("../actions/usuarios");
+    const r = await criarUsuario({}, novo({ email: "", usuario: "José Silva" }));
+    expect(r.ok).toBe(true);
+    expect(r.message).toMatch(/jose\.silva/);
+    expect(authAdmin.createUser).toHaveBeenCalledWith(expect.objectContaining({ email: "jose.silva@usuarios.geeasy.invalid", password: SENHA, email_confirm: true }));
+    const perfil = chamadas.find((c) => c.tabela === "profiles" && c.metodo === "update");
+    expect(perfil?.args[0]).toMatchObject({ usuario: "jose.silva" });
+  });
+
+  it("exige usuário ou e-mail e recusa usuário já existente", async () => {
+    comoUsuario(["usuarios.manage"]);
+    const { criarUsuario } = await import("../actions/usuarios");
+    expect((await criarUsuario({}, novo({ email: "", usuario: "" }))).fieldErrors?.usuario).toBeTruthy();
+    respostas.profiles = { maybeSingle: { data: { id: ALVO } } };
+    expect((await criarUsuario({}, novo({ email: "", usuario: "jose.silva" }))).fieldErrors?.usuario).toBeTruthy();
+    expect(authAdmin.createUser).not.toHaveBeenCalled();
+  });
+
   it("desfaz a conta nova se o vínculo falhar", async () => {
     comoUsuario(["usuarios.manage"]);
     respostas.empresa_membros = { insert: { error: { code: "P0001", message: "Limite de usuários do plano atingido" } } };

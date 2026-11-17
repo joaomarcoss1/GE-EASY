@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 import { strongPassword } from "@/lib/validators";
+import { emailTecnico, normalizarUsuario, USUARIO_RE } from "@/lib/usuario-login";
 import type { ActionState } from "./types";
 
 const safeNext = (v: unknown) => (typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : "/inicio");
@@ -40,11 +41,25 @@ async function ipDaRequisicao() {
   return (h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0] ?? "local").trim().slice(0, 64);
 }
 
+/** E-mail da conta a partir do que a pessoa digitou: e-mail, ou nome de usuário (consultado pelo servidor). */
+async function emailDoLogin(login: string): Promise<string | null> {
+  if (login.includes("@")) return z.string().email().safeParse(login).success ? login : null;
+  const usuario = normalizarUsuario(login);
+  if (!USUARIO_RE.test(usuario)) return null;
+  if (hasServiceRole()) {
+    const { data } = await createAdminClient().from("profiles").select("email").eq("usuario", usuario).maybeSingle();
+    if (data?.email) return (data.email as string).toLowerCase();
+  }
+  return emailTecnico(usuario);
+}
+
 export async function signIn(_: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = z
-    .object({ email: z.string().trim().toLowerCase().email("E-mail inválido"), password: z.string().min(6, "Senha inválida").max(200) })
-    .safeParse({ email: formData.get("email"), password: formData.get("password") });
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const bruto = z.object({ login: z.string().trim().toLowerCase().min(3, "Informe o e-mail ou o usuário").max(160), password: z.string().min(6, "Senha inválida").max(200) })
+    .safeParse({ login: formData.get("email"), password: formData.get("password") });
+  if (!bruto.success) return { error: bruto.error.issues[0].message };
+  const email = await emailDoLogin(bruto.data.login);
+  if (!email) return { error: "E-mail ou usuário inválido." };
+  const parsed = { data: { email, password: bruto.data.password } };
 
   const ip = await ipDaRequisicao();
   const chaveIp = chaveLogin("ip", ip, parsed.data.email);
@@ -58,7 +73,7 @@ export async function signIn(_: ActionState, formData: FormData): Promise<Action
 
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) await registrarFalhaLogin(parsed.data.email, ip);
-  if (error) return { error: error.message.includes("Email not confirmed") ? "Confirme seu e-mail antes de entrar." : "E-mail ou senha incorretos." };
+  if (error) return { error: error.message.includes("Email not confirmed") ? "Confirme seu e-mail antes de entrar." : "Usuário/e-mail ou senha incorretos." };
   await Promise.all([supabase.rpc("limpar_rate_limit_login", { p_hash: chaveIp }), supabase.rpc("limpar_rate_limit_login", { p_hash: chaveEmail })]);
   // Registro de acesso (Marco Civil da Internet, art. 15: guarda dos registros de acesso a aplicações)
   const ua = (await headers()).get("user-agent")?.slice(0, 200) ?? null;

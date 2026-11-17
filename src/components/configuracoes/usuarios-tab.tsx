@@ -1,3 +1,4 @@
+import { ehEmailTecnico } from "@/lib/usuario-login";
 import { AlertTriangle, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { hasServiceRole } from "@/lib/supabase/admin";
@@ -11,6 +12,9 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { editUsuarioFields, novoUsuarioFields, senhaUsuarioFields } from "./usuario-fields";
+
+/** Login exibido: nome de usuário (sem o e-mail técnico) ou o e-mail real. */
+const loginDe = (u: { email?: string | null; usuario?: string | null }) => (u.usuario ? `usuário ${u.usuario}${u.email && !ehEmailTecnico(u.email) ? ` · ${u.email}` : ""}` : (u.email ?? ""));
 
 export async function UsuariosTab({ currentUserId, isMaster }: { currentUserId: string; isMaster: boolean }) {
   const supabase = await createClient();
@@ -44,7 +48,7 @@ export async function UsuariosTab({ currentUserId, isMaster }: { currentUserId: 
           title="Usuários"
           description={`${users.length} usuário(s)${pending ? ` · ${pending} aguardando aprovação` : ""}`}
           icon={<Users className="h-4 w-4" />}
-          action={serviceRole && <FormDrawerButton action={criarUsuario} fields={novoUsuarioFields(opNiveis)} values={{ role: "administrativo", comissao_percentual: 0, trocar_senha: true }} title="Novo usuário" label="Novo usuário" variant="accent" size="sm" width="max-w-lg" submitLabel="Criar acesso" description="O acesso é criado na hora, sem e-mail: passe o login e a senha para a pessoa." />}
+          action={serviceRole && <FormDrawerButton action={criarUsuario} fields={novoUsuarioFields(opNiveis)} values={{ role: "administrativo", comissao_percentual: 0, trocar_senha: true }} title="Novo usuário" label="Novo usuário" variant="accent" size="sm" width="max-w-lg" submitLabel="Criar acesso" description="O acesso é criado na hora: informe o nome de usuário (ou um e-mail) e a senha e passe para a pessoa. Serve para o sistema e para o app de campo." />}
         />
         {users.length === 0 ? (
           <EmptyState title="Nenhum usuário" />
@@ -73,7 +77,7 @@ export async function UsuariosTab({ currentUserId, isMaster }: { currentUserId: 
                             {u.full_name || "—"}
                             {u.id === currentUserId && <span className="ml-1.5 text-xs font-normal text-muted">(você)</span>}
                           </span>
-                          <span className="block truncate text-xs text-muted">{u.email}</span>
+                          <span className="block truncate text-xs text-muted">{loginDe(u)}</span>
                         </span>
                       </div>
                     </td>
@@ -94,8 +98,8 @@ export async function UsuariosTab({ currentUserId, isMaster }: { currentUserId: 
                           fields={editUsuarioFields}
                           values={{ role: u.role, active: u.active, comissao_percentual: u.comissao_percentual, territorio: u.territorio, cargo: u.cargo }}
                           hidden={{ id: u.id }}
-                          title={u.active ? `Editar ${u.full_name || u.email}` : `Aprovar ${u.full_name || u.email}`}
-                          description={u.id === currentUserId ? "Você não pode remover seu próprio acesso de administrador." : u.email}
+                          title={u.active ? `Editar ${u.full_name || loginDe(u)}` : `Aprovar ${u.full_name || loginDe(u)}`}
+                          description={u.id === currentUserId ? "Você não pode remover seu próprio acesso de administrador." : loginDe(u)}
                           icon="edit"
                           size="icon"
                           variant="ghost"
@@ -107,8 +111,8 @@ export async function UsuariosTab({ currentUserId, isMaster }: { currentUserId: 
                             fields={senhaUsuarioFields}
                             values={{ trocar_senha: true }}
                             hidden={{ id: u.id }}
-                            title={`Definir senha: ${u.full_name || u.email}`}
-                            description={`Login: ${u.email}`}
+                            title={`Definir senha: ${u.full_name || loginDe(u)}`}
+                            description={`Login: ${loginDe(u)}`}
                             label="Definir senha"
                             icon="key"
                             size="icon"

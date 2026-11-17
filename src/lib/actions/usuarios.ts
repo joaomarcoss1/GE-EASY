@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import { strongPassword } from "@/lib/validators";
+import { emailTecnico, normalizarUsuario, USUARIO_RE } from "@/lib/usuario-login";
 import { dbError, formToObject, guard, registrarAcesso, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
@@ -61,7 +62,8 @@ export async function updateUsuario(_: ActionState, formData: FormData): Promise
 }
 
 const novoSchema = z.object({
-  email: z.string().trim().toLowerCase().email("E-mail inválido").max(160),
+  email: z.string().trim().toLowerCase().max(160).optional().default("").refine((v) => !v || z.string().email().safeParse(v).success, "E-mail inválido"),
+  usuario: z.string().max(60).optional().default("").transform((v) => normalizarUsuario(v)),
   full_name: zs.required("Nome", 120),
   senha: z.string().max(128).optional().default(""),
   confirmar: z.string().max(128).optional().default(""),
@@ -70,6 +72,9 @@ const novoSchema = z.object({
   nivel_id: zs.uuid(),
   comissao_percentual: zs.number(0, 100),
   territorio: zs.text(120),
+}).superRefine((v, ctx) => {
+  if (!v.email && !v.usuario) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["usuario"], message: "Informe o nome de usuário (ou um e-mail)" });
+  if (v.usuario && !USUARIO_RE.test(v.usuario)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["usuario"], message: "Use de 3 a 30 letras, números, ponto ou sublinhado" });
 });
 
 const erroSenha = (senha: string, confirmar: string): ActionState | null => {
@@ -92,13 +97,28 @@ export async function criarUsuario(_: ActionState, formData: FormData): Promise<
   if (!hasServiceRole()) return { error: SERVICE_ROLE_MSG };
   const parsed = novoSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
-  const v = parsed.data;
-  const master = !!g.session.profile.admin_master;
-  if (GESTAO.has(v.role) && !master) return { error: "Somente o administrador master cria administradores e gestores.", fieldErrors: { role: "Perfil de gestão" } };
-  const empresaId = g.session.empresa!.id;
-  const admin = createAdminClient();
+  const r = await criarConta(g.session, parsed.data);
+  if (r.ok) revalidateUsers();
+  return r;
+}
 
-  const { data: perfil } = await admin.from("profiles").select("id").eq("email", v.email).maybeSingle();
+type NovoAcesso = z.output<typeof novoSchema>;
+type SessaoGuard = Extract<Awaited<ReturnType<typeof guard>>, { session: unknown }>["session"];
+
+/** Cria (ou vincula) a conta na empresa ativa. Chamar só depois do guard("usuarios.manage"). */
+async function criarConta(session: SessaoGuard, v: NovoAcesso): Promise<ActionState & { id?: string }> {
+  const master = !!session.profile.admin_master;
+  if (GESTAO.has(v.role) && !master) return { error: "Somente o administrador master cria administradores e gestores.", fieldErrors: { role: "Perfil de gestão" } };
+  const empresaId = session.empresa!.id;
+  const admin = createAdminClient();
+  if (v.usuario) {
+    const { data: dono } = await admin.from("profiles").select("id").eq("usuario", v.usuario).maybeSingle();
+    if (dono) return { error: `O usuário "${v.usuario}" já existe. Escolha outro.`, fieldErrors: { usuario: "Já existe" } };
+  }
+  const email = v.email || emailTecnico(v.usuario);
+  const login = v.usuario || email;
+
+  const { data: perfil } = await admin.from("profiles").select("id, usuario").eq("email", email).maybeSingle();
   let userId = (perfil?.id as string | undefined) ?? null;
   const novo = !userId;
   if (userId) {
@@ -108,7 +128,7 @@ export async function criarUsuario(_: ActionState, formData: FormData): Promise<
     const invalida = erroSenha(v.senha, v.confirmar);
     if (invalida) return invalida;
     const { data, error } = await admin.auth.admin.createUser({
-      email: v.email,
+      email,
       password: v.senha,
       email_confirm: true,
       user_metadata: { full_name: v.full_name },
@@ -116,7 +136,7 @@ export async function criarUsuario(_: ActionState, formData: FormData): Promise<
     });
     if (error || !data.user) {
       console.error("[usuarios.criar]", error?.status, error?.code);
-      if (error?.code === "email_exists" || /already|registered/i.test(error?.message ?? "")) return { error: "Já existe uma conta com este e-mail.", fieldErrors: { email: "Já cadastrado" } };
+      if (error?.code === "email_exists" || /already|registered/i.test(error?.message ?? "")) return v.email ? { error: "Já existe uma conta com este e-mail.", fieldErrors: { email: "Já cadastrado" } } : { error: `O usuário "${v.usuario}" já existe. Escolha outro.`, fieldErrors: { usuario: "Já existe" } };
       if (error?.code === "weak_password") return { error: "Senha fraca ou já vazada na internet. Escolha outra.", fieldErrors: { senha: "Senha fraca" } };
       return { error: "Não foi possível criar o usuário. Tente novamente." };
     }
@@ -125,7 +145,7 @@ export async function criarUsuario(_: ActionState, formData: FormData): Promise<
 
   const { error: vincError } = await admin
     .from("empresa_membros")
-    .insert({ empresa_id: empresaId, user_id: userId, role: v.role, ativo: true, admin_master: false, convidado_por: g.session.userId });
+    .insert({ empresa_id: empresaId, user_id: userId, role: v.role, ativo: true, admin_master: false, convidado_por: session.userId });
   if (vincError) {
     console.error("[usuarios.criar.vinculo]", vincError.code, vincError.message);
     // conta criada agora sem vínculo não serve para nada: desfaz
@@ -135,8 +155,10 @@ export async function criarUsuario(_: ActionState, formData: FormData): Promise<
   if (novo) {
     await admin
       .from("profiles")
-      .update({ full_name: v.full_name, comissao_percentual: v.comissao_percentual ?? 0, territorio: v.territorio, empresa_padrao_id: empresaId })
+      .update({ full_name: v.full_name, comissao_percentual: v.comissao_percentual ?? 0, territorio: v.territorio, empresa_padrao_id: empresaId, usuario: v.usuario || null })
       .eq("id", userId);
+  } else if (v.usuario && !perfil?.usuario) {
+    await admin.from("profiles").update({ usuario: v.usuario }).eq("id", userId);
   }
   let aviso = "";
   if (v.nivel_id && master) {
@@ -148,13 +170,45 @@ export async function criarUsuario(_: ActionState, formData: FormData): Promise<
       : { error: { message: "nível não encontrado" } };
     if (error) aviso = " O nível de acesso não foi aplicado: ajuste na tela Acessos.";
   }
-  await registrarAcesso("USUARIO_CRIADO", "empresa_membros", userId, { role: v.role, conta_nova: novo, trocar_senha: novo && v.trocar_senha });
-  revalidateUsers();
+  await registrarAcesso("USUARIO_CRIADO", "empresa_membros", userId, { role: v.role, conta_nova: novo, trocar_senha: novo && v.trocar_senha, por_usuario: !v.email });
   return {
     ok: true,
     id: userId!,
-    message: (novo ? `Acesso criado. ${v.email} já pode entrar com a senha definida${v.trocar_senha ? " (e vai trocá-la no primeiro acesso)" : ""}.` : `${v.email} já tinha conta e foi adicionado(a) à empresa com a senha atual dele(a).`) + aviso,
+    message: (novo ? `Acesso criado. Login: ${login} — já pode entrar com a senha definida${v.trocar_senha ? " (e vai trocá-la no primeiro acesso)" : ""}.` : `${login} já tinha conta e foi adicionado(a) à empresa com a senha atual.`) + aviso,
   };
+}
+
+const acessoAssessorSchema = z.object({
+  assessor_id: zs.requiredUuid("o assessor"),
+  usuario: z.string().max(60).transform((v) => normalizarUsuario(v)).refine((v) => USUARIO_RE.test(v), "Use de 3 a 30 letras, números, ponto ou sublinhado"),
+  senha: z.string().max(128),
+  confirmar: z.string().max(128),
+  trocar_senha: zs.bool(),
+});
+
+/** Cria o login (usuário e senha) do assessor para o app de campo e liga ao cadastro dele. */
+export async function criarAcessoAssessor(_: ActionState, formData: FormData): Promise<ActionState> {
+  const g = await guard("usuarios.manage");
+  if ("denied" in g) return g.denied;
+  if (!hasServiceRole()) return { error: SERVICE_ROLE_MSG };
+  const parsed = acessoAssessorSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return zodErrors(parsed.error);
+  const v = parsed.data;
+  const supabase = await createClient();
+  const { data: ass } = await supabase.from("assessores").select("id, nome, categoria, telefone, user_id").eq("id", v.assessor_id).maybeSingle();
+  if (!ass) return { error: "Assessor não encontrado." };
+  if (ass.user_id) return { error: "Este assessor já tem acesso ao sistema." };
+  const r = await criarConta(g.session, {
+    email: "", usuario: v.usuario, full_name: ass.nome as string, senha: v.senha, confirmar: v.confirmar, trocar_senha: v.trocar_senha,
+    role: ass.categoria === "corretor" ? "consultor_externo" : "consultor", nivel_id: null, comissao_percentual: null, territorio: null,
+  });
+  if (!r.ok || !r.id) return r;
+  // liga o login ao cadastro do assessor (mesma empresa; o service role ignora o RLS, por isso o filtro explícito)
+  const { error } = await createAdminClient().from("assessores").update({ user_id: r.id }).eq("id", ass.id).eq("empresa_id", g.session.empresa!.id);
+  if (error) console.error("[assessor.acesso]", error.code, error.message);
+  revalidateUsers();
+  revalidatePath("/assessores");
+  return { ...r, message: `${r.message} O app de campo fica em /campo.` };
 }
 
 const senhaSchema = z.object({

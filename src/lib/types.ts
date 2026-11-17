@@ -22,6 +22,7 @@ export interface Profile {
   /** Somente na sessão: funcionalidades efetivas na empresa ativa */
   permissoes?: string[];
   admin_master?: boolean;
+  usuario?: string | null;
 }
 
 export interface EmpresaResumo {

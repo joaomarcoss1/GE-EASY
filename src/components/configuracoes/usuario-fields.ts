@@ -7,7 +7,8 @@ const SENHA_HELP = "Mínimo de 10 caracteres, com maiúscula, minúscula e núme
 export function novoUsuarioFields(niveis: Option[] = []): FieldDef[] {
   return [
     { name: "full_name", label: "Nome completo", required: true, span: 6, section: "Pessoa" },
-    { name: "email", label: "E-mail (login)", type: "email", required: true, span: 6 },
+    { name: "usuario", label: "Usuário (login)", span: 3, placeholder: "ex.: jose.silva", help: "Letras, números e ponto. Entra com este usuário e a senha, no sistema e no app de campo." },
+    { name: "email", label: "E-mail (opcional)", type: "email", span: 3, help: "Só se a pessoa tiver e-mail próprio (permite recuperar a senha sozinha)." },
     { name: "senha", label: "Senha inicial", type: "password", span: 3, section: "Senha", help: SENHA_HELP },
     { name: "confirmar", label: "Confirmar senha", type: "password", span: 3, help: "Se o e-mail já tiver conta em outra empresa, a senha atual dele é mantida" },
     { name: "trocar_senha", label: "Pedir para trocar a senha no primeiro acesso", type: "checkbox", span: 6 },

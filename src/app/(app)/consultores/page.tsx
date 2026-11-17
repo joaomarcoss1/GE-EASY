@@ -44,7 +44,7 @@ export default async function ConsultoresPage({ searchParams }: { searchParams: 
         description="Equipe interna e assessores externos: carteira, produção do mês, comissões e visitas de campo."
         actions={
           can(profile, "usuarios.manage") && (
-            <FormDrawerButton action={criarUsuario} fields={novoUsuarioFields()} values={{ role: "consultor_externo", trocar_senha: true }} title="Novo assessor" label="Novo assessor" variant="accent" width="max-w-lg" submitLabel="Criar acesso" description="O acesso é criado na hora, sem e-mail: passe o login e a senha para a pessoa." />
+            <FormDrawerButton action={criarUsuario} fields={novoUsuarioFields()} values={{ role: "consultor_externo", trocar_senha: true }} title="Novo assessor" label="Novo assessor" variant="accent" width="max-w-lg" submitLabel="Criar acesso" description="O acesso é criado na hora: informe o nome de usuário e a senha e passe para a pessoa. Ela entra no app de campo em /campo." />
           )
         }
       />
