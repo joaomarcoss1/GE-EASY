@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlarmClock, CalendarPlus, FolderSearch, ListPlus, ShieldAlert, Target, UserPlus } from "lucide-react";
+import { AlarmClock, CalendarPlus, ClipboardList, FolderSearch, ListPlus, ShieldAlert, Target, UserPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import type { Session } from "@/lib/auth";
@@ -42,7 +42,7 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
   const hoje = todayISO();
   const em7 = new Date(Date.now() + 7 * 86_400_000).toISOString();
 
-  const [resumoRes, exigRes, docRes, metasRes, meusAssRes, inc] = await Promise.all([
+  const [resumoRes, exigRes, docRes, metasRes, meusAssRes, inc, meuResumoRes] = await Promise.all([
     veClientes ? supabase.rpc("cliente_casos_resumo") : Promise.resolve({ data: null }),
     veClientes && podeRestritos
       ? supabase.from("cliente_casos").select("id, cliente_id, tipo, exigencia_prazo, exigencia_prorrogada, clientes!inner(nome)").eq("status", "exigencia").order("exigencia_prazo", { ascending: true, nullsFirst: false }).limit(8)
@@ -53,7 +53,11 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
     veClientes ? supabase.rpc("metas_processos_painel", { p_ref: hoje }) : Promise.resolve({ data: [] }),
     supabase.from("assessores").select("id").eq("user_id", userId),
     veBase ? carregarInconsistencias(can(profile, "rotas.ver")) : Promise.resolve(null),
+    supabase.from("resumos_diarios").select("id").eq("usuario_id", userId).eq("data", hoje).maybeSingle(),
   ]);
+  // consultores e assessores com usuário fazem o resumo do dia
+  const fazResumo = ["consultor", "consultor_externo"].includes(profile.role) || (meusAssRes.data ?? []).length > 0;
+  const resumoPendente = fazResumo && !meuResumoRes.data;
 
   const porStatus = ((resumoRes.data ?? {}) as { por_status?: Record<string, number>; total?: number }).por_status ?? {};
   const totalProc = Object.values(porStatus).reduce((a, n) => a + n, 0);
@@ -83,6 +87,14 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
           </>
         }
       />
+
+      {resumoPendente && (
+        <Link href="/comercial/meu-resumo" className="mb-6 flex items-center gap-3 rounded-2xl border-2 border-accent-300 bg-accent-50 px-5 py-3 text-sm text-accent-900 hover:bg-accent-100 dark:border-accent-800 dark:bg-accent-900/30 dark:text-accent-100">
+          <ClipboardList className="h-5 w-5 shrink-0" />
+          <span className="flex-1"><b>Faça o resumo do dia</b> — processos, ligações e para quem ligou. Leva menos de 2 minutos.</span>
+          <span className="font-semibold">Fazer agora</span>
+        </Link>
+      )}
 
       {veClientes && (
         <Card className="mb-6">

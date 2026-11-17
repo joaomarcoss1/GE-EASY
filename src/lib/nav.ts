@@ -57,6 +57,7 @@ const ALL_NAV: NavGroup[] = [
       { href: "/metas/processos", label: "Metas", icon: "Target", permission: "clientes.view" },
       { href: "/comercial", label: "Painel comercial", icon: "TrendingUp", permission: "comercial.view" },
       { href: "/assessores", label: "Assessores", icon: "UserCheck", permission: "consultores.manage" },
+      { href: "/comercial/meu-resumo", label: "Meu resumo do dia", icon: "ClipboardList", permission: "clientes.view" },
       { href: "/comercial/resumo-diario", label: "Resumo diário", icon: "CalendarCheck", permission: "clientes.view" },
       { href: "/consultores", label: "Produção dos assessores", icon: "TrendingUp", permission: "consultores.manage" },
     ],

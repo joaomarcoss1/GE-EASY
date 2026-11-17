@@ -42,6 +42,10 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
 - Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,
   tanque, avaria assinada) obrigatórios para iniciar/finalizar rotas com veículo; `rota_assinaturas`; relatório
   `/rotas/[id]/relatorio`. App de campo: `/campo` (tipos de fila `checklist` e `assinatura_rota`).
+- Resumo do dia: `resumos_diarios` (um por usuário/dia; só hoje ou ontem), tela `/comercial/meu-resumo`
+  (`salvarResumoDia`; ligações para clientes viram `interacoes` uma única vez), gestão em `/comercial/resumo-diario`,
+  planilha `/api/resumos`, lembrete `lembrar_resumo_diario()` às 18h. Meta `ligacoes` = por dia, o maior entre o
+  declarado no resumo e as ligações do histórico.
 
 ## Permissões
 - `can(profile, "chave")` com as funcionalidades efetivas da sessão (`src/lib/rbac.ts` = catálogo de

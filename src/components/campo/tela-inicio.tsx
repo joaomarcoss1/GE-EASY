@@ -1,5 +1,5 @@
 "use client";
-import { AlarmClock, Camera, Clock, Map as MapIcon, Receipt, UserPlus, Users } from "lucide-react";
+import { AlarmClock, Camera, Clock, Map as MapIcon, Receipt, UserPlus, Users, ClipboardList } from "lucide-react";
 import { useCampo } from "./contexto";
 import { hojeISO } from "./tipos";
 
@@ -43,6 +43,11 @@ export function TelaInicio() {
           ))}
         </div>
       )}
+
+      <a href="/comercial/meu-resumo" className="card flex items-center gap-3 border-2 border-brand-200 p-4 dark:border-brand-800">
+        <ClipboardList className="h-6 w-6 shrink-0 text-brand-700 dark:text-brand-200" />
+        <span className="min-w-0 flex-1"><b className="block">Resumo do dia</b><span className="text-xs text-muted">Processos, ligações e para quem ligou · menos de 2 min (precisa de internet)</span></span>
+      </a>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="card p-4"><p className="text-xs text-muted">Leads novos</p><p className="text-2xl font-bold">{snap.contadores.leads_novos}</p></div>

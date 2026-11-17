@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Badge, optionLabel } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/cn";
+import { ResumosEnviados } from "@/components/comercial/resumos-enviados";
 
 export const metadata: Metadata = { title: "Resumo diário dos assessores" };
 
@@ -117,6 +118,7 @@ export default async function ResumoDiarioPage({ searchParams }: { searchParams:
           </div>
         )}
       </Card>
+      <ResumosEnviados dia={dia} gestao={gestao || can(profile, "clientes.ver_todos")} podeExportar={can(profile, "clientes.exportar") && (gestao || can(profile, "clientes.ver_todos"))} />
     </>
   );
 }

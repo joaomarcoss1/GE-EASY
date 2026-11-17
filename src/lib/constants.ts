@@ -690,3 +690,19 @@ export const INCONSISTENCIAS: (Option & { descricao: string; gravidade: "alta" |
   { value: "cliente_sem_telefone", label: "Cliente sem telefone", descricao: "Sem telefone, WhatsApp ou recado", gravidade: "baixa", tone: "slate" },
   { value: "rota_sem_checklist", label: "Rota sem checklist do veículo", descricao: "Rota concluída sem o checklist de saída ou de chegada", gravidade: "media", tone: "amber" },
 ];
+
+// ---------------------------------------------------------------- Resumo do dia (consultor/assessor)
+export const LIGACAO_RESULTADOS: Option[] = [
+  { value: "atendeu", label: "Atendeu", tone: "green" },
+  { value: "nao_atendeu", label: "Não atendeu", tone: "slate" },
+  { value: "agendou", label: "Agendou", tone: "brand" },
+  { value: "retornar", label: "Retornar", tone: "amber" },
+  { value: "fechou", label: "Fechou / cadastrou", tone: "green" },
+  { value: "numero_errado", label: "Número errado", tone: "red" },
+];
+export const DIA_AVALIACOES: Option[] = [
+  { value: "otimo", label: "Ótimo", tone: "green" },
+  { value: "bom", label: "Bom", tone: "brand" },
+  { value: "regular", label: "Regular", tone: "amber" },
+  { value: "dificil", label: "Difícil", tone: "red" },
+];
