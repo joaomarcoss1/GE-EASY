@@ -576,6 +576,11 @@ export interface Rota {
   aprovada_em: string | null;
   observacoes: string | null;
   created_at: string;
+  objetivo_tipo: string | null;
+  cidades: string[];
+  corretores: string[];
+  participantes: string[];
+  exige_checklist: boolean;
 }
 
 export interface RotaResumo {

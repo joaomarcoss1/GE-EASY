@@ -40,6 +40,14 @@ export interface RotaCampo {
   previsao?: { km: number; litros: number; combustivel: number; consumo_km_l: number } | null;
   paradas: ParadaCampo[];
   checkins: CheckinCampo[];
+  veiculo_id?: string | null;
+  exige_checklist?: boolean;
+  objetivo_tipo?: string | null;
+  cidades?: string[];
+  corretores_nomes?: string[];
+  participantes?: { id: string; nome: string }[];
+  checklists?: { momento: "saida" | "chegada"; km: number; pendente?: boolean }[];
+  assinaturas?: { nome: string; pendente?: boolean }[];
 }
 export interface Snapshot {
   gerado_em: string;

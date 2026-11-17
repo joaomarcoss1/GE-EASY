@@ -42,7 +42,7 @@ export function lerFiltros(sp: Record<string, string | undefined>): FiltrosCasos
 }
 
 export const SELECT_CASOS =
-  "id, cliente_id, ano, item, tipo, corretor, corretor_principal, cidade, uf, recebido_em, habilitado_em, exigencia_estado, exigencia_cumprida, pericia_em, avaliacao_em, status, pendencia, exigencia_prazo, exigencia_prorrogada, assinaturas, situacao_planilha, observacoes, contrato_assinado, procuracao_assinada, retroativo, clientes!inner(id, nome, documento, whatsapp, telefone, excluido_em)";
+  "id, cliente_id, ano, item, tipo, corretor, corretor_principal, cidade, uf, recebido_em, habilitado_em, exigencia_estado, exigencia_cumprida, pericia_em, avaliacao_em, status, pendencia, exigencia_prazo, exigencia_prorrogada, assessor_id, protocolo_inss, situacao_atual, assinaturas, situacao_planilha, observacoes, contrato_assinado, procuracao_assinada, retroativo, clientes!inner(id, nome, documento, whatsapp, telefone, excluido_em), assessores(nome)";
 
 /** Busca por nome: cada palavra precisa aparecer (sem acento, em qualquer ordem); 3+ dígitos também buscam o CPF. */
 export function filtrosNome(q: string) {

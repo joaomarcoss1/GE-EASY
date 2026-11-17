@@ -32,6 +32,16 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
 - Resumo diário dos assessores: `resumo_assessores_dia(data)` (só números; gestão vê todos, assessor vê o dele via
   `assessores.user_id`), tela `/comercial/resumo-diario` e notificação `resumo_diario_assessores()` (20h30).
 - Painel (`/dashboard`): `components/dashboard/painel-escritorio.tsx` (processos, prazos, metas, reuniões e tarefas).
+- Especificação de metas/painel/rotas: `docs/especificacao-metas-rotas-2026-11.md`. Master entra em `/dashboard`
+  (`painel-diretoria.tsx`); demais em `painel-escritorio.tsx`.
+- `cliente_casos.assessor_id` (gatilho: assessor do cliente → `assessores.apelidos` × corretor da planilha) é a base de
+  metas e relatórios. Habilitar exige `protocolo_inss` e `situacao_atual` (ação + gatilho); `habilitado_em` automático.
+- Metas: `metas_processos` (recorrentes) + `metas_processos_painel(ref)`; tela `/metas/processos` (`metas.manage` edita).
+- Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
+- Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).
+- Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,
+  tanque, avaria assinada) obrigatórios para iniciar/finalizar rotas com veículo; `rota_assinaturas`; relatório
+  `/rotas/[id]/relatorio`. App de campo: `/campo` (tipos de fila `checklist` e `assinatura_rota`).
 
 ## Permissões
 - `can(profile, "chave")` com as funcionalidades efetivas da sessão (`src/lib/rbac.ts` = catálogo de

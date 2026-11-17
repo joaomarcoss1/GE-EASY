@@ -9,6 +9,7 @@ import {
 } from "@/lib/constants";
 import { date as dateBR, maskDocumento, maskPhone, todayISO } from "@/lib/format";
 import { toCsv as csvTexto } from "@/lib/csv";
+import { aba, gerarPlanilha, respostaPlanilha } from "@/lib/planilha";
 import { fetchAll } from "@/components/dashboard/fetch-all";
 import { addDays, firstDay, isISODate, isMonth, lastDay, spStartOf } from "@/components/dashboard/periods";
 
@@ -51,6 +52,18 @@ interface Entity {
   orderCol?: string;
   columns: (ctx: { consultor: (id: unknown) => string; parceiro: (id: unknown) => string; departamento: (id: unknown) => string; backoffice: boolean }) => Column[];
 }
+
+const TITULOS: Record<string, string> = {
+  auditoria: "Trilha de auditoria",
+  clientes: "Clientes",
+  oportunidades: "Funil de vendas",
+  cotas: "Cotas de consórcio",
+  apolices: "Apólices de seguro",
+  comissoes: "Comissões",
+  processos: "Processos jurídicos",
+  prazos: "Prazos",
+  tarefas: "Tarefas",
+};
 
 const ENTITIES: Record<string, Entity> = {
   auditoria: {
@@ -327,7 +340,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ enti
     parceiro: (id: unknown) => (typeof id === "string" ? (parceiros.get(id) ?? "") : ""),
   };
 
-  const csv = toCsv(entity.columns(ctx), rows);
+  const colunas = entity.columns(ctx);
+  if (sp.get("formato") !== "csv") {
+    const periodo = de || ate ? [`Período: ${de ? dateBR(de) : "início"} a ${ate ? dateBR(ate) : "hoje"}`] : [];
+    const buf = await gerarPlanilha({
+      titulo: TITULOS[entidade] ?? `Exportação — ${entidade}`,
+      empresa: session.empresa?.nome ?? "",
+      usuario: session.profile.full_name || session.profile.email,
+      filtros: periodo,
+      abas: [aba<Row>(TITULOS[entidade] ?? entidade, colunas.map(([h, fn]) => ({ titulo: h, valor: (r: Row) => fn(r) ?? "", largura: Math.min(48, Math.max(12, h.length + 4)) })), rows)],
+    });
+    return respostaPlanilha(buf, `ge-easy-${entidade}`);
+  }
+  const csv = toCsv(colunas, rows);
   const filename = `ge-easy-${entidade}-${todayISO()}.csv`;
   return new NextResponse(csv, {
     status: 200,

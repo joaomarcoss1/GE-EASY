@@ -17,6 +17,8 @@ export default async function InicioPage({ searchParams }: { searchParams: Promi
   const session = await requireSession();
   const { erro } = await searchParams;
   if (erro === "permissao" || erro === "area") redirect(`/dashboard?erro=permissao`);
+  // a primeira tela do administrador master é o painel completo da diretoria
+  if (session.profile.admin_master) redirect("/dashboard");
   const disponiveis = AREAS.filter((a) => session.areas.includes(a.value));
   if (disponiveis.length === 0) redirect("/dashboard");
   if (disponiveis.length === 1) redirect(disponiveis[0].href);

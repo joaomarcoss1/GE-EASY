@@ -56,7 +56,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
           <>
             {can(profile, "clientes.exportar") && (
               <LinkButton href="/api/exportar/clientes" variant="secondary" prefetch={false}>
-                Exportar CSV
+                Exportar planilha
               </LinkButton>
             )}
             {canWrite && <LinkButton href="/comercial/clientes/novo" variant="accent">Novo cliente</LinkButton>}

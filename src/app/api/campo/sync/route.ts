@@ -190,6 +190,58 @@ export async function POST(req: NextRequest) {
         return resp({ status: "ok", mensagem: "Rota finalizada e enviada para aprovação.", dados: data as Record<string, unknown> });
       }
 
+      // ------------------------------------------------------------ checklist do veículo (saída/chegada)
+      case "checklist": {
+        if (!exigir("rotas.executar")) return rejeitado("Sem permissão para executar rotas.");
+        const v = z.object({
+          rota_id: UUID, momento: z.enum(["saida", "chegada"]), km: z.number().int().min(0).max(9_999_999),
+          nivel_tanque: z.enum(["reserva", "1/4", "1/2", "3/4", "cheio"]), avaria: z.boolean().default(false), avaria_descricao: txt(2000),
+        }).safeParse(p);
+        if (!v.success) return rejeitado("Dados do checklist inválidos.");
+        const d = v.data;
+        const { data: existe } = await db.from("rota_checklists").select("id").eq("rota_id", d.rota_id).eq("momento", d.momento).maybeSingle();
+        if (existe) return resp({ status: "ok", mensagem: "Checklist já registrado." });
+        if (d.avaria && (d.avaria_descricao ?? "").length < 10) return rejeitado("Descreva a avaria (mínimo 10 caracteres).");
+        const foto = await arquivoValido(form!.get("foto"), ["image/jpeg"]);
+        if (!foto) return rejeitado("A foto do painel é obrigatória.");
+        if (typeof foto === "string") return rejeitado(foto);
+        const fotoPath = `empresas/${empresa}/rotas/${d.rota_id}/checklist-${d.momento}-${item.id}.jpg`;
+        await subir(db, fotoPath, foto);
+        let assinatura: string | null = null;
+        if (d.avaria) {
+          const ass = await arquivoValido(form!.get("assinatura"), ["image/png"]);
+          if (!ass) return rejeitado("Assine o relatório de avaria.");
+          if (typeof ass === "string") return rejeitado(ass);
+          assinatura = `empresas/${empresa}/rotas/${d.rota_id}/avaria-${item.id}.png`;
+          await subir(db, assinatura, ass);
+        }
+        const { error } = await db.from("rota_checklists").insert({
+          id: item.id, rota_id: d.rota_id, momento: d.momento, km: d.km, nivel_tanque: d.nivel_tanque, foto_painel: fotoPath,
+          avaria: d.momento === "chegada" && d.avaria, avaria_descricao: d.avaria ? d.avaria_descricao : null, assinatura_path: assinatura,
+        });
+        if (error) return error.code === "23505" ? resp({ status: "ok", mensagem: "Checklist já registrado." }) : rejeitado(msgDb(error));
+        return resp({ status: "ok", mensagem: d.momento === "saida" ? "Checklist de saída registrado." : d.avaria ? "Checklist de chegada e relatório de avaria registrados." : "Checklist de chegada registrado." });
+      }
+
+      // ------------------------------------------------------------ assinatura do relatório da rota
+      case "assinatura_rota": {
+        if (!exigir("rotas.executar")) return rejeitado("Sem permissão para executar rotas.");
+        const v = z.object({ rota_id: UUID, nome: z.string().trim().min(2).max(160), usuario_id: UUID.nullish(), papel: z.enum(["responsavel", "participante"]) }).safeParse(p);
+        if (!v.success) return rejeitado("Dados da assinatura inválidos.");
+        const { data: existe } = await db.from("rota_assinaturas").select("id").eq("id", item.id).maybeSingle();
+        if (existe) return resp({ status: "ok", mensagem: "Assinatura já registrada." });
+        const ass = await arquivoValido(form!.get("assinatura"), ["image/png"]);
+        if (!ass) return rejeitado("Assinatura ausente.");
+        if (typeof ass === "string") return rejeitado(ass);
+        const caminho = `empresas/${empresa}/rotas/${v.data.rota_id}/assinatura-${item.id}.png`;
+        await subir(db, caminho, ass);
+        const { error } = await db.from("rota_assinaturas").insert({
+          id: item.id, rota_id: v.data.rota_id, nome: v.data.nome, usuario_id: v.data.usuario_id ?? null, papel: v.data.papel, assinatura_path: caminho,
+        });
+        if (error && error.code !== "23505") return rejeitado(msgDb(error));
+        return resp({ status: "ok", mensagem: `Relatório assinado por ${v.data.nome}.` });
+      }
+
       // ------------------------------------------------------------ despesa com comprovante
       case "despesa": {
         if (!exigir("despesas.lancar")) return rejeitado("Sem permissão para lançar despesas.");

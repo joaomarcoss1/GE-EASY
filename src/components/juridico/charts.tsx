@@ -13,7 +13,7 @@ export interface FluxoPoint {
   encerrados: number;
 }
 
-const SERIES = [
+const SERIES_PADRAO = [
   { key: "novos", label: "Novos", color: vizColor(0) },
   { key: "encerrados", label: "Encerrados", color: vizColor(1) },
 ] as const;
@@ -22,7 +22,8 @@ const SERIES = [
  * Novos × encerrados por mês — mesma unidade (quantidade), um único eixo.
  * Série 1 = índigo da marca, série 2 = laranja da marca (paleta validada em VIZ_VARS).
  */
-export function FluxoProcessosChart({ data }: { data: FluxoPoint[] }) {
+export function FluxoProcessosChart({ data, rotulos }: { data: FluxoPoint[]; rotulos?: { novos: string; encerrados: string } }) {
+  const SERIES = SERIES_PADRAO.map((x) => ({ ...x, label: rotulos?.[x.key] ?? x.label }));
   const totals = { novos: data.reduce((a, d) => a + d.novos, 0), encerrados: data.reduce((a, d) => a + d.encerrados, 0) };
   if (!totals.novos && !totals.encerrados) return <p className="py-12 text-center text-sm text-muted">Sem movimentação de processos nos últimos 12 meses.</p>;
   return (

@@ -36,6 +36,12 @@ async function aplicarPendentes(base: Snapshot, itens: ItemFila[]): Promise<Snap
         const pa = r.paradas.find((x) => x.id === p.parada_id);
         if (pa && c.tipo === "chegada") pa.status = "visitada";
       }
+    } else if (it.tipo === "checklist") {
+      const r = s.rotas.find((x) => x.id === p.rota_id);
+      if (r && !(r.checklists ?? []).some((c) => c.momento === p.momento)) r.checklists = [...(r.checklists ?? []), { momento: p.momento as "saida" | "chegada", km: Number(p.km), pendente: true }];
+    } else if (it.tipo === "assinatura_rota") {
+      const r = s.rotas.find((x) => x.id === p.rota_id);
+      if (r && !(r.assinaturas ?? []).some((a) => a.nome === p.nome)) r.assinaturas = [...(r.assinaturas ?? []), { nome: String(p.nome), pendente: true }];
     } else if (it.tipo === "pre_cadastro") {
       if (!s.carteira.some((c) => c.id === it.id)) s.carteira.unshift({ id: it.id, nome: String(p.nome), documento: null, cidade: (p.cidade as string) ?? null, status_cadastro: "pre_cadastro" });
     } else if (it.tipo === "ponto") {

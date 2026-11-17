@@ -41,6 +41,7 @@ import { DueChip } from "@/components/juridico/due-chip";
 import { ComercialResumoCard, greeting, MinhasTarefasCard, todayLong } from "@/components/juridico/dashboard-widgets";
 import { depSigla, depTone } from "@/components/departamentos/tone";
 import { PainelEscritorio } from "@/components/dashboard/painel-escritorio";
+import { PainelDiretoria } from "@/components/dashboard/painel-diretoria";
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -106,6 +107,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </Suspense>
     ) : null;
 
+  // Administrador master: painel completo da diretoria
+  if (profile.admin_master) return <PainelDiretoria alert={alert} firstName={firstName} session={session} />;
   // Painel principal (processos, prazos, metas, reuniões e tarefas). Quem só atua no jurídico mantém o painel jurídico.
   if (isJuridicoRole(profile.role) && !can(profile, "clientes.view")) {
     return <PainelJuridico alert={alert} firstName={firstName} session={session} />;

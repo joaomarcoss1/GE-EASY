@@ -7,7 +7,7 @@ import { apagarTudo, cifrar, decifrar, decifrarBytes, gravar, idDoAparelho, list
  * houver internet. Erro de rede/servidor: tenta de novo depois; recusa definitiva: sai da fila e vai para
  * o histórico com o motivo.
  */
-export type TipoItem = "pre_cadastro" | "documento" | "iniciar_rota" | "checkin" | "finalizar_rota" | "despesa" | "ponto";
+export type TipoItem = "pre_cadastro" | "documento" | "iniciar_rota" | "checkin" | "finalizar_rota" | "despesa" | "ponto" | "checklist" | "assinatura_rota";
 
 export interface ItemFila {
   id: string;

@@ -1,3 +1,4 @@
+import { getProfileMap } from "@/lib/data";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -23,9 +24,10 @@ export async function GET() {
   const db = await createClient({ origem: "app" });
   const hoje = todayISO();
   const ate = new Date(Date.now() + 8 * 86400_000).toISOString().slice(0, 10);
+  const ontem = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
   const [{ data: rotas }, { data: pend }, { data: carteira }, { data: tipos }, { data: termo }, { count: despesas }, parametros] = await Promise.all([
-    db.from("rotas").select("id, nome, data, status, objetivo, iniciada_em, km_planejado, veiculo_id").eq("consultor_id", me)
-      .or(`status.eq.em_andamento,and(status.eq.planejada,data.gte.${hoje},data.lte.${ate})`).order("data").limit(20),
+    db.from("rotas").select("id, nome, data, status, objetivo, iniciada_em, km_planejado, veiculo_id, objetivo_tipo, cidades, corretores, participantes, exige_checklist").eq("consultor_id", me)
+      .or(`status.eq.em_andamento,and(status.eq.planejada,data.gte.${hoje},data.lte.${ate}),and(status.eq.concluida,data.gte.${ontem})`).order("data").limit(20),
     db.from("clientes").select("id, nome, cidade, prazo_documentacao, status_cadastro").eq("consultor_id", me).eq("status_cadastro", "pendente_documentacao").order("prazo_documentacao").limit(40),
     db.from("clientes").select("id, nome, documento, cidade, status_cadastro, telefone").eq("consultor_id", me).eq("carteira", "consultor").order("updated_at", { ascending: false }).limit(200),
     db.from("documento_tipos").select("categoria, nome, obrigatorio, aplica_pf, aplica_pj").eq("ativo", true).order("ordem"),
@@ -35,13 +37,18 @@ export async function GET() {
   ]);
   const ids = (rotas ?? []).map((r) => r.id);
   const veicIds = [...new Set((rotas ?? []).map((r) => r.veiculo_id).filter((x): x is string => !!x))];
-  const [{ data: paradas }, { data: checkins }, { data: veiculos }] = ids.length
+  const corretorIds = [...new Set((rotas ?? []).flatMap((r) => (r.corretores ?? []) as string[]))];
+  const [{ data: paradas }, { data: checkins }, { data: veiculos }, { data: checklists }, { data: assinaturas }, { data: corretoresRows }, perfis] = ids.length
     ? await Promise.all([
         db.from("rota_paradas").select("id, rota_id, ordem, tipo, cliente_id, titulo, endereco, cidade, uf, lat, lng, raio_m, janela_inicio, janela_fim, objetivo, obrigatoria, status").in("rota_id", ids).order("ordem"),
         db.from("checkins").select("id, rota_id, parada_id, tipo, registrado_em, resultado, dentro_do_raio").in("rota_id", ids).order("registrado_em"),
         veicIds.length ? db.from("veiculos").select("id, descricao, placa, consumo_km_l").in("id", veicIds) : Promise.resolve({ data: [] }),
+        db.from("rota_checklists").select("rota_id, momento, km").in("rota_id", ids),
+        db.from("rota_assinaturas").select("rota_id, nome").in("rota_id", ids),
+        corretorIds.length ? db.from("assessores").select("id, nome").in("id", corretorIds) : Promise.resolve({ data: [] }),
+        getProfileMap(),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, new Map()];
   /** Veículo e previsão de km/combustível da rota (km planejado ou linha reta × fator entre as paradas) */
   const extras = (r: { veiculo_id: string | null; km_planejado: number | null }, ps: { lat: number | null; lng: number | null }[]) => {
     const v = (veiculos ?? []).find((x) => x.id === r.veiculo_id) ?? null;
@@ -94,6 +101,10 @@ export async function GET() {
         ...extras(r, (paradas ?? []).filter((p) => p.rota_id === r.id)),
         paradas: (paradas ?? []).filter((p) => p.rota_id === r.id),
         checkins: (checkins ?? []).filter((c) => c.rota_id === r.id),
+        corretores_nomes: ((r.corretores ?? []) as string[]).map((id) => (corretoresRows ?? []).find((c) => c.id === id)?.nome ?? "Corretor"),
+        participantes: ((r.participantes ?? []) as string[]).map((id) => ({ id, nome: perfis.get(id)?.full_name ?? "Participante" })),
+        checklists: (checklists ?? []).filter((k) => k.rota_id === r.id).map((k) => ({ momento: k.momento, km: k.km })),
+        assinaturas: (assinaturas ?? []).filter((a) => a.rota_id === r.id).map((a) => ({ nome: a.nome })),
       })),
       pendencias: (pend ?? []).map((c) => ({ ...c, faltando: faltaMap.get(c.id) ?? null })),
       // no aparelho só os 4 últimos dígitos do documento (minimização: basta para identificar o cliente)

@@ -197,23 +197,63 @@ export async function verSenhaGov(clienteId: string): Promise<ActionState & { se
 // ------------------------------------------------------------------ status do processo
 const STATUS = CASO_STATUS.map((s) => s.value) as [string, ...string[]];
 
-export async function alterarStatusCaso(casoId: string, status: string): Promise<ActionState> {
+export async function alterarStatusCaso(casoId: string, status: string, extra?: { protocolo_inss?: string | null; situacao_atual?: string | null }): Promise<ActionState> {
   const g = await guard("clientes.write");
   if ("denied" in g) return g.denied;
   if (!isUuid(casoId)) return { error: "Processo inválido." };
   const v = z.enum(STATUS).safeParse(status);
   if (!v.success) return { error: "Status inválido." };
+  const ex = z.object({ protocolo_inss: zs.text(40), situacao_atual: zs.text(300) }).safeParse(extra ?? {});
+  if (!ex.success) return { error: "Protocolo ou estado atual inválido." };
   const supabase = await createClient();
-  const { data, error } = await supabase.from("cliente_casos").update({ status: v.data }).eq("id", casoId).select("id, cliente_id");
-  if (error) return dbError(error);
+  const patch: Record<string, unknown> = { status: v.data };
+  if (v.data === "habilitado") {
+    const { data: atual } = await supabase.from("cliente_casos").select("protocolo_inss, situacao_atual").eq("id", casoId).maybeSingle();
+    const protocolo = ex.data.protocolo_inss ?? atual?.protocolo_inss ?? null;
+    const situacao = ex.data.situacao_atual ?? atual?.situacao_atual ?? null;
+    if (!protocolo || !situacao) return { error: "Para habilitar, informe o número do protocolo do INSS e o estado atual do processo." };
+    patch.protocolo_inss = protocolo;
+    patch.situacao_atual = situacao;
+  }
+  const { data, error } = await supabase.from("cliente_casos").update(patch).eq("id", casoId).select("id, cliente_id");
+  if (error) return error.code === "23514" && error.message ? { error: error.message } : dbError(error);
   // Ao mover para um status restrito sem permissão, a linha deixa de ser visível: confere se a alteração ocorreu
   if (!data?.length) {
     const restrito = ["pendencia", "exigencia", "em_analise"].includes(v.data) && !can(g.session.profile, "processos.status_restritos");
     if (!restrito) return { error: "Processo não encontrado ou sem permissão." };
   }
   revalidatePath("/administrativo/processos");
+  revalidatePath("/dashboard");
   if (data?.[0]?.cliente_id) revalidatePath(`/clientes/${data[0].cliente_id}`);
   return { ok: true, message: "Status do processo atualizado." };
+}
+
+const casoSchema = z.object({
+  id: zs.requiredUuid("o processo"),
+  protocolo_inss: zs.text(40),
+  situacao_atual: zs.text(300),
+  observacoes: zs.text(4000),
+});
+
+/** Edita protocolo do INSS, estado atual e observações do processo. */
+export async function editarCaso(_: ActionState, formData: FormData): Promise<ActionState> {
+  const g = await guard("clientes.write");
+  if ("denied" in g) return g.denied;
+  const parsed = casoSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return zodErrors(parsed.error);
+  const { id, ...dados } = parsed.data;
+  const supabase = await createClient();
+  const { data: atual } = await supabase.from("cliente_casos").select("status").eq("id", id).maybeSingle();
+  if (!atual) return { error: "Processo não encontrado ou sem permissão." };
+  if (atual.status === "habilitado" && (!dados.protocolo_inss || !dados.situacao_atual)) {
+    return { error: "Processo habilitado precisa do protocolo do INSS e do estado atual.", fieldErrors: { ...(dados.protocolo_inss ? {} : { protocolo_inss: "Obrigatório" }), ...(dados.situacao_atual ? {} : { situacao_atual: "Obrigatório" }) } };
+  }
+  const { data, error } = await supabase.from("cliente_casos").update(dados).eq("id", id).select("cliente_id").maybeSingle();
+  if (error) return dbError(error);
+  if (!data) return { error: "Processo não encontrado ou sem permissão." };
+  revalidatePath("/administrativo/processos");
+  revalidatePath(`/clientes/${data.cliente_id}`);
+  return { ok: true, message: "Processo atualizado." };
 }
 
 // ------------------------------------------------------------------ assessores
@@ -221,8 +261,10 @@ const assessorSchema = z
   .object({
     id: zs.uuid(),
     nome: zs.required("Nome completo", 200),
-    cpf: zs.required("CPF", 14),
-    telefone: zs.required("Telefone", 20),
+    cpf: zs.text(14),
+    telefone: zs.text(20),
+    categoria: zs.enumOf(["consultor", "corretor", "diretoria"], "Escolha a categoria"),
+    apelidos: zs.text(300),
     email: zs.text(160).refine((v) => !v || z.string().email().safeParse(v).success, "E-mail inválido"),
     acordo_comercial: zs.enumOf(["sim", "nao"], "Informe se tem acordo comercial"),
     ativo: zs.bool(),
@@ -230,8 +272,11 @@ const assessorSchema = z
     user_id: zs.uuid(),
   })
   .superRefine((v, ctx) => {
-    if (!isValidCPF(v.cpf)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cpf"], message: "CPF inválido" });
-    if (onlyDigits(v.telefone).length < 10) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["telefone"], message: "Telefone com DDD" });
+    // no cadastro novo CPF e telefone são obrigatórios; na edição de registros antigos podem ser completados depois
+    if (!v.id && !v.cpf) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cpf"], message: "CPF é obrigatório" });
+    if (!v.id && !v.telefone) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["telefone"], message: "Telefone é obrigatório" });
+    if (v.cpf && !isValidCPF(v.cpf)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cpf"], message: "CPF inválido" });
+    if (v.telefone && onlyDigits(v.telefone).length < 10) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["telefone"], message: "Telefone com DDD" });
   });
 
 export async function salvarAssessor(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -249,8 +294,10 @@ export async function salvarAssessor(_: ActionState, formData: FormData): Promis
   const supabase = await createClient();
   const dados = {
     nome: v.nome,
-    cpf: onlyDigits(v.cpf),
-    telefone: onlyDigits(v.telefone),
+    cpf: v.cpf ? onlyDigits(v.cpf) : null,
+    telefone: v.telefone ? onlyDigits(v.telefone) : null,
+    categoria: v.categoria,
+    apelidos: (v.apelidos ?? "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 10),
     email: v.email,
     acordo_comercial: v.acordo_comercial === "sim",
     ativo: v.ativo,

@@ -18,6 +18,9 @@ import { LinkButton } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { StatusCasoSelect } from "@/components/clientes/status-caso-select";
 import { ExigenciaPrazo } from "@/components/processos/exigencia-prazo";
+import { FormDrawerButton } from "@/components/ui/form-drawer";
+import { editarCaso } from "@/lib/actions/comercial";
+import { CASO_FIELDS } from "@/components/processos/caso-fields";
 
 export const metadata: Metadata = { title: "Processos dos clientes" };
 
@@ -40,6 +43,9 @@ interface Caso {
   pendencia: string | null;
   exigencia_prazo: string | null;
   exigencia_prorrogada: boolean;
+  protocolo_inss: string | null;
+  situacao_atual: string | null;
+  assessores: { nome: string } | { nome: string }[] | null;
   situacao_planilha: string | null;
   observacoes: string | null;
   clientes: { id: string; nome: string; documento: string | null; whatsapp: string | null; telefone: string | null };
@@ -97,7 +103,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
         description="Todos os processos (benefícios) da base, com a situação de cada um. Filtre por assessor, cidade, tipo e situação; veja os relatórios ou exporte."
         actions={can(profile, "clientes.exportar") && (
           <LinkButton href={`/api/casos/exportar${qs(f)}`} variant="secondary" prefetch={false}>
-            <Download className="h-4 w-4" /> Exportar CSV
+            <Download className="h-4 w-4" /> Exportar planilha
           </LinkButton>
         )}
       />
@@ -186,27 +192,32 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
                           <div className="text-xs text-muted">{c.clientes.documento ? maskDocumento(c.clientes.documento) : "sem CPF"}{c.ano ? ` · planilha ${c.ano}` : ""}</div>
                         </td>
                         <td className="whitespace-nowrap text-sm">{c.tipo}</td>
-                        <td className="text-sm">{c.corretor ?? "—"}{c.corretor?.includes("/") && <div className="text-[11px] text-muted">principal: {c.corretor_principal}</div>}</td>
+                        <td className="text-sm">{(Array.isArray(c.assessores) ? c.assessores[0]?.nome : c.assessores?.nome) ?? c.corretor ?? "—"}{c.corretor && (Array.isArray(c.assessores) ? c.assessores[0] : c.assessores) ? <div className="text-[11px] text-muted">planilha: {c.corretor}</div> : c.corretor?.includes("/") ? <div className="text-[11px] text-muted">principal: {c.corretor_principal}</div> : null}</td>
                         <td className="whitespace-nowrap text-sm">{c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : "—"}</td>
                         <td className="whitespace-nowrap text-xs text-muted">{c.recebido_em ? date(c.recebido_em) : "—"}</td>
                         <td className="whitespace-nowrap text-xs text-muted">{c.habilitado_em ? date(c.habilitado_em) : "—"}</td>
                         <td>
                           <div className="flex flex-wrap items-center gap-1">
-                            {podeEditar ? <StatusCasoSelect casoId={c.id} status={c.status} podeRestritos={podeRestritos} /> : <StatusBadge options={CASO_STATUS} value={c.status} />}
+                            {podeEditar ? <StatusCasoSelect casoId={c.id} status={c.status} podeRestritos={podeRestritos} protocolo={c.protocolo_inss} situacao={c.situacao_atual} /> : <StatusBadge options={CASO_STATUS} value={c.status} />}
                             {c.status === "exigencia" && <ExigenciaPrazo casoId={c.id} prazo={c.exigencia_prazo} prorrogada={c.exigencia_prorrogada} podeProrrogar={podeEditar} />}
                             {c.pendencia && <Badge tone="amber">{optionLabel(CASO_PENDENCIAS, c.pendencia)}</Badge>}
                             {c.exigencia_estado === "cumprida" && <Badge tone="green">exigência cumprida</Badge>}
                             {c.exigencia_estado === "aberta" && <Badge tone="red">exigência em aberto</Badge>}
                             {c.habilitado_em && c.status !== "habilitado" && <Badge tone="green">habilitado</Badge>}
                           </div>
+                          {(c.protocolo_inss || c.situacao_atual) && <div className="mt-1 max-w-xs text-xs text-muted">{c.protocolo_inss ? <>Protocolo <b className="text-fg">{c.protocolo_inss}</b></> : null}{c.protocolo_inss && c.situacao_atual ? " · " : ""}{c.situacao_atual}</div>}
+                          {c.status === "habilitado" && !c.protocolo_inss && <div className="mt-1 text-xs font-semibold text-red-600">Habilitado sem protocolo do INSS</div>}
                           {c.observacoes && <div className="mt-1 max-w-xs truncate text-xs text-muted" title={c.observacoes}>{c.observacoes}</div>}
                         </td>
                         <td>
+                          <div className="flex items-center gap-1">
+                          {podeEditar && <FormDrawerButton action={editarCaso} fields={CASO_FIELDS} values={{ protocolo_inss: c.protocolo_inss, situacao_atual: c.situacao_atual, observacoes: c.observacoes }} hidden={{ id: c.id }} title="Editar processo" description={`${c.clientes.nome} · ${c.tipo}`} icon="edit" variant="ghost" size="icon" width="max-w-lg" />}
                           {wa && (
                             <a href={wa} target="_blank" rel="noopener noreferrer" title="Conversar no WhatsApp" aria-label={`WhatsApp de ${c.clientes.nome}`} className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-600 text-white transition hover:bg-emerald-700">
                               <MessageCircle className="h-4 w-4" />
                             </a>
                           )}
+                          </div>
                         </td>
                       </tr>
                     );

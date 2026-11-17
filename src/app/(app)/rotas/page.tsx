@@ -13,6 +13,7 @@ import type { Rota } from "@/lib/types";
 import { parametrosRotas } from "@/lib/parametros";
 import { custoPercurso } from "@/lib/geo";
 import { salvarRota } from "@/lib/actions/rotas";
+import { opcoesRota, rotaFields } from "@/components/rotas/rota-fields";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ export default async function RotasPage({ searchParams }: { searchParams: Promis
   const previsto = (r: Rota) => r.km_planejado == null ? null : custoPercurso(Number(r.km_planejado), {
     consumoKmL: (r.veiculo_id && consumoDe.get(r.veiculo_id)) || par.consumo_km_l, precoCombustivel: par.preco_combustivel, valorKm: par.valor_km, modo: par.reembolso_modo,
   });
+  const opRota = planeja ? await opcoesRota() : null;
   const opVeic = (veiculos ?? []).filter((v) => v.ativo).map((v) => ({ value: v.id, label: v.placa ? `${v.descricao} · ${v.placa}` : v.descricao }));
 
   return (
@@ -62,13 +64,7 @@ export default async function RotasPage({ searchParams }: { searchParams: Promis
             {planeja && (
               <FormDrawerButton action={salvarRota} title="Nova rota" label="Nova rota" variant="accent" redirectTo="/rotas/:id" width="max-w-lg"
                 values={{ data: todayISO() }}
-                fields={[
-                  { name: "nome", label: "Nome", required: true, span: 6, placeholder: "Ex.: Rota Centro — documentação" },
-                  { name: "data", label: "Data", type: "date", required: true, span: 3 },
-                  { name: "consultor_id", label: "Assessor", type: "select", options: consultores, required: true, span: 3 },
-                  { name: "veiculo_id", label: "Veículo", type: "select", options: opVeic, span: 6 },
-                  { name: "objetivo", label: "Objetivo", type: "textarea", rows: 3, span: 6 },
-                ]} />
+                fields={rotaFields({ ...opRota!, consultores, veiculos: opVeic })} />
             )}
           </>
         }

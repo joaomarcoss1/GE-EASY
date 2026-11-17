@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Car, Check, Clock, Fuel, Gauge, MapPin, Navigation, Receipt, Route, Smartphone, Wallet, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Car, Check, Clock, FileText, Fuel, Gauge, MapPin, Navigation, Receipt, Route, Smartphone, Wallet, X } from "lucide-react";
 import { requireSession } from "@/lib/auth";
+import { opcoesRota, rotaFields } from "@/components/rotas/rota-fields";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { clienteOptions, consultorOptions, getProfileMap } from "@/lib/data";
-import { CADASTRO_STATUS, CARTEIRAS, CHECKIN_FLAGS, CHECKIN_RESULTADOS, DESPESA_STATUS, DESPESA_TIPOS, PARADA_STATUS, PARADA_TIPOS, ROTA_STATUS } from "@/lib/constants";
+import { CADASTRO_STATUS, CARTEIRAS, CHECKIN_FLAGS, CHECKIN_RESULTADOS, DESPESA_STATUS, DESPESA_TIPOS, PARADA_STATUS, PARADA_TIPOS, ROTA_OBJETIVOS, ROTA_STATUS } from "@/lib/constants";
 import { brl, date, num, time } from "@/lib/format";
 import { linkTrajeto } from "@/lib/integracoes/maps";
 import { parametrosRotas } from "@/lib/parametros";
@@ -58,6 +59,7 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
   const aprova = can(profile, "rotas.aprovar");
   const editavel = planeja && (rota.status === "planejada" || rota.status === "em_andamento");
   const meu = rota.consultor_id === userId;
+  const opRota = editavel ? await opcoesRota() : null;
   const tituloParada = new Map(paradas.map((p) => [p.id, `${p.ordem}. ${p.titulo}`]));
   const pontos = paradas.filter((p) => p.lat != null && p.lng != null).map((p) => ({ lat: Number(p.lat), lng: Number(p.lng) }));
   const trajeto = linkTrajeto(rota.inicio_lat != null ? [{ lat: Number(rota.inicio_lat), lng: Number(rota.inicio_lng) }, ...pontos] : pontos);
@@ -98,22 +100,17 @@ export default async function RotaPage({ params }: { params: Promise<{ id: strin
       <PageHeader
         eyebrow={`${date(rota.data)} · ${profiles.get(rota.consultor_id)?.full_name ?? "Consultor"}`}
         title={<span className="flex flex-wrap items-center gap-3">{rota.nome}<StatusBadge options={ROTA_STATUS} value={rota.status} /></span>}
-        description={rota.objetivo ?? undefined}
+        description={[rota.objetivo_tipo ? optionLabel(ROTA_OBJETIVOS, rota.objetivo_tipo) : null, rota.cidades?.length ? `Cidades: ${rota.cidades.join(", ")}` : null, rota.objetivo ? `Motivo: ${rota.objetivo}` : null].filter(Boolean).join(" · ") || undefined}
         actions={
           <>
             {meu && (rota.status === "planejada" || rota.status === "em_andamento") && <LinkButton href={`/campo/rota/${rota.id}`} variant="accent"><Smartphone className="h-4 w-4" />Executar no app</LinkButton>}
             {trajeto && <LinkButton href={trajeto} variant="secondary" target="_blank" rel="noopener noreferrer"><Navigation className="h-4 w-4" />Trajeto no Maps</LinkButton>}
+            <LinkButton href={`/rotas/${rota.id}/relatorio`} variant="secondary"><FileText className="h-4 w-4" />Relatório da rota</LinkButton>
             {editavel && rota.status === "planejada" && <ActionButton action={otimizarRota.bind(null, rota.id)} label="Otimizar ordem" icon={<Route className="h-4 w-4" />} size="md" />}
             {editavel && (
               <FormDrawerButton action={salvarRota} hidden={{ id: rota.id }} title="Editar rota" icon="edit" size="icon" variant="ghost" width="max-w-lg"
-                values={{ nome: rota.nome, data: rota.data, consultor_id: rota.consultor_id, veiculo_id: rota.veiculo_id, objetivo: rota.objetivo }}
-                fields={[
-                  { name: "nome", label: "Nome", required: true, span: 6 },
-                  { name: "data", label: "Data", type: "date", required: true, span: 3 },
-                  { name: "consultor_id", label: "Assessor", type: "select", options: consultores, required: true, span: 3 },
-                  { name: "veiculo_id", label: "Veículo", type: "select", options: opVeic, span: 6 },
-                  { name: "objetivo", label: "Objetivo", type: "textarea", rows: 3, span: 6 },
-                ]} />
+                values={{ nome: rota.nome, data: rota.data, consultor_id: rota.consultor_id, veiculo_id: rota.veiculo_id, objetivo: rota.objetivo, objetivo_tipo: rota.objetivo_tipo, cidades: rota.cidades, corretores: rota.corretores, participantes: rota.participantes }}
+                fields={rotaFields({ ...opRota!, consultores, veiculos: opVeic })} />
             )}
             {planeja && rota.status === "planejada" && <ConfirmAction action={cancelarRota} id={rota.id} title="Cancelar rota?" message="A rota sai do app do assessor. As paradas ficam no histórico." confirmLabel="Cancelar rota" label="Cancelar" size="sm" variant="ghost" />}
             {aprova && rota.status === "concluida" && !meu && (revisoesPendentes > 0 ? (

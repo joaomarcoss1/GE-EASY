@@ -1,21 +1,17 @@
 import Link from "next/link";
-import { AlarmClock, CalendarPlus, FolderSearch, ListPlus, Target, UserPlus } from "lucide-react";
+import { AlarmClock, CalendarPlus, FolderSearch, ListPlus, ShieldAlert, Target, UserPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import type { Session } from "@/lib/auth";
-import { CASO_STATUS, CASO_STATUS_RESTRITOS, META_TIPOS } from "@/lib/constants";
-import { brl, date, daysUntil, num, todayISO } from "@/lib/format";
-import type { MetaTipo } from "@/lib/types";
+import { CASO_STATUS, CASO_STATUS_RESTRITOS } from "@/lib/constants";
+import { date, daysUntil, num, todayISO } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/button";
-import { optionLabel } from "@/components/ui/badge";
-import { currentMonth, lastDay, monthLong } from "@/components/dashboard/periods";
-import { isCountMeta, realizadoMeta } from "@/components/metas/realizado";
-import { carregarRealizado } from "@/components/metas/carregar";
+import { MetaProgresso, type MetaLinha } from "@/components/metas/metas-processos";
+import { carregarInconsistencias } from "@/lib/inconsistencias";
 import { ExigenciaPrazo } from "@/components/processos/exigencia-prazo";
 import { AgendaCard, CustasResumoCard, greeting, MinhasTarefasCard, todayLong } from "@/components/juridico/dashboard-widgets";
 
@@ -43,11 +39,10 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
   const veBase = can(profile, "clientes.ver_todos");
   const podeEditar = can(profile, "clientes.write");
   const podeRestritos = can(profile, "processos.status_restritos");
-  const mes = currentMonth();
   const hoje = todayISO();
   const em7 = new Date(Date.now() + 7 * 86_400_000).toISOString();
 
-  const [resumoRes, exigRes, docRes, metasRes, rows] = await Promise.all([
+  const [resumoRes, exigRes, docRes, metasRes, meusAssRes, inc] = await Promise.all([
     veClientes ? supabase.rpc("cliente_casos_resumo") : Promise.resolve({ data: null }),
     veClientes && podeRestritos
       ? supabase.from("cliente_casos").select("id, cliente_id, tipo, exigencia_prazo, exigencia_prorrogada, clientes!inner(nome)").eq("status", "exigencia").order("exigencia_prazo", { ascending: true, nullsFirst: false }).limit(8)
@@ -55,8 +50,9 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
     veClientes
       ? supabase.from("clientes").select("id, nome, prazo_documentacao").eq("status_cadastro", "pendente_documentacao").lte("prazo_documentacao", em7).order("prazo_documentacao").limit(6)
       : Promise.resolve({ data: [] }),
-    supabase.from("metas").select("id, consultor_id, tipo, valor_meta").eq("periodo", `${mes}-01`),
-    carregarRealizado(mes),
+    veClientes ? supabase.rpc("metas_processos_painel", { p_ref: hoje }) : Promise.resolve({ data: [] }),
+    supabase.from("assessores").select("id").eq("user_id", userId),
+    veBase ? carregarInconsistencias(can(profile, "rotas.ver")) : Promise.resolve(null),
   ]);
 
   const porStatus = ((resumoRes.data ?? {}) as { por_status?: Record<string, number>; total?: number }).por_status ?? {};
@@ -65,11 +61,8 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
   const exigencias = (exigRes.data ?? []) as Exigencia[];
   const vencidas = exigencias.filter((e) => e.exigencia_prazo && e.exigencia_prazo < hoje).length;
   const docs = (docRes.data ?? []) as { id: string; nome: string; prazo_documentacao: string | null }[];
-  const metas = ((metasRes.data ?? []) as { id: string; consultor_id: string | null; tipo: MetaTipo; valor_meta: number | string }[])
-    .filter((m) => m.consultor_id === null || m.consultor_id === userId)
-    .sort((a, b) => Number(a.consultor_id !== null) - Number(b.consultor_id !== null));
-  const diaMes = Number(hoje.slice(8, 10));
-  const ritmo = (diaMes / Number(lastDay(mes).slice(8, 10))) * 100;
+  const meusAss = new Set((meusAssRes.data ?? []).map((a) => a.id as string));
+  const metas = ((metasRes.data ?? []) as MetaLinha[]).filter((m) => veBase || m.alvo === "empresa" || (m.assessor_id && meusAss.has(m.assessor_id)));
 
   return (
     <>
@@ -167,31 +160,36 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
           </Card>
         )}
 
-        <Card>
-          <CardHeader icon={<Target className="h-4 w-4" />} title={`Metas de ${monthLong(mes)}`} description={`Ritmo esperado hoje: ${Math.round(ritmo)}% do mês`} action={<Link href="/metas" className={linkCls}>Ver metas</Link>} />
-          {metas.length === 0 ? (
-            <EmptyState title="Nenhuma meta no mês" description="Cadastre as metas mensais (ex.: processos analisados) em Metas." />
-          ) : (
-            <ul className="divide-y divide-line">
-              {metas.map((m) => {
-                const alvo = Number(m.valor_meta);
-                const real = realizadoMeta(m.tipo, m.consultor_id, rows);
-                const perc = alvo ? (real / alvo) * 100 : 0;
-                const fmt = (v: number) => (isCountMeta(m.tipo) ? num(v) : brl(v));
-                return (
-                  <li key={m.id} className="px-5 py-3">
-                    <div className="flex items-baseline justify-between gap-2 text-sm">
-                      <span className="font-medium">{optionLabel(META_TIPOS, m.tipo)}<span className="ml-1 text-xs text-muted">{m.consultor_id ? "· sua meta" : "· equipe"}</span></span>
-                      <span className="tabular-nums"><b>{fmt(real)}</b> <span className="text-muted">de {fmt(alvo)}</span></span>
-                    </div>
-                    <Progress value={perc} tone={perc >= 100 ? "green" : perc >= ritmo ? "brand" : "accent"} className="mt-2" />
-                    <p className="mt-1 text-[11px] text-muted">{perc >= 100 ? "Meta batida" : perc >= ritmo ? "No ritmo" : `Abaixo do ritmo · faltam ${fmt(Math.max(0, alvo - real))}`}</p>
-                  </li>
-                );
-              })}
-            </ul>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader icon={<Target className="h-4 w-4" />} title="Metas" description={veBase ? "Da empresa, dos consultores e dos corretores" : "As gerais e as suas"} action={<Link href="/metas/processos" className={linkCls}>Ver metas</Link>} />
+            {metas.length === 0 ? (
+              <EmptyState title="Nenhuma meta ativa" description="As metas são cadastradas em Metas." />
+            ) : (
+              <div className="divide-y divide-line px-5">
+                {metas.slice(0, 8).map((m) => <MetaProgresso key={`${m.meta_id}-${m.assessor_id}`} m={m} hoje={hoje} compacto />)}
+              </div>
+            )}
+          </Card>
+          {inc && (
+            <Card>
+              <CardHeader icon={<ShieldAlert className="h-4 w-4" />} title={`Inconsistências (${num(inc.todas.length)})`} description="Dados incorretos que distorcem as métricas" action={<Link href="/administrativo/inconsistencias" className={linkCls}>Ver todas</Link>} />
+              {inc.todas.length === 0 ? <p className="px-5 py-4 text-sm text-muted">Nenhuma inconsistência.</p> : (
+                <ul className="divide-y divide-line">
+                  {inc.resumo.filter((r) => r.total > 0).slice(0, 6).map((r) => (
+                    <li key={r.value}>
+                      <Link href={`/administrativo/inconsistencias?tipo=${r.value}`} className="flex items-center gap-2 px-5 py-2.5 text-sm hover:bg-surface-2">
+                        <span className={cn("h-2 w-2 shrink-0 rounded-full", r.gravidade === "alta" ? "bg-red-500" : r.gravidade === "media" ? "bg-amber-500" : "bg-slate-400")} />
+                        <span className="flex-1">{r.label}</span>
+                        <b className="tabular-nums">{num(r.total)}</b>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
           )}
-        </Card>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

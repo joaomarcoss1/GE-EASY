@@ -639,3 +639,54 @@ export const CASO_PENDENCIAS: Option[] = [
   { value: "contato", label: "Sem contato / sem retorno", tone: "amber" },
   { value: "desistencia", label: "Desistência", tone: "red" },
 ];
+
+// ---------------------------------------------------------------- Metas de processos, assessores e rotas (2026-11)
+export const META_INDICADORES: Option[] = [
+  { value: "processos_novos", label: "Processos/clientes novos", tone: "brand" },
+  { value: "habilitados", label: "Habilitações no INSS", tone: "green" },
+  { value: "judicializados", label: "Processos judicializados", tone: "violet" },
+  { value: "analises", label: "Processos analisados", tone: "sky" },
+  { value: "ligacoes", label: "Ligações para clientes", tone: "accent" },
+];
+export const META_PERIODICIDADES: Option[] = [
+  { value: "diaria", label: "Por dia" },
+  { value: "mensal", label: "Por mês" },
+  { value: "anual", label: "Por ano" },
+];
+export const META_ALVOS: Option[] = [
+  { value: "empresa", label: "Geral (toda a empresa)" },
+  { value: "assessor", label: "Um assessor/consultor" },
+  { value: "categoria", label: "Cada assessor de uma categoria" },
+];
+export const ASSESSOR_CATEGORIAS: Option[] = [
+  { value: "consultor", label: "Consultor", tone: "brand" },
+  { value: "corretor", label: "Corretor", tone: "accent" },
+  { value: "diretoria", label: "Diretoria", tone: "violet" },
+];
+export const ROTA_OBJETIVOS: Option[] = [
+  { value: "prospeccao", label: "Prospecção de clientes", tone: "brand" },
+  { value: "atender_corretor", label: "Atender corretor(es)", tone: "accent" },
+  { value: "pendencias", label: "Resolver pendências", tone: "amber" },
+];
+export const NIVEIS_TANQUE: Option[] = [
+  { value: "reserva", label: "Reserva" },
+  { value: "1/4", label: "1/4" },
+  { value: "1/2", label: "1/2" },
+  { value: "3/4", label: "3/4" },
+  { value: "cheio", label: "Cheio" },
+];
+export const INCONSISTENCIAS: (Option & { descricao: string; gravidade: "alta" | "media" | "baixa" })[] = [
+  { value: "exigencia_vencida", label: "Exigência com prazo vencido", descricao: "Prazo de 7 dias (+7 de prorrogação) estourado", gravidade: "alta", tone: "red" },
+  { value: "documentacao_vencida", label: "Documentação do cadastro vencida", descricao: "Prazo de coleta de documentos encerrado", gravidade: "alta", tone: "red" },
+  { value: "habilitado_sem_protocolo", label: "Habilitado sem protocolo do INSS", descricao: "Todo processo habilitado precisa do número de protocolo", gravidade: "alta", tone: "red" },
+  { value: "sem_assinatura", label: "Falta contrato ou procuração assinados", descricao: "Assinaturas pendentes em processos ativos", gravidade: "alta", tone: "amber" },
+  { value: "exigencia_sem_status", label: "Exigência em aberto com outro status", descricao: "A planilha indica exigência, mas o status não é Exigência", gravidade: "media", tone: "amber" },
+  { value: "analise_parada", label: "Em análise há mais de 60 dias", descricao: "Processos parados na análise", gravidade: "media", tone: "amber" },
+  { value: "duplicado", label: "Processos duplicados", descricao: "Mesmo cliente e mesmo tipo com mais de um processo ativo", gravidade: "media", tone: "amber" },
+  { value: "datas_invalidas", label: "Datas inconsistentes", descricao: "Habilitação antes do recebimento ou data no futuro", gravidade: "media", tone: "amber" },
+  { value: "habilitado_sem_data", label: "Habilitado sem data de habilitação", descricao: "Status habilitado sem a data", gravidade: "media", tone: "amber" },
+  { value: "sem_assessor", label: "Processo sem assessor", descricao: "Não dá para medir a meta de quem trouxe o cliente", gravidade: "baixa", tone: "slate" },
+  { value: "cliente_sem_cpf", label: "Cliente sem CPF válido", descricao: "CPF ausente ou com quantidade de dígitos errada", gravidade: "media", tone: "amber" },
+  { value: "cliente_sem_telefone", label: "Cliente sem telefone", descricao: "Sem telefone, WhatsApp ou recado", gravidade: "baixa", tone: "slate" },
+  { value: "rota_sem_checklist", label: "Rota sem checklist do veículo", descricao: "Rota concluída sem o checklist de saída ou de chegada", gravidade: "media", tone: "amber" },
+];

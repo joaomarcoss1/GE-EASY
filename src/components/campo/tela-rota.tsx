@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { Car, CheckCircle2, Flag, Fuel, Loader2, LogIn, LogOut, MapPin, Navigation, Play } from "lucide-react";
 import { distanciaM } from "@/lib/geo";
-import { CHECKIN_RESULTADOS } from "@/lib/constants";
+import { CHECKIN_RESULTADOS, ROTA_OBJETIVOS } from "@/lib/constants";
+import { AssinaturasRota, ChecklistVeiculo } from "./checklist-rota";
 import { useCampo } from "./contexto";
 import { hojeISO, posicaoAtual, type ParadaCampo, type RotaCampo } from "./tipos";
 import { FotoInput } from "./foto-input";
@@ -45,15 +46,20 @@ function ExecucaoRota({ rota }: { rota: RotaCampo }) {
   const [foto, setFoto] = useState<Blob | null>(null);
   const [finalizando, setFinalizando] = useState(false);
   const [motivos, setMotivos] = useState<Record<string, string>>({});
-  const exigeHod = snap.parametros.exigir_hodometro;
+  const precisaChecklist = !!rota.veiculo_id && rota.exige_checklist !== false;
+  const ckSaida = rota.checklists?.find((c) => c.momento === "saida");
+  const ckChegada = rota.checklists?.find((c) => c.momento === "chegada");
+  // com checklist, a quilometragem vem do checklist (não pede o hodômetro de novo)
+  const exigeHod = snap.parametros.exigir_hodometro && !precisaChecklist;
 
   const iniciar = async () => {
+    if (precisaChecklist && !ckSaida) return aviso("Faça o checklist de saída do veículo antes de iniciar.", "erro");
     if (exigeHod && !hodometro) return aviso("Informe o hodômetro para iniciar.", "erro");
     setOcupado("iniciar");
     try {
       const pos = await posicaoAtual();
       const id = crypto.randomUUID();
-      await registrar("iniciar_rota", { id, rota_id: rota.id, lat: pos.lat, lng: pos.lng, hodometro: hodometro ? Number(hodometro) : null }, `Início da rota ${rota.nome}`, foto ? [{ campo: "foto", nome: "hodometro.jpg", blob: foto }] : []);
+      await registrar("iniciar_rota", { id, rota_id: rota.id, lat: pos.lat, lng: pos.lng, hodometro: ckSaida ? ckSaida.km : hodometro ? Number(hodometro) : null }, `Início da rota ${rota.nome}`, foto ? [{ campo: "foto", nome: "hodometro.jpg", blob: foto }] : []);
       aviso("Rota iniciada.");
       setHodometro(""); setFoto(null);
     } catch (e) {
@@ -67,12 +73,13 @@ function ExecucaoRota({ rota }: { rota: RotaCampo }) {
     const pend = rota.paradas.filter((p) => p.status === "pendente");
     const semMotivo = pend.filter((p) => !motivos[p.id]?.trim());
     if (semMotivo.length) return aviso("Informe o motivo das paradas não visitadas.", "erro");
+    if (precisaChecklist && !ckChegada) return aviso("Faça o checklist de chegada do veículo antes de finalizar.", "erro");
     if (exigeHod && !hodometro) return aviso("Informe o hodômetro final.", "erro");
     setOcupado("finalizar");
     try {
       const pos = await posicaoAtual().catch(() => null);
       await registrar("finalizar_rota", {
-        id: crypto.randomUUID(), rota_id: rota.id, lat: pos?.lat ?? null, lng: pos?.lng ?? null, hodometro: hodometro ? Number(hodometro) : null,
+        id: crypto.randomUUID(), rota_id: rota.id, lat: pos?.lat ?? null, lng: pos?.lng ?? null, hodometro: ckChegada ? ckChegada.km : hodometro ? Number(hodometro) : null,
         nao_realizadas: pend.map((p) => ({ parada_id: p.id, motivo: motivos[p.id].trim() })),
       }, `Fim da rota ${rota.nome}`, foto ? [{ campo: "foto", nome: "hodometro.jpg", blob: foto }] : []);
       aviso("Rota finalizada e enviada para aprovação.");
@@ -90,7 +97,11 @@ function ExecucaoRota({ rota }: { rota: RotaCampo }) {
       <div>
         <p className="text-xs text-muted">{rota.data.split("-").reverse().join("/")}</p>
         <h1 className="text-xl font-bold">{rota.nome}</h1>
-        {rota.objetivo && <p className="text-sm text-muted">{rota.objetivo}</p>}
+        {rota.objetivo_tipo && <p className="mt-1 inline-flex rounded-full bg-accent-100 px-2.5 py-0.5 text-xs font-semibold text-accent-800 dark:bg-accent-900/40 dark:text-accent-100">{ROTA_OBJETIVOS.find((o) => o.value === rota.objetivo_tipo)?.label}</p>}
+        {rota.objetivo && <p className="mt-1 text-sm text-muted"><b className="text-fg">Motivo:</b> {rota.objetivo}</p>}
+        {!!rota.cidades?.length && <p className="text-sm text-muted"><b className="text-fg">Cidades:</b> {rota.cidades.join(", ")}</p>}
+        {!!rota.corretores_nomes?.length && <p className="text-sm text-muted"><b className="text-fg">Corretor(es):</b> {rota.corretores_nomes.join(", ")}</p>}
+        {!!rota.participantes?.length && <p className="text-sm text-muted"><b className="text-fg">Equipe:</b> {rota.participantes.map((x) => x.nome).join(", ")}</p>}
       </div>
 
       <div className="card space-y-3 p-4">
@@ -112,11 +123,12 @@ function ExecucaoRota({ rota }: { rota: RotaCampo }) {
         )}
       </div>
 
-      {rota.status === "planejada" && (
+      {rota.status === "planejada" && precisaChecklist && !ckSaida && <ChecklistVeiculo rota={rota} momento="saida" />}
+      {rota.status === "planejada" && (!precisaChecklist || ckSaida) && (
         <div className="card space-y-3 p-4">
-          <p className="text-sm">Ao iniciar, a posição e o horário ficam registrados.</p>
-          <input className="input" inputMode="numeric" placeholder={`Hodômetro (km)${exigeHod ? " — obrigatório" : ""}`} value={hodometro} onChange={(e) => setHodometro(e.target.value.replace(/\D/g, ""))} />
-          <FotoInput label="Foto do hodômetro" onFoto={setFoto} />
+          <p className="text-sm">Ao iniciar, a posição e o horário ficam registrados.{ckSaida ? ` Saída com ${ckSaida.km.toLocaleString("pt-BR")} km.` : ""}</p>
+          {!precisaChecklist && <input className="input" inputMode="numeric" placeholder={`Hodômetro (km)${exigeHod ? " — obrigatório" : ""}`} value={hodometro} onChange={(e) => setHodometro(e.target.value.replace(/\D/g, ""))} />}
+          {!precisaChecklist && <FotoInput label="Foto do hodômetro" onFoto={setFoto} />}
           <button type="button" disabled={!!ocupado} onClick={iniciar} className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent-500 py-3.5 text-base font-bold text-white">
             {ocupado === "iniciar" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" />} Iniciar rota
           </button>
@@ -139,14 +151,16 @@ function ExecucaoRota({ rota }: { rota: RotaCampo }) {
               <input className="input" value={motivos[p.id] ?? ""} onChange={(e) => setMotivos({ ...motivos, [p.id]: e.target.value })} placeholder="Ex.: cliente pediu para remarcar" />
             </label>
           ))}
-          <input className="input" inputMode="numeric" placeholder={`Hodômetro final (km)${exigeHod ? " — obrigatório" : ""}`} value={hodometro} onChange={(e) => setHodometro(e.target.value.replace(/\D/g, ""))} />
-          <FotoInput label="Foto do hodômetro" onFoto={setFoto} />
+          {precisaChecklist && !ckChegada && <ChecklistVeiculo rota={rota} momento="chegada" />}
+          {!precisaChecklist && <input className="input" inputMode="numeric" placeholder={`Hodômetro final (km)${exigeHod ? " — obrigatório" : ""}`} value={hodometro} onChange={(e) => setHodometro(e.target.value.replace(/\D/g, ""))} />}
+          {!precisaChecklist && <FotoInput label="Foto do hodômetro" onFoto={setFoto} />}
           <div className="flex gap-2">
             <button type="button" onClick={() => setFinalizando(false)} className="flex-1 rounded-xl border border-line py-3 font-semibold">Voltar</button>
             <button type="button" disabled={!!ocupado} onClick={finalizar} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-700 py-3 font-semibold text-white">{ocupado === "finalizar" && <Loader2 className="h-4 w-4 animate-spin" />}Finalizar</button>
           </div>
         </div>
       )}
+      {(rota.status === "concluida" || rota.status === "aprovada") && <AssinaturasRota rota={rota} />}
     </div>
   );
 }

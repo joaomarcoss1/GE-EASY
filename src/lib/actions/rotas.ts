@@ -22,14 +22,31 @@ const atualizar = (id?: string | null) => {
 const erroDb = (e: { code?: string; message?: string }): ActionState =>
   (e.code === "P0001" || e.code === "23514" || (e.code === "42501" && e.message && !e.message.startsWith("new row"))) && e.message ? { error: e.message } : dbError(e);
 
-const rotaSchema = z.object({
-  id: zs.uuid(),
-  nome: zs.required("Nome", 160),
-  data: zs.date().refine((v) => !!v, "Informe a data"),
-  consultor_id: zs.requiredUuid("o assessor"),
-  veiculo_id: zs.uuid(),
-  objetivo: zs.text(2000),
-});
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const lista = (max: number, item: z.ZodTypeAny) => z.array(item).max(max).optional().default([]);
+const rotaSchema = z
+  .object({
+    id: zs.uuid(),
+    nome: zs.required("Nome", 160),
+    data: zs.date().refine((v) => !!v, "Informe a data"),
+    consultor_id: zs.requiredUuid("o consultor responsável"),
+    veiculo_id: zs.uuid(),
+    objetivo_tipo: zs.enumOf(["prospeccao", "atender_corretor", "pendencias"], "Escolha o objetivo da rota"),
+    objetivo: z.string({ error: "Informe o motivo da rota" }).trim().min(10, "Explique o motivo da rota (mínimo 10 caracteres)").max(2000),
+    cidades: lista(40, z.string().trim().min(2).max(120)),
+    corretores: lista(30, z.string().regex(UUID_RE, "Corretor inválido")),
+    participantes: lista(20, z.string().regex(UUID_RE, "Participante inválido")),
+  })
+  .superRefine((v, ctx) => {
+    if (!v.cidades.length) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cidades"], message: "Escolha ao menos uma cidade" });
+    if (v.objetivo_tipo === "atender_corretor" && !v.corretores.length) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["corretores"], message: "Informe qual corretor (ou corretores) será atendido" });
+  })
+  .transform((v) => ({
+    ...v,
+    cidades: [...new Set(v.cidades)],
+    corretores: v.objetivo_tipo === "atender_corretor" ? [...new Set(v.corretores as string[])] : [],
+    participantes: [...new Set(v.participantes as string[])].filter((p) => p !== v.consultor_id),
+  }));
 
 export async function salvarRota(_: ActionState, formData: FormData): Promise<ActionState> {
   const g = await guard("rotas.definir");
@@ -38,6 +55,10 @@ export async function salvarRota(_: ActionState, formData: FormData): Promise<Ac
   if (!parsed.success) return zodErrors(parsed.error);
   const { id, ...v } = parsed.data;
   const supabase = await createClient();
+  if (v.corretores.length) {
+    const { data: ok } = await supabase.from("assessores").select("id").in("id", v.corretores);
+    if ((ok ?? []).length !== v.corretores.length) return { error: "Algum corretor escolhido não foi encontrado.", fieldErrors: { corretores: "Corretor inválido" } };
+  }
   // rota nova sem veículo escolhido: o veículo ativo de que o consultor é responsável (carro próprio ou da frota)
   if (!id && !v.veiculo_id) {
     const { data: dele } = await supabase.from("veiculos").select("id").eq("responsavel_id", v.consultor_id).eq("ativo", true).limit(1).maybeSingle();
@@ -365,4 +386,32 @@ export async function salvarParametrosRotas(_: ActionState, formData: FormData):
   revalidatePath("/configuracoes");
   revalidatePath("/rotas", "layout");
   return { ok: true, message: "Parâmetros de rotas salvos." };
+}
+
+/** Assina o relatório da rota pelo computador (gestão ou participante). O PNG da assinatura é conferido no servidor. */
+export async function assinarRota(_: ActionState, formData: FormData): Promise<ActionState> {
+  const g = await guard();
+  if ("denied" in g) return g.denied;
+  const v = z.object({ rota_id: zs.requiredUuid("a rota"), nome: zs.required("Nome", 160), papel: zs.enumOf(["participante", "gestor", "responsavel"]) }).safeParse(formToObject(formData));
+  if (!v.success) return zodErrors(v.error);
+  const arq = formData.get("assinatura");
+  if (!(arq instanceof File) || !arq.size || arq.size > 2 * 1024 * 1024 || arq.type !== "image/png") return { error: "Faça a assinatura no quadro." };
+  const bytes = new Uint8Array(await arq.arrayBuffer());
+  const { detectarTipoArquivo } = await import("@/lib/seguranca/arquivos");
+  if (!detectarTipoArquivo(bytes, "image/png")) return { error: "Assinatura inválida." };
+  const supabase = await createClient();
+  const { data: rota } = await supabase.from("rotas").select("id, status").eq("id", v.data.rota_id).maybeSingle();
+  if (!rota) return { error: "Rota não encontrada." };
+  const id = crypto.randomUUID();
+  const caminho = `empresas/${g.session.empresa!.id}/rotas/${rota.id}/assinatura-${id}.png`;
+  const { error: upErr } = await supabase.storage.from("documentos").upload(caminho, bytes, { contentType: "image/png", upsert: false });
+  if (upErr) return { error: "Não foi possível guardar a assinatura." };
+  const { error } = await supabase.from("rota_assinaturas").insert({ id, rota_id: rota.id, nome: v.data.nome, papel: v.data.papel, usuario_id: g.session.userId, assinatura_path: caminho });
+  if (error) {
+    await supabase.storage.from("documentos").remove([caminho]);
+    return erroDb(error);
+  }
+  revalidatePath(`/rotas/${rota.id}/relatorio`);
+  atualizar(rota.id);
+  return { ok: true, message: "Relatório assinado." };
 }

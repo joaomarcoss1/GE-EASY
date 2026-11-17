@@ -5,11 +5,12 @@ import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { searchTerm, userOptions } from "@/lib/data";
 import { maskDocumento, maskPhone } from "@/lib/format";
+import { ASSESSOR_CATEGORIAS } from "@/lib/constants";
 import { excluirAssessor, salvarAssessor } from "@/lib/actions/comercial";
 import type { FieldDef } from "@/components/ui/form";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, optionLabel } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -26,8 +27,10 @@ const ACORDO = [
 function assessorFields(usuarios: { value: string; label: string }[], edit: boolean, temComprovante = false): FieldDef[] {
   return [
     { name: "nome", label: "Nome completo", required: true, span: 6 },
-    { name: "cpf", label: "CPF", type: "documento", required: true, span: 3 },
-    { name: "telefone", label: "Telefone", type: "tel", required: true, span: 3 },
+    { name: "categoria", label: "Categoria", type: "select", options: ASSESSOR_CATEGORIAS, required: true, emptyOption: false, span: 3 },
+    { name: "apelidos", label: "Nome na planilha", span: 3, placeholder: "Ex.: JOSE", help: "Como aparece na coluna de corretor da planilha (separe por vírgula). Liga os processos antigos a este assessor." },
+    { name: "cpf", label: "CPF", type: "documento", required: !edit, span: 3 },
+    { name: "telefone", label: "Telefone", type: "tel", required: !edit, span: 3 },
     { name: "email", label: "E-mail", type: "email", span: 6 },
     { name: "acordo_comercial", label: "Tem acordo comercial?", type: "select", options: ACORDO, required: true, emptyOption: false, span: 3 },
     { name: "user_id", label: "Usuário no sistema", type: "select", options: usuarios, emptyOption: "Sem acesso ao sistema", span: 6, help: "Ligue ao usuário do assessor para o resumo diário trazer as rotas dele e ele receber o resumo." },
@@ -55,6 +58,8 @@ interface Assessor {
   comprovante_path: string | null;
   observacoes: string | null;
   user_id: string | null;
+  categoria: string;
+  apelidos: string[];
 }
 
 /** Cadastro dos assessores (quem traz o cliente): CPF, contato, comprovante de residência e acordo comercial. */
@@ -62,7 +67,7 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
   await requirePermission("consultores.manage");
   const sp = await searchParams;
   const supabase = await createClient();
-  let query = supabase.from("assessores").select("id, nome, cpf, telefone, email, acordo_comercial, ativo, comprovante_path, observacoes, user_id").order("ativo", { ascending: false }).order("nome");
+  let query = supabase.from("assessores").select("id, nome, cpf, telefone, email, acordo_comercial, ativo, comprovante_path, observacoes, user_id, categoria, apelidos").order("ativo", { ascending: false }).order("nome");
   const q = searchTerm(sp.q);
   if (q) {
     const digits = q.replace(/\D/g, "");
@@ -85,7 +90,7 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
         eyebrow="Comercial"
         title="Assessores"
         description={`Quem traz os clientes. ${lista.filter((a) => a.ativo).length} ativo(s), ${comAcordo} com acordo comercial.`}
-        actions={<FormDrawerButton action={salvarAssessor} fields={assessorFields(usuarios, false)} values={{ acordo_comercial: "nao" }} title="Novo assessor" label="Novo assessor" variant="accent" width="max-w-lg" />}
+        actions={<FormDrawerButton action={salvarAssessor} fields={assessorFields(usuarios, false)} values={{ acordo_comercial: "nao", categoria: "corretor" }} title="Novo assessor" label="Novo assessor" variant="accent" width="max-w-lg" />}
       />
       <Card>
         <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center">
@@ -105,7 +110,7 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
               <tbody>
                 {lista.map((a) => (
                   <tr key={a.id} className={a.ativo ? "" : "opacity-60"}>
-                    <td className="font-semibold">{a.nome}{!a.ativo && <Badge tone="slate" className="ml-2">inativo</Badge>}</td>
+                    <td className="font-semibold">{a.nome}{!a.ativo && <Badge tone="slate" className="ml-2">inativo</Badge>}<div className="mt-0.5 flex flex-wrap gap-1 text-xs font-normal"><Badge tone={a.categoria === "corretor" ? "accent" : a.categoria === "diretoria" ? "violet" : "brand"}>{optionLabel(ASSESSOR_CATEGORIAS, a.categoria)}</Badge>{a.apelidos.length > 0 && <span className="text-muted">planilha: {a.apelidos.join(", ")}</span>}</div></td>
                     <td className="whitespace-nowrap text-sm">{a.cpf ? maskDocumento(a.cpf) : "—"}</td>
                     <td className="text-sm">{a.telefone ? maskPhone(a.telefone) : "—"}{a.email && <div className="text-xs text-muted">{a.email}</div>}</td>
                     <td>{a.acordo_comercial ? <Badge tone="green">Sim</Badge> : <Badge tone="slate">Não</Badge>}</td>
@@ -116,7 +121,7 @@ export default async function AssessoresPage({ searchParams }: { searchParams: P
                         <FormDrawerButton
                           action={salvarAssessor}
                           fields={assessorFields(usuarios, true, !!a.comprovante_path)}
-                          values={{ ...a, acordo_comercial: a.acordo_comercial ? "sim" : "nao", comprovante_path: null }}
+                          values={{ ...a, acordo_comercial: a.acordo_comercial ? "sim" : "nao", comprovante_path: null, apelidos: a.apelidos.join(", ") }}
                           hidden={{ id: a.id }}
                           title="Editar assessor"
                           icon="edit"
