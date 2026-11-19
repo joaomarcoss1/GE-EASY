@@ -9,16 +9,18 @@ const schema = z
   .object({
     id: zs.uuid(),
     nome: zs.required("Nome da meta", 120),
-    indicador: zs.enumOf(["processos_novos", "habilitados", "judicializados", "analises", "ligacoes"], "Escolha o indicador"),
+    indicador: zs.enumOf(["processos_novos", "habilitados", "judicializados", "analises", "ligacoes", "pendencias_resolvidas", "exigencias_cumpridas"], "Escolha o indicador"),
     periodicidade: zs.enumOf(["diaria", "mensal", "anual"], "Escolha o período"),
-    alvo: zs.enumOf(["empresa", "assessor", "categoria"], "Escolha para quem é a meta"),
+    alvo: zs.enumOf(["empresa", "assessor", "categoria", "usuario"], "Escolha para quem é a meta"),
     assessor_id: zs.uuid(),
+    usuario_id: zs.uuid(),
     categoria: zs.text(20),
     valor: zs.number(1, 1_000_000).refine((v) => v !== null && Number.isInteger(v), "Informe um número inteiro maior que zero"),
     ativo: zs.bool(),
   })
   .superRefine((v, ctx) => {
     if (v.alvo === "assessor" && !v.assessor_id) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["assessor_id"], message: "Escolha o assessor" });
+    if (v.alvo === "usuario" && !v.usuario_id) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["usuario_id"], message: "Escolha o funcionário" });
     if (v.alvo === "categoria" && !["consultor", "corretor", "diretoria"].includes(v.categoria ?? "")) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["categoria"], message: "Escolha a categoria" });
     if (v.indicador === "ligacoes" && v.alvo === "empresa") ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["alvo"], message: "Ligações são medidas por pessoa: escolha um assessor ou uma categoria" });
   })
@@ -30,6 +32,7 @@ const schema = z
     alvo: v.alvo,
     assessor_id: v.alvo === "assessor" ? v.assessor_id! : null,
     categoria: v.alvo === "categoria" ? v.categoria! : null,
+    usuario_id: v.alvo === "usuario" ? v.usuario_id! : null,
     valor: v.valor as number,
     ativo: v.ativo,
   }));

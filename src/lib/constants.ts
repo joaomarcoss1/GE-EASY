@@ -647,6 +647,8 @@ export const META_INDICADORES: Option[] = [
   { value: "judicializados", label: "Processos judicializados", tone: "violet" },
   { value: "analises", label: "Processos analisados", tone: "sky" },
   { value: "ligacoes", label: "Ligações para clientes", tone: "accent" },
+  { value: "pendencias_resolvidas", label: "Pendências resolvidas", tone: "amber" },
+  { value: "exigencias_cumpridas", label: "Exigências cumpridas", tone: "red" },
 ];
 export const META_PERIODICIDADES: Option[] = [
   { value: "diaria", label: "Por dia" },
@@ -655,7 +657,8 @@ export const META_PERIODICIDADES: Option[] = [
 ];
 export const META_ALVOS: Option[] = [
   { value: "empresa", label: "Geral (toda a empresa)" },
-  { value: "assessor", label: "Um assessor/consultor" },
+  { value: "assessor", label: "Um assessor/consultor (o que ele trouxe)" },
+  { value: "usuario", label: "Um funcionário (o que ele fez)" },
   { value: "categoria", label: "Cada assessor de uma categoria" },
 ];
 export const ASSESSOR_CATEGORIAS: Option[] = [

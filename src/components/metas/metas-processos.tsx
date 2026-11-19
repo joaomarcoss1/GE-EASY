@@ -9,7 +9,8 @@ export interface MetaLinha {
   nome: string;
   indicador: string;
   periodicidade: "diaria" | "mensal" | "anual";
-  alvo: "empresa" | "assessor" | "categoria";
+  alvo: "empresa" | "assessor" | "categoria" | "usuario";
+  usuario_id?: string | null;
   categoria: string | null;
   valor: number;
   assessor_id: string | null;

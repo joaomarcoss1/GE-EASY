@@ -66,7 +66,7 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
   const vencidas = exigencias.filter((e) => e.exigencia_prazo && e.exigencia_prazo < hoje).length;
   const docs = (docRes.data ?? []) as { id: string; nome: string; prazo_documentacao: string | null }[];
   const meusAss = new Set((meusAssRes.data ?? []).map((a) => a.id as string));
-  const metas = ((metasRes.data ?? []) as MetaLinha[]).filter((m) => veBase || m.alvo === "empresa" || (m.assessor_id && meusAss.has(m.assessor_id)));
+  const metas = ((metasRes.data ?? []) as MetaLinha[]).filter((m) => veBase || m.alvo === "empresa" || m.usuario_id === userId || (m.assessor_id && meusAss.has(m.assessor_id)));
 
   return (
     <>

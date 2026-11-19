@@ -36,7 +36,9 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   (`painel-diretoria.tsx`); demais em `painel-escritorio.tsx`.
 - `cliente_casos.assessor_id` (gatilho: assessor do cliente → `assessores.apelidos` × corretor da planilha) é a base de
   metas e relatórios. Habilitar exige `protocolo_inss` e `situacao_atual` (ação + gatilho); `habilitado_em` automático.
-- Metas: `metas_processos` (recorrentes) + `metas_processos_painel(ref)`; tela `/metas/processos` (`metas.manage` edita).
+- Metas: `metas_processos` (recorrentes; alvo empresa/assessor/categoria/usuario) + `metas_processos_painel(ref)`; tela
+  `/metas/processos` (`metas.manage` edita). Indicadores por pessoa (`pendencias_resolvidas`, `exigencias_cumpridas`, …) contam
+  pelo histórico de status de quem mudou. Setores do Administrativo: Pendências, Exigências, Análise.
 - Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
 - Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).
 - Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,
