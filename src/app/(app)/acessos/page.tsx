@@ -19,6 +19,7 @@ import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { ResourceForm } from "@/components/ui/form";
 import { MatrizAcessos, type DepMatriz, type PessoaMatriz } from "@/components/acessos/matriz";
+import { EditorAcessosUsuario, type FuncEditor } from "@/components/acessos/editor-usuario";
 
 export const metadata: Metadata = { title: "Acessos" };
 
@@ -39,7 +40,7 @@ interface ContextoUsuario {
 export default async function AcessosPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const session = await requireMaster();
   const sp = await searchParams;
-  const tab = ["matriz", "niveis", "excecoes", "equipes", "dispositivos"].includes(sp.tab ?? "") ? sp.tab! : "matriz";
+  const tab = ["matriz", "usuario", "niveis", "excecoes", "equipes", "dispositivos"].includes(sp.tab ?? "") ? sp.tab! : "matriz";
   const supabase = await createClient();
   const [{ data: membros }, { data: deps }, { data: niveis }, { data: vinculos }, { data: funcs }, { data: nivelFuncs }, { data: extras }, { data: equipes }, { data: aparelhos }] = await Promise.all([
     supabase.from("membros").select("id, full_name, email, role, active, admin_master, is_master").order("full_name"),
@@ -117,7 +118,7 @@ export default async function AcessosPage({ searchParams }: { searchParams: Prom
             title={`Ver como: ${nomePessoa.get(ver) ?? "usuário"}`}
             description={ctx?.membro ? `${ROLES.find((r) => r.value === ctx.membro?.role)?.label ?? ctx.membro.role}${ctx.membro.admin_master ? " · administrador master" : ""}${ctx.membro.ativo ? "" : " · acesso desativado"} — simulação somente leitura (registrada na auditoria).` : "Simulação somente leitura."}
             icon={<Eye className="h-4 w-4" />}
-            action={<Link href="/acessos" className="text-sm font-semibold text-brand-600">Fechar</Link>}
+            action={<span className="flex gap-3"><Link href={`/acessos?tab=usuario&u=${ver}`} className="text-sm font-semibold text-brand-600">Editar acessos</Link><Link href="/acessos" className="text-sm font-semibold text-muted">Fechar</Link></span>}
           />
           <CardBody className="grid gap-6 lg:grid-cols-3">
             <div>
@@ -144,6 +145,7 @@ export default async function AcessosPage({ searchParams }: { searchParams: Prom
       )}
       <LinkTabs base="/acessos" active={tab} tabs={[
         { key: "matriz", label: "Funcionários × departamentos" },
+        { key: "usuario", label: "Por usuário" },
         { key: "niveis", label: "Níveis e funcionalidades" },
         { key: "excecoes", label: "Exceções individuais", count: (extras ?? []).length },
         { key: "equipes", label: "Equipes", count: equipesPorSup.size },
@@ -156,6 +158,57 @@ export default async function AcessosPage({ searchParams }: { searchParams: Prom
           {pessoas.length === 0 ? <EmptyState title="Nenhum usuário" /> : <MatrizAcessos pessoas={pessoas} deps={depLista} eu={session.userId} />}
         </Card>
       )}
+
+      {tab === "usuario" && (() => {
+        const alvo = sp.u && /^[0-9a-f-]{36}$/i.test(sp.u) ? pessoasBase.find((p) => p.id === sp.u) : null;
+        const nivelNome = new Map(depLista.flatMap((d) => d.niveis.map((n) => [n.id, `${d.nome} › ${n.nome}`] as const)));
+        const meusNiveis = alvo ? (vinculos ?? []).filter((v) => v.user_id === alvo.id && v.nivel_id).map((v) => v.nivel_id as string) : [];
+        const origemDe = new Map<string, string[]>();
+        for (const nf of nivelFuncs ?? []) if (meusNiveis.includes(nf.nivel_id as string)) origemDe.set(nf.funcionalidade as string, [...(origemDe.get(nf.funcionalidade as string) ?? []), nivelNome.get(nf.nivel_id as string) ?? "nível"]);
+        const excecoesAlvo = alvo ? (extras ?? []).filter((x) => x.user_id === alvo.id && (!x.valido_ate || new Date(x.valido_ate as string) > new Date())) : [];
+        const setorDe = (area: string | null) => (area ? (AREAS.find((a) => a.value === area)?.label ?? "Outros") : "Geral (todos os setores)");
+        const funcsEditor: FuncEditor[] = catalogo.map((f) => {
+          const x = excecoesAlvo.find((e) => e.funcionalidade === f.chave);
+          return {
+            chave: f.chave, nome: f.nome, setor: setorDe(f.area), sensivel: f.sensivel, doNivel: origemDe.has(f.chave), origem: origemDe.get(f.chave)?.join(", ") ?? null,
+            excecao: (x?.tipo as "concessao" | "revogacao" | undefined) ?? null, excecaoValidade: x?.valido_ate ? String(x.valido_ate).slice(0, 10) : null, soMaster: f.area === "financeiro",
+          };
+        }).sort((a, b) => a.setor.localeCompare(b.setor, "pt-BR") || a.nome.localeCompare(b.nome, "pt-BR"));
+        return (
+          <div className="grid gap-6 xl:grid-cols-[280px_1fr]">
+            <Card className="h-fit">
+              <CardHeader title="Escolha a pessoa" icon={<Users className="h-4 w-4" />} />
+              <ul className="max-h-[70vh] divide-y divide-line overflow-y-auto">
+                {pessoasBase.filter((p) => p.id !== session.userId).map((p) => (
+                  <li key={p.id as string}>
+                    <Link href={`/acessos?tab=usuario&u=${p.id}`} scroll={false} className={`block px-4 py-2.5 text-sm hover:bg-surface-2 ${alvo?.id === p.id ? "bg-brand-50 font-semibold text-brand-800 dark:bg-brand-900/40 dark:text-brand-100" : ""}`}>
+                      {(p.full_name as string) || (p.email as string)}
+                      <span className="block text-[11px] font-normal text-muted">{ROLES.find((r) => r.value === p.role)?.label ?? p.role}{p.admin_master ? " · master" : ""}{p.active ? "" : " · inativo"}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+            <Card>
+              {!alvo ? (
+                <EmptyState icon={<KeyRound className="h-6 w-6" />} title="Escolha uma pessoa" description="Libere só as funcionalidades que ela precisa — inclusive de outro setor — ou bloqueie alguma que o nível dá." />
+              ) : alvo.admin_master ? (
+                <EmptyState title="Administrador master" description="O administrador master tem todas as funcionalidades; não há o que ajustar." />
+              ) : (
+                <>
+                  <CardHeader
+                    title={`Acessos de ${(alvo.full_name as string) || (alvo.email as string)}`}
+                    description="Padrão = segue o nível do departamento. Conceder = libera só para esta pessoa (vale de outro setor). Bloquear = tira, mesmo que o nível dê. O perfil continua definindo quais dados ela enxerga."
+                    icon={<KeyRound className="h-4 w-4" />}
+                    action={<Link href={`/acessos?ver=${alvo.id}`} className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-300">Ver como a pessoa</Link>}
+                  />
+                  <EditorAcessosUsuario key={alvo.id as string} userId={alvo.id as string} nome={((alvo.full_name as string) || "a pessoa").split(" ")[0]} funcs={funcsEditor} master={!!alvo.admin_master} />
+                </>
+              )}
+            </Card>
+          </div>
+        );
+      })()}
 
       {tab === "niveis" && (
         <div className="space-y-6">

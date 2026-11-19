@@ -237,3 +237,52 @@ export async function revogarDispositivo(id: string): Promise<ActionState> {
   await registrarAcesso("DISPOSITIVO_REVOGADO", "dispositivos", id);
   return ok("Aparelho revogado.");
 }
+
+const ajusteSchema = z.object({
+  user_id: z.string().regex(/^[0-9a-f-]{36}$/i, "Usuário inválido"),
+  mudancas: z
+    .array(z.object({
+      funcionalidade: z.string().refine((f) => (FUNCIONALIDADES as readonly string[]).includes(f), "Funcionalidade inválida"),
+      estado: z.enum(["padrao", "concessao", "revogacao"]),
+    }))
+    .min(1, "Nenhuma alteração para salvar.")
+    .max(200),
+  motivo: z.string().trim().min(3, "Informe o motivo da alteração").max(500),
+  valido_ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+});
+
+/**
+ * Ajuste fino dos acessos de UM usuário: para cada funcionalidade, volta ao padrão do nível, concede (mesmo de
+ * outro setor) ou bloqueia. Tudo numa vez, com motivo e validade opcional; cada mudança fica na auditoria.
+ */
+export async function salvarAcessosUsuario(input: z.input<typeof ajusteSchema>): Promise<ActionState> {
+  const g = await master();
+  if ("denied" in g) return g.denied;
+  const parsed = ajusteSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  const v = parsed.data;
+  if (v.user_id === g.session.userId) return { error: "Você não pode alterar o seu próprio acesso." };
+  const supabase = await createClient();
+  const remover = v.mudancas.filter((m) => m.estado === "padrao").map((m) => m.funcionalidade);
+  const gravar = v.mudancas.filter((m) => m.estado !== "padrao");
+  if (remover.length) {
+    const { error } = await supabase.from("usuario_permissoes_extra").delete().eq("user_id", v.user_id).in("funcionalidade", remover);
+    if (error) return erro(error);
+  }
+  if (gravar.length) {
+    const validade = v.valido_ate ? `${v.valido_ate}T23:59:59-03:00` : null;
+    const { error } = await supabase.from("usuario_permissoes_extra").upsert(
+      gravar.map((m) => ({ user_id: v.user_id, funcionalidade: m.funcionalidade, tipo: m.estado, motivo: v.motivo, valido_ate: validade, concedido_por: g.session.userId })),
+      { onConflict: "empresa_id,user_id,funcionalidade" },
+    );
+    if (error) return erro(error);
+  }
+  await registrarAcesso("ACESSOS_AJUSTADOS", "usuario_permissoes_extra", v.user_id, {
+    concedidas: gravar.filter((m) => m.estado === "concessao").map((m) => m.funcionalidade),
+    bloqueadas: gravar.filter((m) => m.estado === "revogacao").map((m) => m.funcionalidade),
+    padrao: remover,
+    valido_ate: v.valido_ate ?? null,
+  });
+  revalidatePath("/acessos");
+  return { ok: true, message: `${v.mudancas.length} alteração(ões) salva(s). Vale no próximo clique do usuário.` };
+}
