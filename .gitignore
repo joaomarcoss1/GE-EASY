@@ -10,3 +10,6 @@ next-env.d.ts
 coverage
 test-results
 playwright-report
+
+# pacotes gerados para entrega (zip)
+entregas/
