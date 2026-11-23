@@ -3,12 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { ROLES } from "@/lib/constants";
 import { csvResponse, toCsv } from "@/lib/csv";
 import { registrarAcesso } from "@/lib/actions/utils";
+import { protegerApi } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
 /** Matriz de acessos (funcionário × departamento × nível) em CSV — somente o administrador master; auditado. */
 export async function GET() {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session?.empresa || !session.profile.active) return new Response("Não autorizado", { status: 401 });
   if (!session.profile.admin_master) return new Response("Sem permissão", { status: 403 });
   const supabase = await createClient();

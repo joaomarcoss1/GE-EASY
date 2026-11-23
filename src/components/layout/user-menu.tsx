@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { ROLE_LABEL } from "@/lib/constants";
 import type { Profile } from "@/lib/types";
 import { signOut } from "@/lib/actions/auth";
+import { limparAoSair } from "@/lib/campo/local";
 
 export function ThemeToggle() {
   const [dark, setDark] = useState(false);
@@ -44,6 +45,12 @@ export function UserMenu({ profile, trocarEmpresa }: { profile: Profile; trocarE
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
+  const sairSeguro = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // Apaga os dados pessoais do app de campo; envios ainda não sincronizados ficam guardados (cifrados).
+    await limparAoSair().catch(() => undefined);
+    await signOut();
+  };
   return (
     <div className="relative" ref={ref}>
       <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2.5 rounded-xl py-1 pl-1 pr-2 hover:bg-surface-2" aria-haspopup="menu" aria-expanded={open}>
@@ -76,7 +83,7 @@ export function UserMenu({ profile, trocarEmpresa }: { profile: Profile; trocarE
             {dark ? <Sun className="h-4 w-4 text-muted" /> : <Moon className="h-4 w-4 text-muted" />} {dark ? "Tema claro" : "Tema escuro"}
           </button>
           <div className="my-1 h-px bg-line" />
-          <form action={signOut}>
+          <form onSubmit={sairSeguro}>
             <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40" role="menuitem">
               <LogOut className="h-4 w-4" /> Sair
             </button>

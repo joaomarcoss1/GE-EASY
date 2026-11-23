@@ -6,6 +6,7 @@ import { serverEnv } from "@/lib/env";
 import { detectarTipoArquivo } from "@/lib/seguranca/arquivos";
 import { extrairDados } from "@/lib/campo/ocr";
 import { registrarAcesso } from "@/lib/actions/utils";
+import { protegerApi } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,8 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: NextRequest) {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session?.empresa || !session.profile.active) return NextResponse.json({ mensagem: "Sem acesso." }, { status: 401 });
   if (!can(session.profile, "clientes.write")) return NextResponse.json({ mensagem: "Sem permissão." }, { status: 403 });
   const { googleVisionKey } = serverEnv();
@@ -27,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const form = await req.formData().catch(() => null);
   const f = form?.get("imagem");
-  if (!f || typeof f === "string" || f.size > 4 * 1024 * 1024) return NextResponse.json({ mensagem: "Envie uma foto de até 4 MB." }, { status: 400 });
+  if (!f || typeof f === "string" || f.size > 3 * 1024 * 1024) return NextResponse.json({ mensagem: "Envie uma foto de até 3 MB." }, { status: 400 });
   const bytes = new Uint8Array(await f.arrayBuffer());
   if (!detectarTipoArquivo(bytes, "image/jpeg")) return NextResponse.json({ mensagem: "Envie uma foto em JPEG." }, { status: 400 });
 

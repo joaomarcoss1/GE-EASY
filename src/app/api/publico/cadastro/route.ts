@@ -27,6 +27,9 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   if (!hasServiceRole()) return NextResponse.json({ mensagem: "Cadastro indisponível no momento." }, { status: 503 });
+  // Sem o segredo do Turnstile o cadastro segue protegido só pelo limite por IP. Configure TURNSTILE_SECRET_KEY
+  // (e NEXT_PUBLIC_TURNSTILE_SITE_KEY) na Vercel para ligar o anti-robô; o aviso abaixo aparece nos logs até lá.
+  if (process.env.NODE_ENV === "production" && !serverEnv().turnstileSecret) console.warn("[cadastro] TURNSTILE_SECRET_KEY ausente: anti-robô desligado");
   const ip = (req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",")[0] ?? "local").trim();
   const chave = createHmac("sha256", serverEnv().encryptionKey || serverEnv().serviceRoleKey).update(`cadastro:${ip}`).digest("hex");
   const admin = createAdminClient();

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { getSession, getSituacao2fa } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
+import { protegerApi } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { can, type Permission } from "@/lib/rbac";
 import { detectarTipoArquivo } from "@/lib/seguranca/arquivos";
@@ -18,7 +19,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const MAX_ARQUIVO = 10 * 1024 * 1024;
+const MAX_ARQUIVO = 3 * 1024 * 1024;
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const txt = (max: number) => z.string().trim().max(max).nullish().transform((v) => (v ? v : null));
 
@@ -35,7 +36,7 @@ type Db = Awaited<ReturnType<typeof createClient>>;
 
 async function arquivoValido(f: FormDataEntryValue | null, tipos: string[]): Promise<{ bytes: Uint8Array; mime: string } | string | null> {
   if (!f || typeof f === "string") return null;
-  if (f.size > MAX_ARQUIVO) return "Arquivo maior que 10 MB.";
+  if (f.size > MAX_ARQUIVO) return "Arquivo maior que 3 MB.";
   const mime = f.type;
   if (!tipos.includes(mime)) return "Tipo de arquivo não permitido.";
   const bytes = new Uint8Array(await f.arrayBuffer());
@@ -53,9 +54,10 @@ const msgDb = (e: { code?: string; message?: string }) => (e.message && (e.code 
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session) return NextResponse.json({ mensagem: "Sessão expirada. Entre novamente." }, { status: 401 });
   if (!session.empresa || !session.profile.active) return NextResponse.json({ revogado: true, mensagem: "Sem acesso à empresa." }, { status: 410 });
-  if ((await getSituacao2fa(session.profile)).bloqueado) return NextResponse.json({ mensagem: "Confirme o segundo fator para sincronizar." }, { status: 401 });
 
   const form = await req.formData().catch(() => null);
   const metaTxt = form?.get("meta");

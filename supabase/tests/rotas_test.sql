@@ -69,6 +69,8 @@ begin
     r := r || pg_temp.ok(false, '5 check-in sem iniciar');
   exception when others then r := r || pg_temp.ok(true, '5 check-in exige rota iniciada');
   end;
+  insert into public.rota_checklists (rota_id, momento, km, nivel_tanque, foto_painel)
+  values (rota, 'saida', 1000, 'cheio', 'empresas/teste/rotas/painel-saida.jpg');
   perform public.iniciar_rota(rota, lat0, lng0);
   perform pg_temp.como(null);
   update public.rotas set iniciada_em = t0 where id = rota;
@@ -117,6 +119,8 @@ begin
 
   -- ---------------- finalizar e conferir as fórmulas
   perform pg_temp.como(cons, e);
+  insert into public.rota_checklists (rota_id, momento, km, nivel_tanque, foto_painel)
+  values (rota, 'chegada', 1010, '3/4', 'empresas/teste/rotas/painel-chegada.jpg');
   perform public.finalizar_rota(rota, lat0 + 0.02, lng0);
   perform pg_temp.como(null);
   update public.rotas set finalizada_em = t0 + interval '120 minutes' where id = rota;
@@ -146,7 +150,10 @@ begin
   exception when others then r := r || pg_temp.ok(true, '22 consultor não aprova rota');
   end;
   perform pg_temp.como(master, e);
+  perform public.revisar_checkin(c1, true);
+  perform public.revisar_checkin(c2, true);
   perform public.revisar_checkin(c3, true);
+  perform public.revisar_checkin(c4, true);
   j := public.aprovar_rota(rota);
   r := r || pg_temp.ok((select status::text from public.rotas where id = rota) = 'aprovada' and (select revisao from public.checkins where id = c3) = 'aprovado', '23 gestão revisa check-in e aprova a rota');
   select count(*) into n from public.relatorio_rotas(current_date, current_date) x where x.rota_id = rota and (x.resumo->>'km')::numeric = v_km;

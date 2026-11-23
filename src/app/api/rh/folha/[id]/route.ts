@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { isUuid, registrarAcesso } from "@/lib/actions/utils";
 import { csvResponse, toCsv } from "@/lib/csv";
+import { protegerApi } from "@/lib/api-auth";
 
 /** Exporta a pré-folha (CSV para a contabilidade). Só folha.gerir; exportação auditada. */
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ export const dynamic = "force-dynamic";
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session || !can(session.profile, "folha.gerir")) return NextResponse.json({ error: "sem permissão" }, { status: 403 });
   if (!isUuid(id)) return NextResponse.json({ error: "inválido" }, { status: 400 });
   const supabase = await createClient();

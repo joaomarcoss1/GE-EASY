@@ -6,6 +6,7 @@ import { can } from "@/lib/rbac";
 import { parametrosRotas } from "@/lib/parametros";
 import { onlyDigits, todayISO } from "@/lib/format";
 import { custoPercurso, kmEstimado } from "@/lib/geo";
+import { protegerApi } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +19,8 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session) return NextResponse.json({ mensagem: "Sessão expirada." }, { status: 401 });
   if (!session.empresa || !session.profile.active) return NextResponse.json({ revogado: true }, { status: 410 });
   const me = session.userId;
@@ -61,12 +64,12 @@ export async function GET() {
       previsao: km != null && c ? { km, litros: c.litros, combustivel: c.combustivel, consumo_km_l: consumo } : null,
     };
   };
-  // o que falta de documento (até 30 clientes, os de prazo mais curto)
-  const faltando = await Promise.all((pend ?? []).slice(0, 30).map(async (c) => {
-    const { data } = await db.rpc("situacao_documental", { p_cliente: c.id });
-    return [c.id, ((data as { faltando?: string[] } | null)?.faltando ?? [])] as const;
-  }));
-  const faltaMap = new Map(faltando);
+  // Uma única ida ao banco para até 30 clientes, em vez de uma RPC por cliente.
+  const pendIds = (pend ?? []).slice(0, 30).map((c) => c.id);
+  const { data: faltando } = pendIds.length
+    ? await db.rpc("situacao_documental_lote", { p_clientes: pendIds })
+    : { data: [] as { cliente_id: string; faltando: string[] }[] };
+  const faltaMap = new Map(((faltando ?? []) as { cliente_id: string; faltando: string[] }[]).map((row) => [row.cliente_id, row.faltando]));
   let leadsNovos = 0;
   if (can(session.profile, "leads.view")) {
     const { count } = await db.from("leads").select("id", { count: "exact", head: true }).eq("responsavel_id", me).eq("status", "novo");

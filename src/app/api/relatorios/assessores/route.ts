@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
+import { protegerApi } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { CASO_PENDENCIAS, CASO_STATUS } from "@/lib/constants";
@@ -16,6 +17,8 @@ const rot = (opts: { value: string; label: string }[], v: string | null) => (v ?
 /** Planilha do relatório por assessor: resumo, resumo por assessor e lista de processos. */
 export async function GET(req: NextRequest) {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!can(session.profile, "clientes.ver_todos") || !can(session.profile, "clientes.exportar")) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   const supabase = await createClient();

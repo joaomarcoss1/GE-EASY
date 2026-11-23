@@ -232,7 +232,7 @@ export async function importarClientes(_: ActionState, formData: FormData): Prom
   if (lim) return lim;
   const file = formData.get("arquivo");
   if (!(file instanceof File) || !file.size) return { error: "Escolha o arquivo CSV.", fieldErrors: { arquivo: "Obrigatório" } };
-  if (file.size > 5 * 1024 * 1024) return { error: "O arquivo deve ter até 5 MB." };
+  if (file.size > 3 * 1024 * 1024) return { error: "O arquivo deve ter até 3 MB." };
   const linhas = parseCsv(new TextDecoder("utf-8").decode(await file.arrayBuffer()));
   if (linhas.length < 2) return { error: "O arquivo não tem linhas de dados." };
   const cab = linhas[0].map((h) => COLUNAS[h.trim().toLowerCase()] ?? null);

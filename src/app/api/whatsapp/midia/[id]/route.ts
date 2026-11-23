@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isUuid, registrarAcesso } from "@/lib/actions/utils";
+import { getSession } from "@/lib/auth";
+import { protegerApi } from "@/lib/api-auth";
 
 /**
  * Mídia de uma mensagem de WhatsApp. A leitura da mensagem passa pelo RLS (só quem vê a conversa);
@@ -10,6 +12,9 @@ import { isUuid, registrarAcesso } from "@/lib/actions/utils";
 export const dynamic = "force-dynamic";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: "inválido" }, { status: 400 });
   const supabase = await createClient();

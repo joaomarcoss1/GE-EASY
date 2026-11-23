@@ -94,12 +94,12 @@ export const getPoliticaSeguranca = cache(async (): Promise<PoliticaSeguranca> =
  * - `cadastrar`: a política exige 2FA e o usuário ainda não cadastrou o autenticador.
  * Administrador master e dono da plataforma sempre precisam de 2FA quando a política é "gestão".
  */
-export const getSituacao2fa = cache(async (profile: Pick<Profile, "role" | "admin_master">) => {
+export const getSituacao2fa = cache(async (profile: Pick<Profile, "role" | "admin_master">, forcar = false) => {
   const supabase = await createClient();
   const [{ data: aal }, politica] = await Promise.all([supabase.auth.mfa.getAuthenticatorAssuranceLevel(), getPoliticaSeguranca()]);
   const verificar = !!aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2";
   const gestao = isManagerRole(profile.role) || profile.role === "financeiro" || !!profile.admin_master;
-  const exige = politica.exigir_2fa === "todos" || (politica.exigir_2fa === "gestao" && gestao);
+  const exige = forcar || politica.exigir_2fa === "todos" || (politica.exigir_2fa === "gestao" && gestao);
   const cadastrar = exige && aal?.nextLevel !== "aal2";
   return { verificar, cadastrar, bloqueado: verificar || cadastrar };
 });
@@ -151,7 +151,9 @@ export async function requirePlataforma(): Promise<Session> {
   const session = await getSession();
   if (!session) redirect("/login");
   if (!session.plataformaAdmin) redirect("/inicio?erro=permissao");
-  const mfa = await getSituacao2fa({ role: "admin", admin_master: true });
+  // O dono da plataforma sempre usa 2FA, mesmo sem empresa ativa ou política de tenant.
+  const mfa = await getSituacao2fa({ role: "admin", admin_master: true }, true);
   if (mfa.verificar) redirect("/mfa");
+  if (mfa.cadastrar) redirect("/mfa/cadastrar");
   return session;
 }

@@ -34,7 +34,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  experimental: { serverActions: { bodySizeLimit: "26mb" } },
+  // Mantém margem para o limite de 4,5 MB da Vercel. Documentos grandes usam upload direto ao Storage.
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

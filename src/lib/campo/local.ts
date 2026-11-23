@@ -37,6 +37,70 @@ export const listar = <T>(store: "fila" | "historico") => op<T[]>(store, "readon
 export const gravar = (store: "fila" | "historico", v: unknown) => op<IDBValidKey>(store, "readwrite", (s) => s.put(v));
 export const remover = (store: "fila" | "historico", id: string) => op<undefined>(store, "readwrite", (s) => s.delete(id));
 
+interface ProprietarioLocal {
+  usuarioId: string;
+  empresaId: string;
+}
+
+/** Resultado da conferência do dono dos dados locais. */
+export type SituacaoProprietario = "ok" | "pendente_outro";
+
+const limparStore = (store: "fila" | "historico") => op<undefined>(store, "readwrite", (s) => s.clear());
+const removerKv = (k: string) => op<undefined>("kv", "readwrite", (s) => s.delete(k));
+
+/**
+ * Garante que nenhum dado offline de outra conta seja exibido ou enviado por quem entrou agora.
+ * - Aparelho sem dono registrado (versão anterior): o dono é descoberto pelo pacote local; se for a mesma
+ *   pessoa, os dados (inclusive os envios pendentes) são mantidos.
+ * - Outra conta/empresa: sem envios pendentes, tudo é apagado; COM envios pendentes, nada é apagado e o app
+ *   pede para entrar com a conta dona (ou descartar de forma explícita) — registro de campo nunca some sozinho.
+ */
+export async function garantirProprietario(usuarioId: string, empresaId: string): Promise<SituacaoProprietario> {
+  let atual = await kvGet<ProprietarioLocal>("proprietario");
+  if (!atual) {
+    const snap = await kvGet<Cifrado>("snapshot");
+    const dono = snap ? await decifrar<{ usuario?: { id?: string }; empresa?: { id?: string } }>(snap).catch(() => null) : null;
+    if (dono?.usuario?.id && dono.empresa?.id) atual = { usuarioId: dono.usuario.id, empresaId: dono.empresa.id };
+  }
+  if (atual && (atual.usuarioId !== usuarioId || atual.empresaId !== empresaId)) {
+    if ((await listar("fila")).length > 0) {
+      await kvSet("proprietario", atual);
+      return "pendente_outro";
+    }
+    await apagarTudo();
+  }
+  await kvSet("proprietario", { usuarioId, empresaId } satisfies ProprietarioLocal);
+  return "ok";
+}
+
+/** Quantos envios pendentes há no aparelho (para a tela de troca de conta). */
+export async function pendentesDoAparelho(): Promise<number> {
+  return (await listar("fila")).length;
+}
+
+/**
+ * Saída da conta (menu ou inatividade): apaga os dados pessoais do aparelho. Se houver envios ainda não
+ * sincronizados, eles ficam guardados (cifrados, com o dono registrado) para serem enviados no próximo acesso
+ * da mesma pessoa — nada do que foi feito em campo se perde.
+ */
+export async function limparAoSair() {
+  let pendentes = 0;
+  try {
+    pendentes = (await listar("fila")).length;
+  } catch {
+    pendentes = 0;
+  }
+  if (!pendentes) return apagarTudo();
+  await removerKv("snapshot").catch(() => undefined);
+  await limparStore("historico").catch(() => undefined);
+  try {
+    const ks = await caches.keys();
+    await Promise.all(ks.map((k) => caches.delete(k)));
+  } catch {
+    // sem caches no navegador
+  }
+}
+
 async function chave(): Promise<CryptoKey> {
   const atual = await kvGet<CryptoKey>("chave");
   if (atual) return atual;

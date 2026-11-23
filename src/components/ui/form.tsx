@@ -198,6 +198,7 @@ export function ResourceForm({
   onSuccess,
   footer,
   hidden,
+  maxTotalFileBytes,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   fields: FieldDef[];
@@ -206,6 +207,8 @@ export function ResourceForm({
   onSuccess?: (state: ActionState) => void;
   footer?: React.ReactNode;
   hidden?: Values;
+  /** Impede que um formulário com arquivos ultrapasse o payload aceito pela hospedagem. */
+  maxTotalFileBytes?: number;
 }) {
   const [state, formAction] = useActionState(action, {});
   const toast = useToast();
@@ -224,7 +227,19 @@ export function ResourceForm({
 
   let lastSection: string | undefined;
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form
+      action={formAction}
+      className="space-y-5"
+      noValidate
+      onSubmit={(event) => {
+        if (!maxTotalFileBytes) return;
+        const inputs = event.currentTarget.querySelectorAll<HTMLInputElement>('input[type="file"]');
+        const total = [...inputs].reduce((sum, input) => sum + [...(input.files ?? [])].reduce((n, file) => n + file.size, 0), 0);
+        if (total <= maxTotalFileBytes) return;
+        event.preventDefault();
+        toast(`Os anexos devem somar no máximo ${Math.floor(maxTotalFileBytes / 1024 / 1024)} MB.`, "error");
+      }}
+    >
       {hidden && Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v == null ? "" : String(v)} />)}
       {state.error && state.fieldErrors && (
         <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">

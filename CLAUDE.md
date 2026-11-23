@@ -106,6 +106,9 @@ Permissões da interface em `src/lib/rbac.ts` (`can(role, "perm")`).
 - Rotina `src/app/api/cron/sincronizar/route.ts` (segredo `CRON_SECRET`), disparada pelo pg_cron via `disparar_sincronizacao()`.
 
 ## Segurança adicional
+- APIs privadas (`src/app/api/**`, exceto `publico`, `webhooks`, `cron`): logo após `getSession()` chamem
+  `protegerApi(session)` (`src/lib/api-auth.ts`: sessão, senha inicial, vínculo e 2FA). O teste `api-mfa-coverage` confere.
+- App de campo: `garantirProprietario`/`limparAoSair` (`src/lib/campo/local.ts`) nunca apagam envios pendentes sem confirmação.
 - `limitar(acao, max, janela)` e `registrarAcesso(acao, tabela, id, detalhes)` em `actions/utils.ts` para ações sensíveis.
 - Uploads: conferir assinatura com `detectarTipoArquivo()` (`src/lib/seguranca/arquivos.ts`).
 - LGPD: `actions/lgpd.ts` (anonimização) e `/api/lgpd/cliente/[id]` (relatório do titular).

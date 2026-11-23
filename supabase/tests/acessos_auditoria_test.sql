@@ -49,7 +49,7 @@ begin
   perform pg_temp.como(adv, e);
   r := r || pg_temp.ok(public.tem_permissao('processos.write') and 'juridico' = any(public.minhas_areas()), '3 advogado: Jurídico/Supervisor');
   perform pg_temp.como(gest, e);
-  r := r || pg_temp.ok(public.minhas_areas() @> array['administrativo', 'consultor', 'financeiro', 'juridico'], '4 gestor com várias áreas de trabalho');
+  r := r || pg_temp.ok(public.minhas_areas() @> array['administrativo', 'consultor', 'juridico'] and not ('financeiro' = any(public.minhas_areas())), '4 gestor com várias áreas, sem financeiro reservado ao master: ' || array_to_string(public.minhas_areas(), ','));
   perform pg_temp.como(master, e);
   r := r || pg_temp.ok((select count(*) from unnest(public.minhas_permissoes())) = (select count(*) from public.funcionalidades), '5 admin master tem todas as funcionalidades');
 
@@ -131,7 +131,7 @@ begin
   insert into public.clientes (nome, documento) values ('Auditado', '52998224725') returning id into cli2;
   update public.clientes set nome = 'Auditado Alterado', cidade = 'Codó' where id = cli2;
   select a.campos_alterados::text, a.area || '/' || a.origem || '/' || a.ip into s from public.audit_logs a where a.tabela = 'clientes' and a.registro_id = cli2::text and a.acao = 'UPDATE';
-  r := r || pg_temp.ok(s like '{cidade,nome}%', '21 auditoria registra campos alterados: ' || coalesce(s, 'null'));
+  r := r || pg_temp.ok(s like '{cidade,nome,nome_busca}%', '21 auditoria registra campos derivados alterados: ' || coalesce(s, 'null'));
   select a.area || '/' || a.origem || '/' || a.ip into s from public.audit_logs a where a.tabela = 'clientes' and a.registro_id = cli2::text and a.acao = 'UPDATE';
   r := r || pg_temp.ok(s = 'administrativo/web/200.1.2.3', '22 auditoria registra área, origem e IP');
   select dados_antigos->>'nome' into s from public.audit_logs where tabela = 'clientes' and registro_id = cli2::text and acao = 'UPDATE';

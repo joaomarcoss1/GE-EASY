@@ -36,7 +36,11 @@ function chaveIp(req: NextRequest) {
 
 async function turnstileOk(token: string | undefined, req: NextRequest) {
   const secret = serverEnv().turnstileSecret;
-  if (!secret) return true;
+  if (!secret) {
+    // Anti-robô ainda não configurado: mantém a captação funcionando (limite por IP continua valendo).
+    if (process.env.NODE_ENV === "production") console.warn("[leads] TURNSTILE_SECRET_KEY ausente: anti-robô desligado");
+    return true;
+  }
   if (!token) return false;
   const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST",

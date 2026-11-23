@@ -25,7 +25,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - run: npm audit --omit=dev --audit-level=high
+      - run: npm audit --audit-level=moderate
       - run: npm run build
 
   # Migrações + testes de isolamento entre empresas, permissões, auditoria e regras de negócio (RLS)

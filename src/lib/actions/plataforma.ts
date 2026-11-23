@@ -13,7 +13,8 @@ async function plataforma(): Promise<{ userId: string } | { denied: ActionState 
   const session = await getSession();
   if (!session) return { denied: { error: "Sessão expirada. Entre novamente." } };
   if (!session.plataformaAdmin) return { denied: { error: "Somente o dono da plataforma." } };
-  if ((await getSituacao2fa({ role: "admin", admin_master: true })).verificar) return { denied: { error: "Confirme a verificação em duas etapas." } };
+  const mfa = await getSituacao2fa({ role: "admin", admin_master: true }, true);
+  if (mfa.bloqueado) return { denied: { error: mfa.verificar ? "Confirme a verificação em duas etapas." : "Cadastre a autenticação em dois fatores antes de administrar a plataforma." } };
   return { userId: session.userId };
 }
 

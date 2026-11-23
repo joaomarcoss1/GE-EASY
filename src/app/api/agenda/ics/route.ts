@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { EVENTO_TIPOS } from "@/lib/constants";
 import { addDays, toLocal } from "@/components/agenda/date-utils";
+import { protegerApi } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -53,16 +54,13 @@ const ymdCompact = (ymd: string) => ymd.replace(/-/g, "");
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session || !session.profile.active) {
     return new NextResponse("Não autenticado", { status: 401, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
 
   const supabase = await createClient();
-  // O middleware não exige 2FA em /api: garante aqui que a sessão está no nível exigido.
-  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
-    return new NextResponse("Verificação em duas etapas pendente", { status: 401, headers: { "Content-Type": "text/plain; charset=utf-8" } });
-  }
   const now = Date.now();
   const from = new Date(now - 30 * 86_400_000).toISOString();
   const to = new Date(now + 180 * 86_400_000).toISOString();

@@ -12,7 +12,8 @@ begin
     (adv1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-adv1@test.local', jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'advogado', 'ge_active', true), '{}', now(), now()),
     (adv2, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-adv2@test.local', jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'advogado', 'ge_active', true), '{}', now(), now()),
     (com,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-com@test.local',  jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'consultor_externo', 'ge_active', true), '{}', now(), now()),
-    (fin,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-fin@test.local',  jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'financeiro', 'ge_active', true), '{}', now(), now());
+    -- A política atual reserva a área financeira ao administrador master.
+    (fin,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 't-fin@test.local',  jsonb_build_object('ge_empresa_id', (select id from public.empresas where slug = 'easy'), 'ge_role', 'financeiro', 'ge_active', true, 'ge_admin_master', true), '{}', now(), now());
   select id into dep_cont from public.departamentos where sigla = 'CONT';
   select id into dep_trab from public.departamentos where sigla = 'TRAB';
   insert into public.departamento_membros (departamento_id, user_id) values (dep_cont, adv1), (dep_trab, adv2);

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
+import { protegerApi } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { CASO_PENDENCIAS, CASO_STATUS } from "@/lib/constants";
@@ -50,6 +51,8 @@ const COLUNAS: Coluna<Linha>[] = [
 /** Exporta os processos dos clientes (planilha .xlsx com resumo; ?formato=csv mantém o CSV) com os filtros da tela. */
 export async function GET(req: NextRequest) {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!can(session.profile, "clientes.exportar") || !can(session.profile, "clientes.ver_todos")) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   const sp = Object.fromEntries(req.nextUrl.searchParams);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { protegerApi } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import { registrarAcesso } from "@/lib/actions/utils";
@@ -26,6 +27,8 @@ const OMITIR: Record<string, string[]> = { wa_numeros: [], funcionario_documento
 
 export async function GET() {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session?.empresa || !session.profile.admin_master) return NextResponse.json({ error: "Somente o administrador master." }, { status: 403 });
   if (!hasServiceRole()) return NextResponse.json({ error: "indisponível" }, { status: 503 });
   const supabase = await createClient();

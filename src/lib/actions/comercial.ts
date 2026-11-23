@@ -15,7 +15,8 @@ import { dbError, formToObject, guard, isUuid, limitar, registrarAcesso, zodErro
 import type { ActionState } from "./types";
 
 const BUCKET = "documentos";
-const MAX_BYTES = 25 * 1024 * 1024;
+const MAX_BYTES = 3 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 3 * 1024 * 1024;
 const MAX_ARQUIVOS = 10;
 const EXT_MIME: Record<string, string> = { pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg" };
 
@@ -34,7 +35,7 @@ async function lerArquivos(formData: FormData, campo: string, rotulo: string): P
     const ext = (f.name.split(".").pop() ?? "").toLowerCase();
     const mime = f.type === "image/jpg" ? "image/jpeg" : f.type || EXT_MIME[ext] || "";
     if (!["application/pdf", "image/jpeg"].includes(mime)) return { error: `${f.name}: envie só PDF ou JPEG.`, campo };
-    if (f.size > MAX_BYTES) return { error: `${f.name}: o arquivo deve ter até 25 MB.`, campo };
+    if (f.size > MAX_BYTES) return { error: `${f.name}: o arquivo deve ter até 3 MB neste cadastro. Arquivos maiores podem ser enviados na ficha do cliente.`, campo };
     const bytes = new Uint8Array(await f.arrayBuffer());
     if (!detectarTipoArquivo(bytes, mime)) return { error: `${f.name}: o conteúdo não confere com o tipo. Envio bloqueado por segurança.`, campo };
     out.push({ nome: f.name.slice(0, 255), mime, bytes });
@@ -82,6 +83,9 @@ export async function cadastrarClienteComercial(_: ActionState, formData: FormDa
   if ("error" in documentos) return { error: documentos.error, fieldErrors: { [documentos.campo]: documentos.error } };
   const contrato = await lerArquivos(formData, "contrato", "Contrato assinado");
   if ("error" in contrato) return { error: contrato.error, fieldErrors: { [contrato.campo]: contrato.error } };
+  if ([...documentos, ...contrato].reduce((total, arquivo) => total + arquivo.bytes.byteLength, 0) > MAX_TOTAL_BYTES) {
+    return { error: "Os anexos deste cadastro devem somar no máximo 3 MB. Cadastre o cliente e envie os arquivos maiores pela ficha.", fieldErrors: { documentos: "Total acima de 3 MB" } };
+  }
   const temArquivos = documentos.length + contrato.length > 0;
   if (temArquivos && !hasServiceRole()) return { error: "Armazenamento de arquivos indisponível no momento. Cadastre sem anexos e envie depois." };
 

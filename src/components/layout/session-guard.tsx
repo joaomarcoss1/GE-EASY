@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Clock } from "lucide-react";
 import { signOutInatividade } from "@/lib/actions/auth";
+import { limparAoSair } from "@/lib/campo/local";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/drawer";
 
@@ -32,6 +33,10 @@ export function SessionGuard({ minutos }: { minutos: number }) {
   const ultima = useRef(Date.now());
   const saindo = useRef(false);
   const limiteMs = Math.max(5, minutos) * 60_000;
+  const sair = useCallback(async () => {
+    await limparAoSair().catch(() => undefined);
+    await signOutInatividade();
+  }, []);
 
   const registrar = useCallback(() => {
     const agora = Date.now();
@@ -59,7 +64,7 @@ export function SessionGuard({ minutos }: { minutos: number }) {
       if (faltam <= 0) {
         if (!saindo.current) {
           saindo.current = true;
-          void signOutInatividade();
+          void sair();
         }
       } else if (faltam <= AVISO_SEG) setRestante(faltam);
       else setRestante(null);
@@ -69,7 +74,7 @@ export function SessionGuard({ minutos }: { minutos: number }) {
       window.removeEventListener("pageshow", aoVoltar);
       window.clearInterval(timer);
     };
-  }, [limiteMs, registrar]);
+  }, [limiteMs, registrar, sair]);
 
   return (
     <Modal open={restante !== null} onClose={continuar} title="Sua sessão vai expirar">
@@ -78,7 +83,7 @@ export function SessionGuard({ minutos }: { minutos: number }) {
           <Clock className="h-5 w-5 text-amber-500" /> Por segurança, você será desconectado em <b>{restante ?? 0}s</b> por inatividade.
         </p>
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => void signOutInatividade()}>Sair agora</Button>
+          <Button variant="secondary" onClick={() => void sair()}>Sair agora</Button>
           <Button onClick={continuar}>Continuar conectado</Button>
         </div>
       </div>

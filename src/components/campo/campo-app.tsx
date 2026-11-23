@@ -4,7 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Camera, CloudOff, Home, ListChecks, Loader2, Lock, Map as MapIcon, RefreshCw, Settings, UserPlus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { enfileirar, pendentes, sincronizar as enviarFila, type ItemFila, type TipoItem } from "@/lib/campo/fila";
-import { cifrar, conferirPin, decifrar, kvGet, kvSet, temPin, type Cifrado } from "@/lib/campo/local";
+import { apagarTudo, cifrar, conferirPin, decifrar, garantirProprietario, kvGet, kvSet, pendentesDoAparelho, temPin, type Cifrado } from "@/lib/campo/local";
+import { signOut } from "@/lib/actions/auth";
 import { Ctx, type CampoCtx } from "./contexto";
 import type { CheckinCampo, Snapshot, Tela } from "./tipos";
 import { TelaInicio } from "./tela-inicio";
@@ -51,7 +52,7 @@ async function aplicarPendentes(base: Snapshot, itens: ItemFila[]): Promise<Snap
   return s;
 }
 
-export function CampoApp({ inicial, vapidKey, versaoMinima }: { inicial: Snapshot | null; vapidKey: string; versaoMinima: string | null }) {
+export function CampoApp({ inicial, usuarioId, empresaId, vapidKey, versaoMinima }: { inicial: Snapshot | null; usuarioId: string; empresaId: string; vapidKey: string; versaoMinima: string | null }) {
   const router = useRouter();
   const sp = useSearchParams();
   const [snapBase, setSnapBase] = useState<Snapshot | null>(inicial);
@@ -65,6 +66,9 @@ export function CampoApp({ inicial, vapidKey, versaoMinima }: { inicial: Snapsho
   const [bloqueado, setBloqueado] = useState(false);
   const [carregando, setCarregando] = useState(!inicial);
   const [pin, setPin] = useState("");
+  /** envios pendentes de OUTRA conta guardados neste aparelho (não sincroniza nem apaga sozinho) */
+  const [outroDono, setOutroDono] = useState<number | null>(null);
+  const travado = useRef(false);
   const escondidoEm = useRef<number | null>(null);
 
   const aviso = useCallback((texto: string, tipo: "ok" | "erro" = "ok") => {
@@ -94,6 +98,7 @@ export function CampoApp({ inicial, vapidKey, versaoMinima }: { inicial: Snapsho
   }, [recalcular, router]);
 
   const sincronizar = useCallback(async () => {
+    if (travado.current) return;
     setSinc(true);
     try {
       const r = await enviarFila();
@@ -110,11 +115,21 @@ export function CampoApp({ inicial, vapidKey, versaoMinima }: { inicial: Snapsho
   useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     (async () => {
+      // Precisa acontecer antes de ler PIN, chave, snapshot ou fila.
+      if ((await garantirProprietario(usuarioId, empresaId)) === "pendente_outro") {
+        travado.current = true;
+        setOutroDono(await pendentesDoAparelho());
+        setCarregando(false);
+        return;
+      }
       if (await temPin()) setBloqueado(true);
       const local = await kvGet<Cifrado>("snapshot");
       if (!inicial && local) {
         const s = await decifrar<Snapshot>(local).catch(() => null);
-        if (s) { setSnapBase(s); await recalcular(s); }
+        if (s?.usuario.id === usuarioId && s.empresa.id === empresaId) {
+          setSnapBase(s);
+          await recalcular(s);
+        }
       } else if (inicial) {
         await kvSet("snapshot", await cifrar(inicial));
         await recalcular(inicial);
@@ -164,6 +179,33 @@ export function CampoApp({ inicial, vapidKey, versaoMinima }: { inicial: Snapsho
   }, []);
 
   const ctx = useMemo<CampoCtx | null>(() => (snap ? { snap, online, fila, sincronizando: sinc, irPara, params, registrar, sincronizar, aviso } : null), [snap, online, fila, sinc, irPara, params, registrar, sincronizar, aviso]);
+
+  if (outroDono !== null) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+        <CloudOff className="h-10 w-10 text-accent-500" />
+        <p className="text-lg font-semibold">Há {outroDono} envio(s) de outra conta neste aparelho</p>
+        <p className="max-w-sm text-sm text-muted">
+          Esses registros foram feitos por outro usuário e ainda não chegaram ao sistema. Para enviá-los, saia e entre com a conta
+          de quem os registrou. Eles ficam guardados com segurança até lá.
+        </p>
+        <form action={signOut}>
+          <button type="submit" className="rounded-xl bg-brand-700 px-5 py-2.5 font-semibold text-white">Sair e entrar com a outra conta</button>
+        </form>
+        <button
+          type="button"
+          className="text-sm font-semibold text-red-600 underline"
+          onClick={async () => {
+            if (!window.confirm(`Descartar ${outroDono} registro(s) não enviado(s) de outra conta? Isso não pode ser desfeito.`)) return;
+            await apagarTudo();
+            window.location.reload();
+          }}
+        >
+          Descartar esses envios e continuar
+        </button>
+      </div>
+    );
+  }
 
   if (bloqueado) {
     return (

@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
+import { protegerApi } from "@/lib/api-auth";
 import { googleConfigured } from "@/lib/env";
 import { exchangeCode, saveTokens } from "@/lib/google";
 
@@ -27,6 +28,8 @@ export async function GET(request: NextRequest) {
   };
 
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session) return NextResponse.redirect(`${origin}/login?next=${encodeURIComponent("/configuracoes?tab=integracoes")}`);
   if (!session.profile.active) return NextResponse.redirect(`${origin}/acesso-pendente`);
   if (!googleConfigured()) return back("erro=config");

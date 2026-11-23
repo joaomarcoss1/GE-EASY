@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
+import { protegerApi } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { can, isBackofficeRole, type Permission } from "@/lib/rbac";
 import { departamentoMap, getProfileMap, parceiroMap } from "@/lib/data";
@@ -287,6 +288,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ enti
   if (!entity) return plain(404, "Exportação não encontrada.");
 
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session) return plain(401, "Sessão expirada. Entre novamente.");
   if (!session.profile.active) return plain(403, "Acesso pendente de liberação.");
   if (!can(session.profile, entity.permission)) return plain(403, "Você não tem permissão para esta exportação.");

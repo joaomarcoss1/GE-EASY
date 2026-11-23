@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
+import { protegerApi } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { getProfileMap } from "@/lib/data";
@@ -8,6 +9,7 @@ import { date, todayISO } from "@/lib/format";
 import { registrarAcesso } from "@/lib/actions/utils";
 import { isISODate } from "@/components/dashboard/periods";
 import { aba, gerarPlanilha, paraData, respostaPlanilha } from "@/lib/planilha";
+import { fetchAll } from "@/components/dashboard/fetch-all";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,8 @@ const rot = (o: { value: string; label: string }[], v: string | null) => (v ? (o
 /** Planilha dos resumos do dia (período): resumo por pessoa, resumos e ligações. */
 export async function GET(req: NextRequest) {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!can(session.profile, "clientes.exportar") || !(can(session.profile, "consultores.manage") || can(session.profile, "clientes.ver_todos"))) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   const sp = req.nextUrl.searchParams;
@@ -31,11 +35,11 @@ export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: permitido } = await supabase.rpc("rate_limit", { p_acao: "exportar", p_max: 30, p_janela_seg: 3600 });
   if (permitido !== true) return NextResponse.json({ error: "Muitas exportações em pouco tempo." }, { status: 429 });
-  const [{ data }, profiles] = await Promise.all([
-    supabase.from("resumos_diarios").select("*").gte("data", de).lte("data", ate).order("data", { ascending: false }).limit(10000),
+  const [data, profiles] = await Promise.all([
+    fetchAll<Resumo>((from, to) => supabase.from("resumos_diarios").select("*").gte("data", de).lte("data", ate).order("data", { ascending: false }).order("usuario_id").range(from, to), 50_000),
     getProfileMap(),
   ]);
-  const resumos = (data ?? []) as Resumo[];
+  const resumos = data;
   const nome = (u: string) => profiles.get(u)?.full_name ?? "—";
   await registrarAcesso("EXPORTACAO", "resumos_diarios", null, { de, ate, linhas: resumos.length });
   const porPessoa = [...new Set(resumos.map((r) => r.usuario_id))].map((u) => {

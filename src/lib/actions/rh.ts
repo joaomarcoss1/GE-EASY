@@ -152,7 +152,7 @@ const EXT: Record<string, string> = { "application/pdf": "pdf", "image/jpeg": "j
 
 async function guardarArquivo(empresaId: string, funcionarioId: string, file: File): Promise<{ path: string; mime: string; tamanho: number } | { error: string }> {
   if (!hasServiceRole()) return { error: "Armazenamento indisponível (service role não configurada)." };
-  if (!file.size || file.size > 10 * 1024 * 1024) return { error: "Envie um arquivo de até 10 MB." };
+  if (!file.size || file.size > 3 * 1024 * 1024) return { error: "Envie um arquivo de até 3 MB. Arquivos maiores devem usar o envio direto da central de documentos." };
   if (!MIMES.includes(file.type)) return { error: "Envie PDF ou imagem (JPG, PNG, WEBP)." };
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (!detectarTipoArquivo(bytes, file.type)) return { error: "O conteúdo do arquivo não confere com o tipo. Envio bloqueado por segurança." };

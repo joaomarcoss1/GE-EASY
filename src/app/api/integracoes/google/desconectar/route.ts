@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
+import { protegerApi } from "@/lib/api-auth";
 import { env } from "@/lib/env";
 import { hasServiceRole } from "@/lib/supabase/admin";
 import { disconnectGoogle } from "@/lib/google";
@@ -33,6 +34,8 @@ function isSameOrigin(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Origem não permitida" }, { status: 403 });
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   const target = new URL("/configuracoes?tab=integracoes", request.nextUrl.origin);

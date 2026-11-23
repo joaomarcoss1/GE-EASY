@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { isUuid, registrarAcesso } from "@/lib/actions/utils";
+import { protegerApi } from "@/lib/api-auth";
 
 /**
  * Arquivos do RH (documentos do funcionário e anexos de ausências). A linha é lida com RLS; atestados
@@ -13,6 +14,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
+  const bloqueio = await protegerApi(session);
+  if (bloqueio) return bloqueio;
   if (!session) return NextResponse.json({ error: "não autenticado" }, { status: 401 });
   const doc = req.nextUrl.searchParams.get("doc");
   const aus = req.nextUrl.searchParams.get("ausencia");

@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { todayISO } from "@/lib/format";
+import { fetchAll } from "@/components/dashboard/fetch-all";
 
 interface ConsultorStats {
   clientes: number;
@@ -29,31 +30,32 @@ export async function statsPorConsultor(ids: string[]) {
   const { ini, fim } = mesAtual();
 
   const [cli, cotas, aps, com, vis] = await Promise.all([
-    supabase.from("clientes").select("consultor_id").in("consultor_id", ids).limit(10000),
-    supabase
+    fetchAll<{ consultor_id: string | null }>((from, to) => supabase.from("clientes").select("consultor_id").in("consultor_id", ids).order("id").range(from, to), 50_000),
+    fetchAll<{ consultor_id: string | null; valor_credito: number }>((from, to) => supabase
       .from("consorcio_cotas")
       .select("consultor_id, valor_credito")
       .in("consultor_id", ids)
       .gte("data_adesao", ini)
       .lt("data_adesao", fim)
       .in("status", ["ativa", "contemplada", "quitada", "inadimplente"])
-      .limit(10000),
-    supabase
+      .order("id").range(from, to), 50_000),
+    fetchAll<{ consultor_id: string | null; premio_liquido: number }>((from, to) => supabase
       .from("seguro_apolices")
       .select("consultor_id, premio_liquido")
       .in("consultor_id", ids)
       .gte("inicio_vigencia", ini)
       .lt("inicio_vigencia", fim)
       .in("status", ["vigente", "renovada"])
-      .limit(10000),
-    supabase.from("comissoes").select("consultor_id, valor_consultor").in("consultor_id", ids).eq("competencia", ini).neq("status", "estornada").limit(10000),
-    supabase
+      .order("id").range(from, to), 50_000),
+    fetchAll<{ consultor_id: string | null; valor_consultor: number }>((from, to) => supabase.from("comissoes").select("consultor_id, valor_consultor").in("consultor_id", ids).eq("competencia", ini).neq("status", "estornada").order("id").range(from, to), 50_000),
+    fetchAll<{ consultor_id: string | null; checkin_em: string }>((from, to) => supabase
       .from("visitas")
       .select("consultor_id, checkin_em")
       .in("consultor_id", ids)
       .gte("checkin_em", `${ini}T00:00:00-03:00`)
       .order("checkin_em", { ascending: false })
-      .limit(10000),
+      .order("id")
+      .range(from, to), 50_000),
   ]);
 
   const get = (id: string | null) => {
@@ -62,23 +64,23 @@ export async function statsPorConsultor(ids: string[]) {
     if (!s) map.set(id, (s = emptyStats()));
     return s;
   };
-  for (const r of cli.data ?? []) {
+  for (const r of cli) {
     const s = get(r.consultor_id);
     if (s) s.clientes++;
   }
-  for (const r of cotas.data ?? []) {
+  for (const r of cotas) {
     const s = get(r.consultor_id);
     if (s) s.credito += Number(r.valor_credito);
   }
-  for (const r of aps.data ?? []) {
+  for (const r of aps) {
     const s = get(r.consultor_id);
     if (s) s.premio += Number(r.premio_liquido);
   }
-  for (const r of com.data ?? []) {
+  for (const r of com) {
     const s = get(r.consultor_id);
     if (s) s.comissao += Number(r.valor_consultor);
   }
-  for (const r of vis.data ?? []) {
+  for (const r of vis) {
     const s = get(r.consultor_id);
     if (s) {
       s.visitas++;

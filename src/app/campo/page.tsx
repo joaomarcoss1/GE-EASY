@@ -14,10 +14,15 @@ export default async function CampoPage() {
   const session = await requireSession();
   const supabase = await createClient();
   const { data: app } = await supabase.from("configuracoes").select("valor").eq("chave", "app").maybeSingle();
-  void session;
   return (
     <Suspense>
-      <CampoApp inicial={null} vapidKey={env.vapidPublicKey} versaoMinima={(app?.valor as { versao_minima?: string } | null)?.versao_minima ?? null} />
+      <CampoApp
+        inicial={null}
+        usuarioId={session.userId}
+        empresaId={session.empresa!.id}
+        vapidKey={env.vapidPublicKey}
+        versaoMinima={(app?.valor as { versao_minima?: string } | null)?.versao_minima ?? null}
+      />
     </Suspense>
   );
 }
