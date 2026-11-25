@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (permitido !== true) return NextResponse.json({ error: "Muitos dossiês em pouco tempo. Aguarde alguns minutos." }, { status: 429 });
   try {
     const r = await gerarDossie(supabase, { casoId: id, destino, empresaId: session.empresa.id, geradoPor: session.userId, nomeQuemGera: session.profile.full_name || session.profile.email });
-    await registrarAcesso("DOSSIE_GERADO", "cliente_casos", id, { destino, arquivos: r.arquivos, faltando: r.faltando.length });
+    await registrarAcesso("EXPORTACAO", "cliente_casos", id, { relatorio: "dossie", destino, arquivos: r.arquivos, faltando: r.faltando.length });
     const [{ data: link }, { data: pdf }] = await Promise.all([
       supabase.storage.from("dossies").createSignedUrl(r.caminho, 600, { download: r.nomeZip }),
       r.pdfCaminho ? supabase.storage.from("dossies").createSignedUrl(r.pdfCaminho, 600, { download: r.nomePdf }) : Promise.resolve({ data: null }),
