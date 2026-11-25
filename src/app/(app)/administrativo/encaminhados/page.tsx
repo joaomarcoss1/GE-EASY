@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Send } from "lucide-react";
+import { BadgeCheck, Send } from "lucide-react";
+import { date, maskDocumento } from "@/lib/format";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
@@ -24,10 +25,16 @@ export default async function EncaminhadosPage({ searchParams }: { searchParams:
   const { aba } = await searchParams;
   const todos = aba === "todos";
   const supabase = await createClient();
-  const [{ data }, perfis] = await Promise.all([
+  const [{ data }, perfis, { data: habilitador }] = await Promise.all([
     supabase.from("fichas_pendencia").select(SELECT_FICHA_LINHA).eq("status", "encerrada").eq("encaminhado_para", userId).order("encerrada_em", { ascending: false }).limit(500),
     getProfileMap(),
+    supabase.rpc("eh_habilitador"),
   ]);
+  // Fila de habilitação: todos os processos "Para habilitação" (vindos de ficha ou da análise)
+  const { data: filaHab } = habilitador
+    ? await supabase.from("cliente_casos").select("id, cliente_id, tipo, status, protocolo_inss, situacao_atual, updated_at, clientes!inner(nome, documento, whatsapp, telefone)").eq("status", "habilitacao").order("updated_at", { ascending: true }).limit(500)
+    : { data: [] };
+  const hab = (filaHab ?? []) as unknown as { id: string; cliente_id: string; tipo: string; status: string; protocolo_inss: string | null; situacao_atual: string | null; updated_at: string; clientes: { nome: string; documento: string | null } }[];
   const linhas = (data ?? []) as unknown as FichaLinha[];
   // a ficha mais recente de cada processo; "a fazer" = o processo continua na situação para a qual foi enviado
   const porCaso = new Map<string, FichaLinha>();
@@ -46,6 +53,29 @@ export default async function EncaminhadosPage({ searchParams }: { searchParams:
         title="Encaminhados para mim"
         description="Processos que os setores de Pendências e Exigências enviaram para você — para análise ou habilitação. Abra a ficha para ver tudo o que foi feito e mude a situação quando concluir."
       />
+      {habilitador && (
+        <Card className="mb-6">
+          <CardHeader icon={<BadgeCheck className="h-4 w-4" />} title={`Fila de habilitação (${hab.length})`} description="Todos os processos “Para habilitação”, os mais antigos primeiro. Habilite com o protocolo do INSS e o estado atual." />
+          {!hab.length ? <EmptyState title="Nenhum processo esperando habilitação" /> : (
+            <div className="overflow-x-auto">
+              <table className="table-base">
+                <thead><tr><th>Cliente</th><th>Tipo</th><th>Na fila desde</th><th>Situação</th></tr></thead>
+                <tbody>
+                  {hab.map((c) => (
+                    <tr key={c.id}>
+                      <td><Link href={`/clientes/${c.cliente_id}`} className="font-semibold hover:text-brand-600">{c.clientes.nome}</Link><div className="text-xs text-muted">{c.clientes.documento ? maskDocumento(c.clientes.documento) : "sem CPF"}</div></td>
+                      <td className="text-sm">{c.tipo}</td>
+                      <td className="whitespace-nowrap text-xs text-muted">{date(c.updated_at)}</td>
+                      <td>{podeMudar ? <StatusCasoSelect casoId={c.id} status={c.status} podeRestritos={restritos} protocolo={c.protocolo_inss} situacao={c.situacao_atual} /> : <StatusBadge options={CASO_STATUS} value={c.status} />}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
+
       <Card>
         <CardHeader
           icon={<Send className="h-4 w-4" />}

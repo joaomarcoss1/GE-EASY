@@ -223,8 +223,12 @@ export async function alterarStatusCaso(casoId: string, status: string, extra?: 
   if (error) return error.code === "23514" && error.message ? { error: error.message } : dbError(error);
   // Ao mover para um status restrito sem permissão, a linha deixa de ser visível: confere se a alteração ocorreu
   if (!data?.length) {
+    // A linha pode sair da visão de quem alterou (status restrito, ou a fila de habilitação): confere de novo
     const restrito = ["pendencia", "exigencia", "em_analise"].includes(v.data) && !can(g.session.profile, "processos.status_restritos");
-    if (!restrito) return { error: "Processo não encontrado ou sem permissão." };
+    if (!restrito) {
+      const { data: agora } = await supabase.from("cliente_casos").select("status").eq("id", casoId).maybeSingle();
+      if (agora?.status !== v.data) return { error: "Processo não encontrado ou sem permissão." };
+    }
   }
   revalidatePath("/administrativo/processos");
   revalidatePath("/dashboard");

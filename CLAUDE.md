@@ -51,6 +51,10 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   e trabalha em `/administrativo/encaminhados`.
   Quem abre/anota/encerra: funcionalidades `fichas.pendencias` e `fichas.exigencias` (RLS por tipo; liberar/bloquear em
   `/acessos` › Por usuário).
+- Fila de habilitação: `habilitadores(empresa)`/`eh_habilitador()` (de `configuracoes.fluxo_processos.habilitacao`) veem todo
+  processo em `habilitacao` e os que já mudaram (via `can_access_cliente`); fila em `/administrativo/encaminhados`.
+  Gatilho `cliente_caso_avisar_setor`: troca de status por uma pessoa para pendência/exigência/análise/habilitação avisa o
+  setor (chave `caso_status:<caso>:<status>:<dia>`; o aviso da ficha usa a mesma chave e substitui texto e link).
 - Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
 - Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).
 - Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,
