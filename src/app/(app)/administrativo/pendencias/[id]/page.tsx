@@ -38,9 +38,9 @@ export default async function FichaPendenciaPage({ params }: { params: Promise<{
   const ficha = fichaData as unknown as FichaCompleta;
   const itens = (itensData ?? []) as ItemFicha[];
   const aberta = ficha.status === "aberta";
-  const editavel = aberta && can(profile, "processos.status_restritos") && can(profile, "clientes.write");
-  const setor = can(profile, "processos.status_restritos");
   const T = FICHA_TIPOS[ficha.tipo];
+  const setor = can(profile, T.perm);
+  const editavel = aberta && setor && can(profile, "clientes.write");
   const exig = ficha.tipo === "exigencia";
   const nome = (uid: string | null) => (uid ? (perfis.get(uid)?.full_name ?? "—") : "—");
   const pendencias = itens.filter((i) => i.secao === "pendencia");

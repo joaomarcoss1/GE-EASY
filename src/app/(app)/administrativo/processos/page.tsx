@@ -213,7 +213,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
                         </td>
                         <td>
                           <div className="flex items-center gap-1">
-                          {podeRestritos && podeEditar && (c.status === "pendencia" || c.status === "exigencia") && (
+                          {podeEditar && ((c.status === "pendencia" && can(profile, "fichas.pendencias")) || (c.status === "exigencia" && can(profile, "fichas.exigencias"))) && (
                             <form action={abrirFicha}>
                               <input type="hidden" name="caso_id" value={c.id} />
                               <input type="hidden" name="tipo" value={c.status} />

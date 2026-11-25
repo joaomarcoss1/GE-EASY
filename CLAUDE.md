@@ -49,6 +49,8 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   análise (setor Análise) ou habilitação (`configuracoes.fluxo_processos.habilitacao`; status `habilitacao`).
   Quem recebe (`encaminhado_para`) lê a ficha, o processo e o cliente (`can_access_cliente` + `clientes_select_encaminhado`)
   e trabalha em `/administrativo/encaminhados`.
+  Quem abre/anota/encerra: funcionalidades `fichas.pendencias` e `fichas.exigencias` (RLS por tipo; liberar/bloquear em
+  `/acessos` › Por usuário).
 - Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
 - Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).
 - Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,

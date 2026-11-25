@@ -34,7 +34,7 @@ function atualizar(fichaId?: string, clienteId?: string | null) {
 export async function abrirFicha(formData: FormData): Promise<void> {
   const tipo: FichaTipo = formData.get("tipo") === "exigencia" ? "exigencia" : "pendencia";
   const base = FICHA_TIPOS[tipo].rota;
-  const g = await guard(PERM);
+  const g = await guard(FICHA_TIPOS[tipo].perm);
   if ("denied" in g) redirect(`${base}?erro=permissao`);
   const casoId = formData.get("caso_id");
   if (!isUuid(casoId)) redirect(base);
@@ -177,6 +177,7 @@ export async function encerrarFicha(_: ActionState, formData: FormData): Promise
   if (!ficha) return { error: "Ficha não encontrada." };
   if (ficha.status !== "aberta") return { error: "Esta ficha já foi encerrada." };
   const tipo = ficha.tipo as FichaTipo;
+  if (!can(g.session.profile, FICHA_TIPOS[tipo].perm)) return { error: `Você não tem acesso às fichas de ${tipo === "exigencia" ? "exigências" : "pendências"}.` };
   if (d.destino !== "outro" && !FICHA_DESTINOS_POR_TIPO[tipo].includes(d.destino)) return { error: "Destino inválido para esta ficha." };
   const { count } = await supabase.from("ficha_pendencia_itens").select("id", { count: "exact", head: true }).eq("ficha_id", ficha.id).eq("secao", "pendencia");
   if (!count) return { error: tipo === "exigencia" ? "Registre ao menos uma exigência (seção 1) antes de encerrar." : "Registre ao menos uma pendência (seção 1) antes de encerrar." };

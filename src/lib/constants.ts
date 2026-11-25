@@ -739,8 +739,8 @@ export const FICHA_DESTINOS_POR_TIPO: Record<"pendencia" | "exigencia", string[]
   exigencia: ["analise", "habilitacao", "pendencia", "outro"],
 };
 export const FICHA_TIPOS = {
-  pendencia: { titulo: "Pendências", ficha: "Folha de acompanhamento de pendências", status: "pendencia", rota: "/administrativo/pendencias" },
-  exigencia: { titulo: "Exigências", ficha: "Folha de acompanhamento de exigências", status: "exigencia", rota: "/administrativo/exigencias" },
+  pendencia: { titulo: "Pendências", ficha: "Folha de acompanhamento de pendências", status: "pendencia", rota: "/administrativo/pendencias", perm: "fichas.pendencias" },
+  exigencia: { titulo: "Exigências", ficha: "Folha de acompanhamento de exigências", status: "exigencia", rota: "/administrativo/exigencias", perm: "fichas.exigencias" },
 } as const;
 export type FichaTipo = keyof typeof FICHA_TIPOS;
 /** Benefício da ficha sugerido pelo tipo do processo (planilha/cadastro). */

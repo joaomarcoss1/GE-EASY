@@ -28,6 +28,8 @@ export const FUNCIONALIDADES = [
   "processos.write",
   "processos.delete",
   "processos.status_restritos",
+  "fichas.pendencias",
+  "fichas.exigencias",
   "publicacoes.view",
   "atendimentos.view",
   "contratos.view",

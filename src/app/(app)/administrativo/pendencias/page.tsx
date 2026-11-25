@@ -6,6 +6,6 @@ export const metadata: Metadata = { title: "Pendências" };
 
 /** Setor de Pendências (Vânia): processos em pendência e a ficha de acompanhamento de cada um. */
 export default async function PendenciasPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  await requirePermission("processos.status_restritos");
+  await requirePermission("fichas.pendencias");
   return <FilaSetor tipo="pendencia" sp={await searchParams} />;
 }
