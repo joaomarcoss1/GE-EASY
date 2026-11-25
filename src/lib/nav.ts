@@ -74,6 +74,7 @@ const ALL_NAV: NavGroup[] = [
       { href: "/administrativo/pendencias", label: "Pendências (fichas)", icon: "ClipboardList", permission: "fichas.pendencias" },
       { href: "/administrativo/exigencias", label: "Exigências (fichas)", icon: "ClipboardList", permission: "fichas.exigencias" },
       { href: "/metas/processos", label: "Metas", icon: "Target", permission: "clientes.view" },
+      { href: "/comercial/meu-resumo", label: "Meu resumo do dia", icon: "ClipboardList", permission: "clientes.view" },
       { href: "/administrativo/inconsistencias", label: "Inconsistências", icon: "ShieldAlert", permission: "clientes.ver_todos" },
       { href: "/relatorios/assessores", label: "Relatório por assessor", icon: "FileBarChart", permission: "clientes.ver_todos" },
       { href: "/rotas", label: "Rotas", icon: "Route", permission: "rotas.ver" },
