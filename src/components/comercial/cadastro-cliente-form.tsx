@@ -20,7 +20,7 @@ export function cadastroClienteFields(assessores: Option[]): FieldDef[] {
     { name: "uf", label: "UF", type: "select", options: UFS, required: true, span: 2 },
     { name: "assessor_id", label: "Assessor", type: "select", options: assessores, emptyOption: "Sem assessor", span: 6, help: assessores.length ? undefined : "Nenhum assessor cadastrado ainda (menu Comercial › Assessores)." },
     { name: "documentos", label: "Documentos do cliente (se houver)", type: "file", multiple: true, placeholder: ACEITOS, span: 6, section: "Anexos", help: "PDF ou JPEG. Neste cadastro, todos os anexos devem somar até 3 MB; envie arquivos maiores pela ficha do cliente." },
-    { name: "contrato", label: "Contrato assinado (se houver)", type: "file", multiple: true, placeholder: ACEITOS, span: 6, help: "PDF ou JPEG, até 25 MB." },
+    { name: "contrato", label: "Contrato assinado (se houver)", type: "file", multiple: true, placeholder: ACEITOS, span: 6, help: "PDF ou JPEG. Entra na soma de 3 MB dos anexos deste cadastro." },
     {
       name: "lgpd_consentimento",
       label: "O titular autorizou o tratamento dos dados para atendimento e contratação (LGPD)",
