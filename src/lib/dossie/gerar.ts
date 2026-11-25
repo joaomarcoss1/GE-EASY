@@ -6,11 +6,11 @@ import { CASO_STATUS, DOC_CATEGORIAS, FICHA_DESTINOS } from "@/lib/constants";
 import { LOGO_PNG_BASE64 } from "@/lib/planilha/logo";
 
 /**
- * Dossiê do processo (INSS ou Justiça): um ZIP com
- *   00 - Resumo do processo.pdf   (capa, dados do cliente e do benefício, checklist, histórico e fichas)
- *   01 - Processo completo.pdf    (resumo + todos os PDFs e imagens na ordem do checklist, para protocolar)
- *   Documentos/NN - Categoria - arquivo   (os originais)
- * Tudo é lido com a sessão de quem gera (RLS), e o ZIP é gravado na pasta do cliente no Storage.
+ * Dossiê do processo (INSS ou Justiça), gravado no bucket privado "dossies" em dois arquivos:
+ *   ZIP:  00 - Resumo do processo.pdf (capa, dados do cliente e do benefício, checklist, histórico e fichas)
+ *         + Documentos/NN - Categoria - arquivo (os originais)
+ *   PDF:  Processo completo (resumo + todos os PDFs e imagens na ordem do checklist), para protocolar
+ * Tudo é lido com a sessão de quem gera (RLS). Cada arquivo tem até 50 MB (limite do bucket).
  * A senha gov.br do cliente nunca entra no dossiê.
  */
 export type Destino = "inss" | "justica";
@@ -18,7 +18,9 @@ export type Destino = "inss" | "justica";
 export interface ItemChecklist { categoria: string; nome: string; obrigatorio: boolean; escopo: string; situacao: string; arquivos: number }
 export interface Checklist { itens: ItemChecklist[]; faltando: string[] }
 
-const LIMITE_TOTAL = 180 * 1024 * 1024; // o que cabe com folga na memória da função
+const LIMITE_TOTAL = 45 * 1024 * 1024; // documentos somados: o ZIP precisa caber nos 50 MB do bucket
+const LIMITE_ARQUIVO = 49 * 1024 * 1024;
+const BUCKET = "dossies";
 const A4: [number, number] = [595.28, 841.89];
 const MARGEM = 48;
 const COR = { brand: rgb(0.176, 0.176, 0.514), accent: rgb(0.882, 0.31, 0.149), texto: rgb(0.09, 0.09, 0.23), muted: rgb(0.37, 0.37, 0.5), linha: rgb(0.86, 0.86, 0.92) };
@@ -226,11 +228,10 @@ export async function gerarDossie(supabase: SupabaseClient, args: { casoId: stri
   }
   const completoBytes = await completo.save();
 
-  // ---------------------------------------------------------------- ZIP
+  // ---------------------------------------------------------------- ZIP (resumo + originais) e PDF único, gravados à parte
   const zip = new JSZip();
   const base = nomeArquivo(cli.nome ?? "cliente");
   zip.file("00 - Resumo do processo.pdf", resumoBytes);
-  zip.file(`01 - Processo completo - ${base}.pdf`, completoBytes);
   const pasta = zip.folder("Documentos")!;
   baixados.forEach((b, i) => {
     if (b.erro) return;
@@ -238,21 +239,35 @@ export async function gerarDossie(supabase: SupabaseClient, args: { casoId: stri
     pasta.file(`${String(i + 1).padStart(2, "0")} - ${nomeArquivo(rotulo(DOC_CATEGORIAS, b.doc.categoria))} - ${nomeArquivo(b.doc.nome.replace(/\.[a-z0-9]{2,5}$/i, ""))}${ext}`, b.bytes);
   });
   const zipBytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE", compressionOptions: { level: 6 } });
+  if (zipBytes.byteLength > LIMITE_ARQUIVO) throw new Error("O dossiê passou de 50 MB. Separe ou reduza os documentos (fotos muito grandes) e tente de novo.");
 
   const carimbo = agora.replace(/[-:]/g, "").slice(0, 13);
-  const caminho = `empresas/${args.empresaId}/clientes/${caso.cliente_id}/dossies/${casoId}/${carimbo}-${destino}.zip`;
-  const { error: upErr } = await supabase.storage.from("documentos").upload(caminho, zipBytes, { contentType: "application/zip", upsert: true });
-  if (upErr) throw new Error("Não foi possível guardar o dossiê.");
+  const pastaDossie = `empresas/${args.empresaId}/clientes/${caso.cliente_id}/dossies/${casoId}/${carimbo}-${destino}`;
+  const caminho = `${pastaDossie}.zip`;
+  const pdfCaminho = completoBytes.byteLength <= LIMITE_ARQUIVO ? `${pastaDossie}.pdf` : null;
+  const { error: upErr } = await supabase.storage.from(BUCKET).upload(caminho, zipBytes, { contentType: "application/zip", upsert: true });
+  if (upErr) throw new Error(`Não foi possível guardar o dossiê (${upErr.message}).`);
+  if (pdfCaminho) {
+    const { error: pdfErr } = await supabase.storage.from(BUCKET).upload(pdfCaminho, completoBytes, { contentType: "application/pdf", upsert: true });
+    if (pdfErr) {
+      await supabase.storage.from(BUCKET).remove([caminho]);
+      throw new Error(`Não foi possível guardar o PDF do dossiê (${pdfErr.message}).`);
+    }
+  }
   const { data: reg, error: regErr } = await supabase
     .from("dossies")
-    .insert({ caso_id: casoId, cliente_id: caso.cliente_id, destino, storage_path: caminho, arquivos: baixados.filter((b) => !b.erro).length, tamanho: zipBytes.byteLength, faltando: checklist.faltando, gerado_por: args.geradoPor })
+    .insert({ caso_id: casoId, cliente_id: caso.cliente_id, destino, storage_path: caminho, pdf_path: pdfCaminho, arquivos: baixados.filter((b) => !b.erro).length, tamanho: zipBytes.byteLength, faltando: checklist.faltando, gerado_por: args.geradoPor })
     .select("id")
     .single();
   if (regErr || !reg) {
-    await supabase.storage.from("documentos").remove([caminho]);
+    await supabase.storage.from(BUCKET).remove([caminho, ...(pdfCaminho ? [pdfCaminho] : [])]);
     throw new Error("Não foi possível registrar o dossiê.");
   }
-  return { id: reg.id as string, caminho, arquivos: baixados.filter((b) => !b.erro).length, faltando: checklist.faltando, tamanho: zipBytes.byteLength, nomeZip: `Dossie - ${base} - ${destino === "inss" ? "INSS" : "Justica"}.zip` };
+  const rotuloDestino = destino === "inss" ? "INSS" : "Justica";
+  return {
+    id: reg.id as string, caminho, pdfCaminho, arquivos: baixados.filter((b) => !b.erro).length, faltando: checklist.faltando, tamanho: zipBytes.byteLength,
+    nomeZip: `Dossie - ${base} - ${rotuloDestino}.zip`, nomePdf: `Processo completo - ${base} - ${rotuloDestino}.pdf`,
+  };
 }
 
 function fmtCpf(v: string | null) {

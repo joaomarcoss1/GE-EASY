@@ -25,18 +25,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const supabase = await createClient();
   const [{ data: checklist, error }, { data: dossies }] = await Promise.all([
     supabase.rpc("checklist_processo", { p_caso: id, p_destino: destino }),
-    supabase.from("dossies").select("id, destino, arquivos, tamanho, faltando, gerado_por, created_at, storage_path").eq("caso_id", id).order("created_at", { ascending: false }).limit(10),
+    supabase.from("dossies").select("id, destino, arquivos, tamanho, faltando, gerado_por, created_at, storage_path, pdf_path").eq("caso_id", id).order("created_at", { ascending: false }).limit(10),
   ]);
   if (error || !checklist) return NextResponse.json({ error: "Processo não encontrado ou sem acesso." }, { status: 404 });
   const lista = dossies ?? [];
-  const { data: urls } = lista.length ? await supabase.storage.from("documentos").createSignedUrls(lista.map((d) => d.storage_path), 600, { download: true }) : { data: [] };
+  const caminhos = lista.flatMap((d) => [d.storage_path, d.pdf_path].filter(Boolean) as string[]);
+  const { data: urls } = caminhos.length ? await supabase.storage.from("dossies").createSignedUrls(caminhos, 600, { download: true }) : { data: [] };
   const url = new Map((urls ?? []).filter((u) => u.signedUrl).map((u) => [u.path ?? "", u.signedUrl as string]));
   const ids = [...new Set(lista.map((d) => d.gerado_por).filter(Boolean))] as string[];
   const { data: pessoas } = ids.length ? await supabase.from("membros").select("id, full_name").in("id", ids) : { data: [] };
   const nome = new Map((pessoas ?? []).map((p) => [p.id as string, p.full_name as string]));
   return NextResponse.json({
     checklist,
-    dossies: lista.map(({ storage_path, gerado_por, ...d }) => ({ ...d, por: gerado_por ? (nome.get(gerado_por) ?? "—") : "—", url: url.get(storage_path) ?? null })),
+    dossies: lista.map(({ storage_path, pdf_path, gerado_por, ...d }) => ({ ...d, por: gerado_por ? (nome.get(gerado_por) ?? "—") : "—", url: url.get(storage_path) ?? null, pdfUrl: pdf_path ? (url.get(pdf_path) ?? null) : null })),
   });
 }
 
@@ -56,8 +57,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const r = await gerarDossie(supabase, { casoId: id, destino, empresaId: session.empresa.id, geradoPor: session.userId, nomeQuemGera: session.profile.full_name || session.profile.email });
     await registrarAcesso("DOSSIE_GERADO", "cliente_casos", id, { destino, arquivos: r.arquivos, faltando: r.faltando.length });
-    const { data: link } = await supabase.storage.from("documentos").createSignedUrl(r.caminho, 600, { download: r.nomeZip });
-    return NextResponse.json({ ok: true, url: link?.signedUrl ?? null, arquivos: r.arquivos, faltando: r.faltando, tamanho: r.tamanho });
+    const [{ data: link }, { data: pdf }] = await Promise.all([
+      supabase.storage.from("dossies").createSignedUrl(r.caminho, 600, { download: r.nomeZip }),
+      r.pdfCaminho ? supabase.storage.from("dossies").createSignedUrl(r.pdfCaminho, 600, { download: r.nomePdf }) : Promise.resolve({ data: null }),
+    ]);
+    return NextResponse.json({ ok: true, url: link?.signedUrl ?? null, pdfUrl: pdf?.signedUrl ?? null, arquivos: r.arquivos, faltando: r.faltando, tamanho: r.tamanho });
   } catch (e) {
     console.error("[dossie]", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: e instanceof Error ? e.message : "Não foi possível gerar o dossiê." }, { status: 500 });

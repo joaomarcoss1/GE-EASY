@@ -60,7 +60,8 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
 - Documentos do processo e dossiê: `documento_tipos.escopo` = `cadastro` (completa o cadastro; `situacao_documental` só olha
   esses) ou `processo` (com `tipos_acao` e `destinos` inss/justica). `checklist_processo(caso, destino)`; dossiê em
   `src/lib/dossie/gerar.ts` (ZIP: resumo PDF, PDF único com PDFs/imagens, pasta Documentos; nunca a senha gov) pela rota
-  `/api/casos/[id]/dossie` (GET checklist + anteriores, POST gera), gravado no Storage e registrado em `dossies`.
+  `/api/casos/[id]/dossie` (GET checklist + anteriores, POST gera), gravado no bucket privado `dossies` (ZIP + PDF único,
+  até 50 MB cada) e registrado em `dossies`. Reclassificar documento (só a categoria): `reclassificar_documento()`.
   Botão `DossieButton` na ficha do cliente, lista de processos, fila de habilitação e ficha de pendências/exigências.
 - Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
 - Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).

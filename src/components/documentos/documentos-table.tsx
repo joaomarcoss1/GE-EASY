@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { File, FileImage, FileSpreadsheet, FileText, FileType } from "lucide-react";
-import { DOC_CATEGORIAS } from "@/lib/constants";
 import { dateTime } from "@/lib/format";
 import type { Documento } from "@/lib/types";
-import { Badge, optionLabel } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { DocumentoActions } from "./documento-actions";
 import { docKind, formatBytes, type DocKind } from "./mime";
+import { CategoriaDocumento } from "./categoria-documento";
 
 const KIND: Record<DocKind, { icon: typeof File; cls: string; label: string }> = {
   pdf: { icon: FileText, cls: "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300", label: "PDF" },
@@ -36,6 +36,7 @@ export function DocumentosTable({
   isManager,
   googleReady,
   showCliente = false,
+  podeClassificar = false,
 }: {
   docs: DocumentoRow[];
   profiles: Map<string, { full_name: string }>;
@@ -43,6 +44,8 @@ export function DocumentosTable({
   isManager: boolean;
   googleReady: boolean;
   showCliente?: boolean;
+  /** quem confere documentos troca a categoria na própria lista */
+  podeClassificar?: boolean;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -98,7 +101,7 @@ export function DocumentosTable({
                 </td>
               )}
               <td>
-                <Badge tone="brand">{optionLabel(DOC_CATEGORIAS, d.categoria)}</Badge>
+                <CategoriaDocumento id={d.id} categoria={d.categoria} editavel={podeClassificar && !!d.cliente_id} />
               </td>
               <td className="text-sm">{(d.enviado_por && profiles.get(d.enviado_por)?.full_name) || <span className="text-muted">—</span>}</td>
               <td className="whitespace-nowrap text-xs text-muted">{dateTime(d.created_at)}</td>

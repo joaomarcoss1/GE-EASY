@@ -4,18 +4,19 @@ import { CheckCircle2, FileCheck2 } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileMap, pageRange } from "@/lib/data";
-import { DOC_ANALISE, DOC_CATEGORIAS } from "@/lib/constants";
+import { DOC_ANALISE } from "@/lib/constants";
 import { date, dateTime, todayISO } from "@/lib/format";
 import { analisarDocumento, aprovarDocumento } from "@/lib/actions/ciclo";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
-import { Badge, StatusBadge, optionLabel } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination, SegmentTabs } from "@/components/ui/filters";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { DocumentoActions } from "@/components/documentos/documento-actions";
 import { DocIcon } from "@/components/documentos/documentos-table";
+import { CategoriaDocumento } from "@/components/documentos/categoria-documento";
 
 export const metadata: Metadata = { title: "Central de documentação" };
 
@@ -68,7 +69,7 @@ export default async function DocumentacaoPage({ searchParams }: { searchParams:
                   <tr key={d.id}>
                     <td><div className="flex min-w-[220px] items-center gap-3"><DocIcon mime={d.mime_type} /><span className="max-w-[260px] truncate font-medium" title={d.nome}>{d.nome}</span></div></td>
                     <td><Link href={`/clientes/${d.cliente_id}`} className="font-medium hover:text-brand-600">{clienteNome(d)}</Link></td>
-                    <td><Badge tone="brand">{optionLabel(DOC_CATEGORIAS, d.categoria)}</Badge></td>
+                    <td><CategoriaDocumento id={d.id} categoria={d.categoria} editavel={!!d.cliente_id} /></td>
                     <td className="text-xs text-muted">{dateTime(d.created_at)}<br />{d.enviado_por ? (nomes.get(d.enviado_por)?.full_name ?? "—") : "—"}</td>
                     <td>
                       <StatusBadge options={DOC_ANALISE} value={d.analise_status} />

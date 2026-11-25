@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
 
 interface Item { categoria: string; nome: string; obrigatorio: boolean; escopo: string; situacao: string; arquivos: number }
-interface Gerado { id: string; destino: string; arquivos: number; tamanho: number; faltando: string[]; por: string; created_at: string; url: string | null }
+interface Gerado { id: string; destino: string; arquivos: number; tamanho: number; faltando: string[]; por: string; created_at: string; url: string | null; pdfUrl: string | null }
 
 const SIT: Record<string, { txt: string; cls: string }> = {
   aprovado: { txt: "Aprovado", cls: "text-emerald-700 dark:text-emerald-400" },
@@ -27,7 +27,7 @@ export function DossieButton({ casoId, cliente, tipo, compacto }: { casoId: stri
   const [dados, setDados] = useState<{ itens: Item[]; faltando: string[]; dossies: Gerado[] } | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [gerando, setGerando] = useState(false);
-  const [link, setLink] = useState<string | null>(null);
+  const [link, setLink] = useState<{ zip: string | null; pdf: string | null } | null>(null);
   const toast = useToast();
 
   const carregar = useCallback(async (d: "inss" | "justica") => {
@@ -53,9 +53,8 @@ export function DossieButton({ casoId, cliente, tipo, compacto }: { casoId: stri
       const r = await fetch(`/api/casos/${casoId}/dossie`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ destino }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Não foi possível gerar o dossiê.");
-      setLink(j.url);
+      setLink({ zip: j.url, pdf: j.pdfUrl });
       toast(`Dossiê gerado com ${j.arquivos} arquivo(s)${j.faltando?.length ? `. Faltam ${j.faltando.length} obrigatório(s).` : "."}`);
-      if (j.url) window.location.assign(j.url);
       void carregar(destino);
     } catch (e) {
       toast(e instanceof Error ? e.message : "Não foi possível gerar o dossiê.", "error");
@@ -79,7 +78,7 @@ export function DossieButton({ casoId, cliente, tipo, compacto }: { casoId: stri
       </button>
       <Modal open={aberto} onClose={() => setAberto(false)} title={`Dossiê — ${cliente}`} className="max-w-2xl">
         <div className="space-y-4">
-          <p className="text-sm text-muted">{tipo}. O dossiê junta os dados do cliente, o histórico do processo, as fichas e todos os documentos anexados em um ZIP, com um PDF único pronto para protocolar.</p>
+          <p className="text-sm text-muted">{tipo}. O dossiê junta os dados do cliente, o histórico do processo, as fichas e os documentos anexados. Sai em dois arquivos: um ZIP com o resumo e os documentos originais, e um PDF único pronto para protocolar no INSS ou no processo judicial.</p>
 
           <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Destino">
             {([["inss", "INSS (requerimento)"], ["justica", "Justiça (ação judicial)"]] as const).map(([v, l]) => (
@@ -121,7 +120,8 @@ export function DossieButton({ casoId, cliente, tipo, compacto }: { casoId: stri
                 <button type="button" onClick={gerar} disabled={gerando} className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-accent-600 disabled:opacity-60">
                   {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderArchive className="h-4 w-4" />} {gerando ? "Montando o dossiê…" : `Gerar dossiê para ${destino === "inss" ? "o INSS" : "a Justiça"}`}
                 </button>
-                {link && <a href={link} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline dark:text-brand-300"><Download className="h-4 w-4" /> Baixar de novo</a>}
+                {link?.zip && <a href={link.zip} className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2"><Download className="h-4 w-4" /> Baixar ZIP (resumo + documentos)</a>}
+                {link?.pdf && <a href={link.pdf} className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2"><Download className="h-4 w-4" /> Baixar PDF único</a>}
               </div>
 
               {dados.dossies.length > 0 && (
@@ -132,7 +132,10 @@ export function DossieButton({ casoId, cliente, tipo, compacto }: { casoId: stri
                       <li key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                         <span className="font-medium">{d.destino === "inss" ? "INSS" : "Justiça"}</span>
                         <span className="text-xs text-muted">{new Date(d.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} · {d.por} · {d.arquivos} arquivo(s) · {mb(d.tamanho)}{d.faltando?.length ? ` · faltavam ${d.faltando.length}` : ""}</span>
-                        {d.url && <a href={d.url} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300"><Download className="h-3.5 w-3.5" /> Baixar</a>}
+                        <span className="ml-auto flex gap-3">
+                          {d.url && <a href={d.url} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300"><Download className="h-3.5 w-3.5" /> ZIP</a>}
+                          {d.pdfUrl && <a href={d.pdfUrl} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300"><Download className="h-3.5 w-3.5" /> PDF único</a>}
+                        </span>
                       </li>
                     ))}
                   </ul>

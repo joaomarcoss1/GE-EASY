@@ -172,3 +172,17 @@ export async function deleteDocumento(id: string): Promise<ActionState> {
 export async function sendToDrive(id: string): Promise<ActionState & { url?: string }> {
   return arquivarDocumentoDrive(id);
 }
+
+/** Muda só a categoria de um documento (ex.: "Documentos pessoais" → "RG / CNH"), para o checklist e o dossiê. */
+export async function reclassificarDocumento(id: string, categoria: string): Promise<ActionState> {
+  const g = await guard("clientes.view");
+  if ("denied" in g) return g.denied;
+  if (!isUuid(id)) return { error: "Documento inválido." };
+  if (!DOC_CATEGORIAS.some((c) => c.value === categoria) || categoria === "dossie") return { error: "Categoria inválida." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reclassificar_documento", { p_doc: id, p_categoria: categoria });
+  if (error) return { error: error.code === "42501" || error.code === "22023" ? error.message : "Não foi possível reclassificar." };
+  revalidatePath("/administrativo/documentacao");
+  revalidatePath("/documentos");
+  return { ok: true, message: "Categoria atualizada." };
+}

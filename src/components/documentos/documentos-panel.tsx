@@ -11,6 +11,7 @@ import { DocumentUploader } from "./document-uploader";
 import { DocumentosTable } from "./documentos-table";
 import { DrivePastaButton } from "./drive-pasta-button";
 import { getDriveEscritorioStatus } from "./google-status";
+import { can } from "@/lib/rbac";
 
 /**
  * Painel de documentos do cliente ou do processo: envio (drag & drop) + lista com download,
@@ -67,7 +68,7 @@ export async function DocumentosPanel({ clienteId, processoId, podeEnviar = true
             description={processoId ? "Envie petições, decisões, provas e procurações do processo." : "Envie documentos pessoais, contratos e comprovantes do cliente."}
           />
         ) : (
-          <DocumentosTable docs={docs} profiles={profiles} currentUserId={session.userId} isManager={isManagerRole(session.profile.role)} googleReady={drive.ativo} />
+          <DocumentosTable docs={docs} profiles={profiles} currentUserId={session.userId} isManager={isManagerRole(session.profile.role)} podeClassificar={can(session.profile, "documentacao.analisar") || isManagerRole(session.profile.role)} googleReady={drive.ativo} />
         )}
       </Card>
     </div>

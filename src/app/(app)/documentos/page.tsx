@@ -15,6 +15,7 @@ import { FilterSelect, Pagination, SearchInput } from "@/components/ui/filters";
 import { DocumentosTable, type DocumentoRow } from "@/components/documentos/documentos-table";
 import { ClientePicker } from "@/components/documentos/cliente-picker";
 import { getGoogleStatus } from "@/components/documentos/google-status";
+import { can } from "@/lib/rbac";
 
 export const metadata: Metadata = { title: "Documentos" };
 
@@ -84,7 +85,7 @@ export default async function DocumentosPage({ searchParams }: { searchParams: P
             description={q || categoria ? "Ajuste a busca ou o filtro de categoria." : "Abra a ficha de um cliente (acima) e envie os arquivos na aba Documentos."}
           />
         ) : (
-          <DocumentosTable docs={docs} profiles={profiles} currentUserId={session.userId} isManager={isManagerRole(session.profile.role)} googleReady={googleReady} showCliente />
+          <DocumentosTable docs={docs} profiles={profiles} currentUserId={session.userId} isManager={isManagerRole(session.profile.role)} podeClassificar={can(session.profile, "documentacao.analisar") || isManagerRole(session.profile.role)} googleReady={googleReady} showCliente />
         )}
         <Suspense>
           <Pagination page={page} pageSize={size} total={count ?? 0} />
