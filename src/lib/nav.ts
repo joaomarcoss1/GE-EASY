@@ -70,6 +70,7 @@ const ALL_NAV: NavGroup[] = [
       { href: "/administrativo/documentacao", label: "Central de documentação", icon: "FileCheck2", permission: "documentacao.analisar" },
       { href: "/administrativo/base", label: "Base de clientes", icon: "Database", permission: "clientes.ver_todos" },
       { href: "/administrativo/processos", label: "Processos dos clientes", icon: "FolderSearch", permission: "clientes.ver_todos" },
+      { href: "/administrativo/pendencias", label: "Pendências (fichas)", icon: "ClipboardList", permission: "processos.status_restritos" },
       { href: "/metas/processos", label: "Metas", icon: "Target", permission: "clientes.view" },
       { href: "/administrativo/inconsistencias", label: "Inconsistências", icon: "ShieldAlert", permission: "clientes.ver_todos" },
       { href: "/relatorios/assessores", label: "Relatório por assessor", icon: "FileBarChart", permission: "clientes.ver_todos" },

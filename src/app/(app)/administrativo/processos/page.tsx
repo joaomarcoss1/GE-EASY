@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { BarChart3, Download, FolderSearch, List, MessageCircle } from "lucide-react";
+import { BarChart3, ClipboardList, Download, FolderSearch, List, MessageCircle } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
@@ -21,6 +21,7 @@ import { ExigenciaPrazo } from "@/components/processos/exigencia-prazo";
 import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { editarCaso } from "@/lib/actions/comercial";
 import { CASO_FIELDS } from "@/components/processos/caso-fields";
+import { abrirFicha } from "@/lib/actions/fichas-pendencia";
 
 export const metadata: Metadata = { title: "Processos dos clientes" };
 
@@ -211,6 +212,14 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
                         </td>
                         <td>
                           <div className="flex items-center gap-1">
+                          {podeRestritos && podeEditar && c.status === "pendencia" && (
+                            <form action={abrirFicha}>
+                              <input type="hidden" name="caso_id" value={c.id} />
+                              <button type="submit" title="Ficha de acompanhamento de pendências" aria-label={`Ficha de pendências de ${c.clientes.nome}`} className="grid h-8 w-8 place-items-center rounded-lg text-amber-700 transition hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40">
+                                <ClipboardList className="h-4 w-4" />
+                              </button>
+                            </form>
+                          )}
                           {podeEditar && <FormDrawerButton action={editarCaso} fields={CASO_FIELDS} values={{ protocolo_inss: c.protocolo_inss, situacao_atual: c.situacao_atual, observacoes: c.observacoes }} hidden={{ id: c.id }} title="Editar processo" description={`${c.clientes.nome} · ${c.tipo}`} icon="edit" variant="ghost" size="icon" width="max-w-lg" />}
                           {wa && (
                             <a href={wa} target="_blank" rel="noopener noreferrer" title="Conversar no WhatsApp" aria-label={`WhatsApp de ${c.clientes.nome}`} className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-600 text-white transition hover:bg-emerald-700">

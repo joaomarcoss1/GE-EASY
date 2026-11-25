@@ -39,6 +39,11 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
 - Metas: `metas_processos` (recorrentes; alvo empresa/assessor/categoria/usuario) + `metas_processos_painel(ref)`; tela
   `/metas/processos` (`metas.manage` edita). Indicadores por pessoa (`pendencias_resolvidas`, `exigencias_cumpridas`, …) contam
   pelo histórico de status de quem mudou. Setores do Administrativo: Pendências, Exigências, Análise.
+- Ficha de pendências (folha de acompanhamento): `fichas_pendencia` (uma aberta por processo; nº sequencial; encerrada =
+  imutável, com destino, assinatura e `encaminhado_para`) + `ficha_pendencia_itens` (seções `pendencia`/`retorno`, sempre
+  com data; só a marcação `resolvida` muda). Telas `/administrativo/pendencias` (fila, "enviados para mim", encerradas),
+  `/administrativo/pendencias/[id]` e `/imprimir`; ações em `actions/fichas-pendencia.ts` (`encerrarFicha` muda o status
+  com a sessão de quem encerra e chama `notificar_ficha_encaminhada`). Acesso: `processos.status_restritos`.
 - Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
 - Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).
 - Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,

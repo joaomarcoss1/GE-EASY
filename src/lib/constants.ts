@@ -709,3 +709,34 @@ export const DIA_AVALIACOES: Option[] = [
   { value: "regular", label: "Regular", tone: "amber" },
   { value: "dificil", label: "Difícil", tone: "red" },
 ];
+
+// ---------------------------------------------------------------- Ficha de acompanhamento de pendências (2026-11)
+export const FICHA_BENEFICIOS: Option[] = [
+  { value: "aux_doenca", label: "Aux. doença" },
+  { value: "bpc", label: "BPC" },
+  { value: "aposentadoria", label: "Aposent." },
+  { value: "sal_maternidade", label: "Sal. matern." },
+  { value: "pensao", label: "Pensão" },
+  { value: "outro", label: "Outro" },
+];
+export const FICHA_SEGURADOS: Option[] = [
+  { value: "rural", label: "Rural" },
+  { value: "pescador", label: "Pescador" },
+  { value: "urbano", label: "Urbano" },
+];
+export const FICHA_DESTINOS: Option[] = [
+  { value: "analise", label: "Análise", tone: "sky" },
+  { value: "habilitado", label: "Habilitado", tone: "green" },
+  { value: "exigencia", label: "Exigência", tone: "red" },
+  { value: "outro", label: "Outro", tone: "slate" },
+];
+/** Benefício da ficha sugerido pelo tipo do processo (planilha/cadastro). */
+export function beneficioDoTipo(tipo: string | null | undefined): string | null {
+  const t = (tipo ?? "").toLowerCase();
+  if (t.includes("doen")) return "aux_doenca";
+  if (t.includes("bpc")) return "bpc";
+  if (t.includes("aposent")) return "aposentadoria";
+  if (t.includes("mater")) return "sal_maternidade";
+  if (t.includes("pens")) return "pensao";
+  return t ? "outro" : null;
+}
