@@ -18,6 +18,7 @@ import { AgendaCard, CustasResumoCard, greeting, MinhasTarefasCard, todayLong } 
 const linkCls = "text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300";
 const TONS: Record<string, string> = {
   em_analise: "bg-sky-500", pendencia: "bg-amber-500", exigencia: "bg-red-500", habilitado: "bg-emerald-500",
+  habilitacao: "bg-accent-500",
   deferido: "bg-green-600", indeferido: "bg-rose-600", aguardando_idade: "bg-brand-500", judicializado: "bg-violet-500",
   arquivo_morto: "bg-slate-400", outros: "bg-slate-300",
 };

@@ -54,6 +54,7 @@ interface Caso {
 
 const TONS: Record<string, string> = {
   em_analise: "bg-sky-500", pendencia: "bg-amber-500", exigencia: "bg-red-500", habilitado: "bg-emerald-500",
+  habilitacao: "bg-accent-500",
   deferido: "bg-green-600", indeferido: "bg-rose-600", aguardando_idade: "bg-brand-500", judicializado: "bg-violet-500",
   arquivo_morto: "bg-slate-400", outros: "bg-slate-300",
 };
@@ -212,10 +213,11 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
                         </td>
                         <td>
                           <div className="flex items-center gap-1">
-                          {podeRestritos && podeEditar && c.status === "pendencia" && (
+                          {podeRestritos && podeEditar && (c.status === "pendencia" || c.status === "exigencia") && (
                             <form action={abrirFicha}>
                               <input type="hidden" name="caso_id" value={c.id} />
-                              <button type="submit" title="Ficha de acompanhamento de pendências" aria-label={`Ficha de pendências de ${c.clientes.nome}`} className="grid h-8 w-8 place-items-center rounded-lg text-amber-700 transition hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40">
+                              <input type="hidden" name="tipo" value={c.status} />
+                              <button type="submit" title={`Ficha de acompanhamento de ${c.status === "exigencia" ? "exigências" : "pendências"}`} aria-label={`Ficha de ${c.status === "exigencia" ? "exigências" : "pendências"} de ${c.clientes.nome}`} className="grid h-8 w-8 place-items-center rounded-lg text-amber-700 transition hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40">
                                 <ClipboardList className="h-4 w-4" />
                               </button>
                             </form>

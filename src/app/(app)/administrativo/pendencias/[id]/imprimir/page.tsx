@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { requirePermission } from "@/lib/auth";
+import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileMap } from "@/lib/data";
 import { CASO_STATUS, FICHA_BENEFICIOS, FICHA_SEGURADOS } from "@/lib/constants";
@@ -10,14 +10,14 @@ import { PrintButton } from "@/components/ui/print-button";
 import { LinkButton } from "@/components/ui/button";
 import { SELECT_FICHA, type FichaCompleta, type ItemFicha } from "@/lib/fichas-pendencia";
 
-export const metadata: Metadata = { title: "Imprimir ficha de pendências" };
+export const metadata: Metadata = { title: "Imprimir ficha" };
 
 const LINHAS = 11;
 const caixa = (marcado: boolean) => (marcado ? "☒" : "☐");
 
-/** Folha de Acompanhamento de Pendências no formato da folha em papel (A4), já preenchida. */
+/** Folha de acompanhamento (pendências ou exigências) no formato da folha em papel (A4), já preenchida. */
 export default async function ImprimirFichaPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission("processos.status_restritos");
+  await requireSession();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const supabase = await createClient();
@@ -29,7 +29,11 @@ export default async function ImprimirFichaPage({ params }: { params: Promise<{ 
   if (!fichaData) notFound();
   const f = fichaData as unknown as FichaCompleta;
   const itens = (itensData ?? []) as ItemFicha[];
-  const { count: total } = await supabase.from("fichas_pendencia").select("id", { count: "exact", head: true }).eq("caso_id", f.caso_id);
+  const { count: total } = await supabase.from("fichas_pendencia").select("id", { count: "exact", head: true }).eq("caso_id", f.caso_id).eq("tipo", f.tipo);
+  const exig = f.tipo === "exigencia";
+  const linhasDestino = exig
+    ? [["habilitacao", "Habilitação", "pendencia", "Pendência"], ["analise", "Análise", "outro", "Outro"]]
+    : [["habilitacao", "Habilitação", "exigencia", "Exigência"], ["analise", "Análise", "outro", "Outro"]];
   let assinatura: string | null = null;
   if (f.assinatura_path) assinatura = (await supabase.storage.from("documentos").createSignedUrl(f.assinatura_path, 900)).data?.signedUrl ?? null;
   const nome = (uid: string | null) => (uid ? (perfis.get(uid)?.full_name ?? "") : "");
@@ -71,7 +75,7 @@ export default async function ImprimirFichaPage({ params }: { params: Promise<{ 
       <article className="rounded-lg bg-white p-6 text-slate-900 shadow-sm print:p-0 print:shadow-none">
         <header className="flex items-end justify-between border-b-[3px] border-[#2D2D83] pb-1.5">
           <div>
-            <h1 className="text-[19px] font-extrabold tracking-tight text-[#2D2D83]">FOLHA DE ACOMPANHAMENTO DE PENDÊNCIAS</h1>
+            <h1 className="text-[19px] font-extrabold tracking-tight text-[#2D2D83]">FOLHA DE ACOMPANHAMENTO DE {exig ? "EXIGÊNCIAS" : "PENDÊNCIAS"}</h1>
             <p className="text-[10.5px] text-slate-500">Complemento da Folha de Análise · toda anotação com data · gerada pelo GE EASY</p>
           </div>
           <p className="text-[12px] font-bold text-[#2D2D83]">Folha nº {f.numero} de {total ?? f.numero}</p>
@@ -94,20 +98,20 @@ export default async function ImprimirFichaPage({ params }: { params: Promise<{ 
               </td>
             </tr>
             <tr>
-              <td className={td + " py-1.5"} colSpan={2}><b>Análise recebida em:</b> {date(f.recebida_em)}</td>
-              <td className={td + " py-1.5"} colSpan={2}><b>Responsável pela pendência:</b> {nome(f.responsavel_id)}</td>
+              <td className={td + " py-1.5"} colSpan={2}><b>{exig ? "Exigência recebida em" : "Análise recebida em"}:</b> {date(f.recebida_em)}{exig && f.cliente_casos?.exigencia_prazo ? ` · prazo INSS ${date(f.cliente_casos.exigencia_prazo)}` : ""}</td>
+              <td className={td + " py-1.5"} colSpan={2}><b>Responsável pela {exig ? "exigência" : "pendência"}:</b> {nome(f.responsavel_id)}</td>
             </tr>
           </tbody>
         </table>
 
-        <Tabela titulo="1. Pendências" sub="o que falta, o que foi pedido, a quem e prazo" rotulo="Pendência / providência" linhas={pend} />
-        <Tabela titulo="2. Retorno do cliente" sub="contatos, respostas, documentos entregues" rotulo="Retorno / resultado do contato" linhas={ret} />
+        <Tabela titulo={exig ? "1. Exigências do INSS" : "1. Pendências"} sub={exig ? "o que o INSS exigiu, a providência, a quem e prazo" : "o que falta, o que foi pedido, a quem e prazo"} rotulo={exig ? "Exigência / providência" : "Pendência / providência"} linhas={pend} />
+        <Tabela titulo={exig ? "2. Retorno do cliente e cumprimento" : "2. Retorno do cliente"} sub="contatos, respostas, documentos entregues" rotulo="Retorno / resultado do contato" linhas={ret} />
 
         <section className="mt-4 break-inside-avoid">
           <h2 className="text-[13px] font-bold text-[#2D2D83]">3. Destino do processo</h2>
           <table className="mt-1 w-full border-collapse text-[11.5px]">
             <tbody>
-              {[["habilitado", "Habilitado", "exigencia", "Exigência"], ["analise", "Análise", "outro", "Outro"]].map(([a, la, b, lb]) => (
+              {linhasDestino.map(([a, la, b, lb]) => (
                 <tr key={a} className="h-8">
                   <td className={td + " w-32 py-1.5 font-bold"}>{caixa(f.destino === a)} {la}</td>
                   <td className={td + " py-1.5"}><span className="text-[10px] text-slate-500">Data:</span> {destinoData(a)}</td>
@@ -123,13 +127,14 @@ export default async function ImprimirFichaPage({ params }: { params: Promise<{ 
             </tbody>
           </table>
           {f.encaminhado_para && <p className="mt-1 text-[11px]">Encaminhado para: <b>{nome(f.encaminhado_para)}</b></p>}
+          {exig && f.exigencia_cumprida !== null && <p className="mt-1 text-[11px]">Exigência cumprida no INSS: <b>{f.exigencia_cumprida ? "sim" : "não"}</b></p>}
         </section>
 
         <footer className="mt-10 flex flex-col items-center break-inside-avoid">
           {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada e temporária do Storage */}
           {assinatura ? <img src={assinatura} alt="Assinatura" className="h-16 object-contain" /> : <div className="h-16" />}
           <div className="w-80 border-t border-slate-700" />
-          <p className="mt-1 text-[11px] text-slate-600">Assinatura da responsável pela pendência{f.responsavel_id ? ` — ${nome(f.responsavel_id)}` : ""}</p>
+          <p className="mt-1 text-[11px] text-slate-600">Assinatura da responsável pela {exig ? "exigência" : "pendência"}{f.responsavel_id ? ` — ${nome(f.responsavel_id)}` : ""}</p>
         </footer>
       </article>
     </div>

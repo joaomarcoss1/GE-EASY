@@ -44,6 +44,11 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   com data; só a marcação `resolvida` muda). Telas `/administrativo/pendencias` (fila, "enviados para mim", encerradas),
   `/administrativo/pendencias/[id]` e `/imprimir`; ações em `actions/fichas-pendencia.ts` (`encerrarFicha` muda o status
   com a sessão de quem encerra e chama `notificar_ficha_encaminhada`). Acesso: `processos.status_restritos`.
+  `fichas_pendencia.tipo` = `pendencia` (Vânia, `/administrativo/pendencias`) ou `exigencia` (Vitória,
+  `/administrativo/exigencias`, prazo do INSS e "exigência cumprida" → `exigencia_situacao`). Ambas encaminham para
+  análise (setor Análise) ou habilitação (`configuracoes.fluxo_processos.habilitacao`; status `habilitacao`).
+  Quem recebe (`encaminhado_para`) lê a ficha, o processo e o cliente (`can_access_cliente` + `clientes_select_encaminhado`)
+  e trabalha em `/administrativo/encaminhados`.
 - Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
 - Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).
 - Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,

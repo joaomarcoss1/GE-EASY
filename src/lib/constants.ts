@@ -621,6 +621,7 @@ export const CASO_STATUS: Option[] = [
   { value: "em_analise", label: "Em análise", tone: "sky" },
   { value: "pendencia", label: "Pendência", tone: "amber" },
   { value: "exigencia", label: "Exigência", tone: "red" },
+  { value: "habilitacao", label: "Para habilitação", tone: "accent" },
   { value: "habilitado", label: "Habilitado", tone: "green" },
   { value: "deferido", label: "Deferido", tone: "green" },
   { value: "indeferido", label: "Indeferido", tone: "red" },
@@ -726,10 +727,22 @@ export const FICHA_SEGURADOS: Option[] = [
 ];
 export const FICHA_DESTINOS: Option[] = [
   { value: "analise", label: "Análise", tone: "sky" },
-  { value: "habilitado", label: "Habilitado", tone: "green" },
+  { value: "habilitacao", label: "Habilitação", tone: "accent" },
   { value: "exigencia", label: "Exigência", tone: "red" },
+  { value: "pendencia", label: "Pendência", tone: "amber" },
+  { value: "habilitado", label: "Habilitado", tone: "green" },
   { value: "outro", label: "Outro", tone: "slate" },
 ];
+/** Destinos oferecidos ao encerrar cada tipo de ficha (análise da Tati ou habilitação da Aline, entre os setores). */
+export const FICHA_DESTINOS_POR_TIPO: Record<"pendencia" | "exigencia", string[]> = {
+  pendencia: ["analise", "habilitacao", "exigencia", "outro"],
+  exigencia: ["analise", "habilitacao", "pendencia", "outro"],
+};
+export const FICHA_TIPOS = {
+  pendencia: { titulo: "Pendências", ficha: "Folha de acompanhamento de pendências", status: "pendencia", rota: "/administrativo/pendencias" },
+  exigencia: { titulo: "Exigências", ficha: "Folha de acompanhamento de exigências", status: "exigencia", rota: "/administrativo/exigencias" },
+} as const;
+export type FichaTipo = keyof typeof FICHA_TIPOS;
 /** Benefício da ficha sugerido pelo tipo do processo (planilha/cadastro). */
 export function beneficioDoTipo(tipo: string | null | undefined): string | null {
   const t = (tipo ?? "").toLowerCase();

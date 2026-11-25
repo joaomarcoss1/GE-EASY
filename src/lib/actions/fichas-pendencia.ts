@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { detectarTipoArquivo } from "@/lib/seguranca/arquivos";
 import { can } from "@/lib/rbac";
-import { beneficioDoTipo, CASO_STATUS } from "@/lib/constants";
+import { beneficioDoTipo, CASO_STATUS, FICHA_DESTINOS_POR_TIPO, FICHA_TIPOS, type FichaTipo } from "@/lib/constants";
 import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
@@ -17,37 +17,43 @@ import type { ActionState } from "./types";
 const PERM = "processos.status_restritos" as const;
 const BENEFICIOS = ["aux_doenca", "bpc", "aposentadoria", "sal_maternidade", "pensao", "outro"] as const;
 const SEGURADOS = ["rural", "pescador", "urbano"] as const;
-const OUTROS_STATUS = CASO_STATUS.map((s) => s.value).filter((s) => !["pendencia", "em_analise", "habilitado", "exigencia"].includes(s)) as [string, ...string[]];
+const OUTROS_STATUS = CASO_STATUS.map((s) => s.value).filter((s) => !["pendencia", "em_analise", "habilitado", "habilitacao", "exigencia"].includes(s)) as [string, ...string[]];
+const STATUS_DO_DESTINO: Record<string, string> = { analise: "em_analise", habilitacao: "habilitacao", exigencia: "exigencia", pendencia: "pendencia" };
 
 function atualizar(fichaId?: string, clienteId?: string | null) {
   revalidatePath("/administrativo/pendencias");
+  revalidatePath("/administrativo/exigencias");
+  revalidatePath("/administrativo/encaminhados");
   if (fichaId) revalidatePath(`/administrativo/pendencias/${fichaId}`);
   revalidatePath("/administrativo/processos");
   revalidatePath("/dashboard");
   if (clienteId) revalidatePath(`/clientes/${clienteId}`);
 }
 
-/** Abre (ou retoma) a ficha do processo e leva para ela. Usada como ação de formulário. */
+/** Abre (ou retoma) a ficha do processo (pendência ou exigência) e leva para ela. Usada como ação de formulário. */
 export async function abrirFicha(formData: FormData): Promise<void> {
+  const tipo: FichaTipo = formData.get("tipo") === "exigencia" ? "exigencia" : "pendencia";
+  const base = FICHA_TIPOS[tipo].rota;
   const g = await guard(PERM);
-  if ("denied" in g) redirect("/administrativo/pendencias?erro=permissao");
+  if ("denied" in g) redirect(`${base}?erro=permissao`);
   const casoId = formData.get("caso_id");
-  if (!isUuid(casoId)) redirect("/administrativo/pendencias");
+  if (!isUuid(casoId)) redirect(base);
   const supabase = await createClient();
-  const { data: aberta } = await supabase.from("fichas_pendencia").select("id").eq("caso_id", casoId).eq("status", "aberta").maybeSingle();
+  const { data: aberta } = await supabase.from("fichas_pendencia").select("id").eq("caso_id", casoId).eq("tipo", tipo).eq("status", "aberta").maybeSingle();
   if (aberta) redirect(`/administrativo/pendencias/${aberta.id}`);
-  const { data: caso } = await supabase.from("cliente_casos").select("id, tipo, cliente_id").eq("id", casoId).maybeSingle();
-  if (!caso) redirect("/administrativo/pendencias?erro=processo");
+  const { data: caso } = await supabase.from("cliente_casos").select("id, tipo, cliente_id, status").eq("id", casoId).maybeSingle();
+  if (!caso) redirect(`${base}?erro=processo`);
+  if (caso.status !== FICHA_TIPOS[tipo].status) redirect(`${base}?erro=status`);
   const { data, error } = await supabase
     .from("fichas_pendencia")
-    .insert({ caso_id: caso.id, beneficio: beneficioDoTipo(caso.tipo), responsavel_id: g.session.userId })
+    .insert({ caso_id: caso.id, tipo, beneficio: beneficioDoTipo(caso.tipo), responsavel_id: g.session.userId })
     .select("id")
     .single();
   if (error || !data) {
     // corrida: outra aba abriu a ficha ao mesmo tempo
-    const { data: outra } = await supabase.from("fichas_pendencia").select("id").eq("caso_id", casoId).eq("status", "aberta").maybeSingle();
+    const { data: outra } = await supabase.from("fichas_pendencia").select("id").eq("caso_id", casoId).eq("tipo", tipo).eq("status", "aberta").maybeSingle();
     if (outra) redirect(`/administrativo/pendencias/${outra.id}`);
-    redirect("/administrativo/pendencias?erro=abrir");
+    redirect(`${base}?erro=abrir`);
   }
   atualizar(data.id, caso.cliente_id);
   redirect(`/administrativo/pendencias/${data.id}`);
@@ -138,17 +144,16 @@ export async function excluirItemFicha(id: string): Promise<ActionState> {
 
 const encerrarSchema = z.object({
   id: zs.requiredUuid("a ficha"),
-  destino: z.enum(["analise", "habilitado", "exigencia", "outro"], { error: "Escolha o destino do processo" }),
+  destino: z.enum(["analise", "habilitacao", "exigencia", "pendencia", "outro"], { error: "Escolha o destino do processo" }),
   encaminhado_para: zs.uuid(),
-  protocolo_inss: zs.text(40),
-  situacao_atual: zs.text(300),
   outro_status: z.enum(OUTROS_STATUS).optional().or(z.literal("").transform(() => undefined)),
   destino_outro: zs.text(120),
+  exigencia_cumprida: zs.bool(),
 });
 
 /**
  * Seção 3: destino do processo + assinatura. Muda o status do processo, encerra a ficha (que fica imutável) e
- * avisa quem recebe (a analista escolhida ou o setor de destino).
+ * avisa quem recebe (a analista ou quem habilita, escolhidos na ficha, ou o setor de destino).
  */
 export async function encerrarFicha(_: ActionState, formData: FormData): Promise<ActionState> {
   const g = await guard(PERM);
@@ -157,9 +162,8 @@ export async function encerrarFicha(_: ActionState, formData: FormData): Promise
   const v = encerrarSchema.safeParse(formToObject(formData));
   if (!v.success) return zodErrors(v.error);
   const d = v.data;
-  if (d.destino === "analise" && !d.encaminhado_para) return { error: "Escolha a analista que vai receber o processo.", fieldErrors: { encaminhado_para: "Obrigatório" } };
-  if (d.destino === "habilitado" && (!d.protocolo_inss || !d.situacao_atual)) {
-    return { error: "Para habilitar, informe o protocolo do INSS e o estado atual.", fieldErrors: { ...(d.protocolo_inss ? {} : { protocolo_inss: "Obrigatório" }), ...(d.situacao_atual ? {} : { situacao_atual: "Obrigatório" }) } };
+  if ((d.destino === "analise" || d.destino === "habilitacao") && !d.encaminhado_para) {
+    return { error: d.destino === "analise" ? "Escolha a analista que vai receber o processo." : "Escolha quem vai fazer a habilitação.", fieldErrors: { encaminhado_para: "Obrigatório" } };
   }
   if (d.destino === "outro" && !d.outro_status) return { error: "Escolha a nova situação do processo.", fieldErrors: { outro_status: "Obrigatório" } };
 
@@ -169,23 +173,27 @@ export async function encerrarFicha(_: ActionState, formData: FormData): Promise
   if (!detectarTipoArquivo(bytes, "image/png")) return { error: "Assinatura inválida." };
 
   const supabase = await createClient();
-  const { data: ficha } = await supabase.from("fichas_pendencia").select("id, caso_id, cliente_id, status").eq("id", d.id).maybeSingle();
+  const { data: ficha } = await supabase.from("fichas_pendencia").select("id, caso_id, cliente_id, status, tipo").eq("id", d.id).maybeSingle();
   if (!ficha) return { error: "Ficha não encontrada." };
   if (ficha.status !== "aberta") return { error: "Esta ficha já foi encerrada." };
+  const tipo = ficha.tipo as FichaTipo;
+  if (d.destino !== "outro" && !FICHA_DESTINOS_POR_TIPO[tipo].includes(d.destino)) return { error: "Destino inválido para esta ficha." };
   const { count } = await supabase.from("ficha_pendencia_itens").select("id", { count: "exact", head: true }).eq("ficha_id", ficha.id).eq("secao", "pendencia");
-  if (!count) return { error: "Registre ao menos uma pendência (seção 1) antes de encerrar." };
+  if (!count) return { error: tipo === "exigencia" ? "Registre ao menos uma exigência (seção 1) antes de encerrar." : "Registre ao menos uma pendência (seção 1) antes de encerrar." };
+  if (d.encaminhado_para) {
+    const { data: membro } = await supabase.from("membros").select("id").eq("id", d.encaminhado_para).eq("active", true).maybeSingle();
+    if (!membro) return { error: "A pessoa escolhida não está ativa nesta empresa.", fieldErrors: { encaminhado_para: "Inválido" } };
+  }
 
-  const novoStatus = d.destino === "analise" ? "em_analise" : d.destino === "outro" ? d.outro_status! : d.destino;
-  const caminho = `empresas/${g.session.empresa!.id}/clientes/${ficha.cliente_id}/fichas-pendencia/${ficha.id}-assinatura.png`;
+  const novoStatus = d.destino === "outro" ? d.outro_status! : STATUS_DO_DESTINO[d.destino];
+  const caminho = `empresas/${g.session.empresa!.id}/clientes/${ficha.cliente_id}/fichas-${tipo}/${ficha.id}-assinatura.png`;
   const { error: upErr } = await supabase.storage.from("documentos").upload(caminho, bytes, { contentType: "image/png", upsert: true });
   if (upErr) return { error: "Não foi possível guardar a assinatura." };
 
   // 1) processo muda de situação (com a sessão de quem encerra: histórico e metas)
   const patch: Record<string, unknown> = { status: novoStatus };
-  if (d.destino === "habilitado") {
-    patch.protocolo_inss = d.protocolo_inss;
-    patch.situacao_atual = d.situacao_atual;
-  }
+  const hoje = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  if (tipo === "exigencia" && d.exigencia_cumprida) patch.exigencia_situacao = `Cumprida em ${hoje} (ficha de exigências)`;
   const { error: casoErr } = await supabase.from("cliente_casos").update(patch).eq("id", ficha.caso_id);
   if (casoErr) {
     await supabase.storage.from("documentos").remove([caminho]);
@@ -200,7 +208,8 @@ export async function encerrarFicha(_: ActionState, formData: FormData): Promise
       destino: d.destino,
       destino_status: novoStatus,
       destino_outro: d.destino === "outro" ? d.destino_outro : null,
-      encaminhado_para: d.destino === "analise" ? d.encaminhado_para : null,
+      encaminhado_para: d.destino === "analise" || d.destino === "habilitacao" ? d.encaminhado_para : null,
+      exigencia_cumprida: tipo === "exigencia" ? d.exigencia_cumprida : null,
       assinatura_path: caminho,
     })
     .eq("id", ficha.id)
@@ -210,6 +219,6 @@ export async function encerrarFicha(_: ActionState, formData: FormData): Promise
   // 3) aviso para quem recebe
   await supabase.rpc("notificar_ficha_encaminhada", { p_ficha: ficha.id });
   atualizar(ficha.id, ficha.cliente_id);
-  const rotulo = d.destino === "analise" ? "enviado para análise" : d.destino === "habilitado" ? "habilitado" : d.destino === "exigencia" ? "enviado para exigência" : "atualizado";
+  const rotulo = { analise: "enviado para análise", habilitacao: "enviado para habilitação", exigencia: "enviado para exigência", pendencia: "devolvido para pendência", outro: "atualizado" }[d.destino];
   return { ok: true, message: `Ficha encerrada. Processo ${rotulo}.` };
 }

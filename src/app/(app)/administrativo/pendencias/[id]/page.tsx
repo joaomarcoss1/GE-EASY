@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
-import { requirePermission } from "@/lib/auth";
+import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/rbac";
 import { getProfileMap } from "@/lib/data";
-import { CASO_STATUS, FICHA_BENEFICIOS, FICHA_DESTINOS, FICHA_SEGURADOS } from "@/lib/constants";
+import { CASO_STATUS, FICHA_BENEFICIOS, FICHA_DESTINOS, FICHA_SEGURADOS, FICHA_TIPOS } from "@/lib/constants";
 import { date, dateTime, maskDocumento } from "@/lib/format";
 import { excluirItemFicha } from "@/lib/actions/fichas-pendencia";
 import { PageHeader } from "@/components/ui/page-header";
@@ -15,13 +15,17 @@ import { LinkButton } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { CabecalhoFicha, EncerrarFicha, NovaAnotacao, ResolvidaToggle } from "@/components/pendencias/ficha-componentes";
 import { cn } from "@/lib/cn";
-import { SELECT_FICHA, type FichaCompleta, type ItemFicha } from "@/lib/fichas-pendencia";
+import { opcoesEncaminhamento, SELECT_FICHA, type FichaCompleta, type ItemFicha } from "@/lib/fichas-pendencia";
+import { ExigenciaPrazo } from "@/components/processos/exigencia-prazo";
 
-export const metadata: Metadata = { title: "Ficha de pendências" };
+export const metadata: Metadata = { title: "Ficha de acompanhamento" };
 
-/** Folha de Acompanhamento de Pendências de um processo (versão digital da folha em papel). */
+/**
+ * Folha de acompanhamento de um processo — pendências ou exigências (versão digital da folha em papel).
+ * Quem trabalha no setor edita; quem recebeu o processo (analista, habilitação) lê a ficha encerrada (RLS).
+ */
 export default async function FichaPendenciaPage({ params }: { params: Promise<{ id: string }> }) {
-  const { profile, userId } = await requirePermission("processos.status_restritos");
+  const { profile, userId } = await requireSession();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const supabase = await createClient();
@@ -34,22 +38,17 @@ export default async function FichaPendenciaPage({ params }: { params: Promise<{
   const ficha = fichaData as unknown as FichaCompleta;
   const itens = (itensData ?? []) as ItemFicha[];
   const aberta = ficha.status === "aberta";
-  const editavel = aberta && can(profile, "clientes.write");
+  const editavel = aberta && can(profile, "processos.status_restritos") && can(profile, "clientes.write");
+  const setor = can(profile, "processos.status_restritos");
+  const T = FICHA_TIPOS[ficha.tipo];
+  const exig = ficha.tipo === "exigencia";
   const nome = (uid: string | null) => (uid ? (perfis.get(uid)?.full_name ?? "—") : "—");
   const pendencias = itens.filter((i) => i.secao === "pendencia");
   const retornos = itens.filter((i) => i.secao === "retorno");
   const caso = ficha.cliente_casos;
   const hoje = new Date().toISOString().slice(0, 10);
 
-  // analistas: membros ativos do setor de Análise
-  let analistas: { value: string; label: string }[] = [];
-  if (editavel) {
-    const { data: dep } = await supabase.from("departamentos").select("id").eq("nome", "Análise").maybeSingle();
-    if (dep) {
-      const { data: membros } = await supabase.from("departamento_membros").select("user_id").eq("departamento_id", dep.id).eq("ativo", true);
-      analistas = (membros ?? []).map((m) => perfis.get(m.user_id as string)).filter((p): p is NonNullable<typeof p> => !!p && p.active).map((p) => ({ value: p.id, label: p.full_name || p.email }));
-    }
-  }
+  const { analistas, habilitadores } = editavel ? await opcoesEncaminhamento(supabase, perfis) : { analistas: [], habilitadores: [] };
   let assinaturaUrl: string | null = null;
   if (ficha.assinatura_path) {
     const { data } = await supabase.storage.from("documentos").createSignedUrl(ficha.assinatura_path, 900);
@@ -63,12 +62,12 @@ export default async function FichaPendenciaPage({ params }: { params: Promise<{
   return (
     <>
       <PageHeader
-        eyebrow={`Folha de acompanhamento de pendências · nº ${ficha.numero}`}
+        eyebrow={`${T.ficha} · nº ${ficha.numero}`}
         title={ficha.clientes?.nome ?? "Cliente"}
         description="Complemento da folha de análise. Toda anotação tem data e fica registrada com o nome de quem escreveu."
         actions={
           <div className="flex flex-wrap gap-2">
-            <LinkButton href="/administrativo/pendencias" variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /> Pendências</LinkButton>
+            <LinkButton href={setor ? T.rota : "/administrativo/encaminhados"} variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /> {setor ? T.titulo : "Encaminhados para mim"}</LinkButton>
             <LinkButton href={`/clientes/${ficha.cliente_id}`} variant="secondary" size="sm">Ficha do cliente</LinkButton>
             <LinkButton href={`/administrativo/pendencias/${ficha.id}/imprimir`} variant="secondary" size="sm" prefetch={false}><Printer className="h-4 w-4" /> Imprimir</LinkButton>
           </div>
@@ -84,9 +83,19 @@ export default async function FichaPendenciaPage({ params }: { params: Promise<{
         <div className="grid divide-y divide-line border-t border-line sm:grid-cols-4 sm:divide-x sm:divide-y-0">
           <Celula rotulo="Benefício">{ficha.beneficio ? optionLabel(FICHA_BENEFICIOS, ficha.beneficio) : "—"}</Celula>
           <Celula rotulo="Segurado">{ficha.segurado ? optionLabel(FICHA_SEGURADOS, ficha.segurado) : "—"}</Celula>
-          <Celula rotulo="Análise recebida em">{date(ficha.recebida_em)}</Celula>
-          <Celula rotulo="Responsável pela pendência">{nome(ficha.responsavel_id)}</Celula>
+          <Celula rotulo={exig ? "Exigência recebida em" : "Análise recebida em"}>{date(ficha.recebida_em)}</Celula>
+          <Celula rotulo={exig ? "Responsável pela exigência" : "Responsável pela pendência"}>{nome(ficha.responsavel_id)}</Celula>
         </div>
+        {exig && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-3 text-sm">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Prazo do INSS</span>
+            {caso?.status === "exigencia" ? (
+              <ExigenciaPrazo casoId={ficha.caso_id} prazo={caso.exigencia_prazo} prorrogada={caso.exigencia_prorrogada} podeProrrogar={editavel} />
+            ) : <span className="text-muted">o processo não está mais em exigência</span>}
+            {caso?.exigencia_aberta_em && <span className="text-xs text-muted">aberta em {date(caso.exigencia_aberta_em)} · 7 dias, prorrogável uma vez por mais 7</span>}
+            {caso?.exigencia_texto && <span className="w-full text-xs text-muted">Registro da planilha: {caso.exigencia_texto}</span>}
+          </div>
+        )}
         <CabecalhoFicha fichaId={ficha.id} beneficio={ficha.beneficio} segurado={ficha.segurado} recebidaEm={ficha.recebida_em} editavel={editavel} />
         <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2.5 text-xs text-muted">
           Situação do processo: <Badge tone="slate">{optionLabel(CASO_STATUS, caso?.status ?? "")}</Badge>
@@ -95,13 +104,13 @@ export default async function FichaPendenciaPage({ params }: { params: Promise<{
       </Card>
 
       <Card className="mb-5">
-        <CardHeader title="1. Pendências" description="O que falta, o que foi pedido, a quem e prazo" />
+        <CardHeader title={exig ? "1. Exigências do INSS" : "1. Pendências"} description={exig ? "O que o INSS exigiu, a providência, a quem foi pedido e prazo" : "O que falta, o que foi pedido, a quem e prazo"} />
         <Anotacoes itens={pendencias} editavel={editavel} userId={userId} nome={nome} hoje={hoje} pendencia />
-        {editavel && <NovaAnotacao fichaId={ficha.id} secao="pendencia" />}
+        {editavel && <NovaAnotacao fichaId={ficha.id} secao="pendencia" tipo={ficha.tipo} />}
       </Card>
 
       <Card className="mb-5">
-        <CardHeader title="2. Retorno do cliente" description="Contatos, respostas, documentos entregues" />
+        <CardHeader title={exig ? "2. Retorno do cliente e cumprimento" : "2. Retorno do cliente"} description={exig ? "Contatos, documentos entregues e o que foi enviado ao INSS" : "Contatos, respostas, documentos entregues"} />
         <Anotacoes itens={retornos} editavel={editavel} userId={userId} nome={nome} hoje={hoje} />
         {editavel && <NovaAnotacao fichaId={ficha.id} secao="retorno" />}
       </Card>
@@ -112,26 +121,26 @@ export default async function FichaPendenciaPage({ params }: { params: Promise<{
           editavel ? (
             <EncerrarFicha
               fichaId={ficha.id}
+              tipo={ficha.tipo}
               analistas={analistas}
-              analistaPadrao={analistas.length === 1 ? analistas[0].value : null}
-              protocolo={caso?.protocolo_inss ?? null}
-              situacao={caso?.situacao_atual ?? null}
+              habilitadores={habilitadores}
               nomeResponsavel={nome(userId)}
               pendenciasAbertas={pendencias.filter((p) => !p.resolvida).length}
             />
-          ) : <p className="p-5 text-sm text-muted">Somente quem pode alterar processos encerra a ficha.</p>
+          ) : <p className="p-5 text-sm text-muted">Somente o setor responsável encerra a ficha.</p>
         ) : (
           <div className="grid gap-5 p-5 sm:grid-cols-[1fr_auto]">
             <div className="space-y-1.5 text-sm">
               <p><span className="text-muted">Destino:</span> <Badge tone={FICHA_DESTINOS.find((d) => d.value === ficha.destino)?.tone ?? "slate"}>{optionLabel(FICHA_DESTINOS, ficha.destino ?? "")}</Badge>{ficha.destino === "outro" ? ` ${optionLabel(CASO_STATUS, ficha.destino_status ?? "")}${ficha.destino_outro ? ` — ${ficha.destino_outro}` : ""}` : ""}</p>
               <p><span className="text-muted">Data:</span> {ficha.destino_em ? date(ficha.destino_em) : "—"}</p>
+              {exig && ficha.exigencia_cumprida !== null && <p><span className="text-muted">Exigência cumprida no INSS:</span> {ficha.exigencia_cumprida ? "sim" : "não"}</p>}
               {ficha.encaminhado_para && <p><span className="text-muted">Encaminhado para:</span> <b>{nome(ficha.encaminhado_para)}</b></p>}
               <p><span className="text-muted">Responsável:</span> {nome(ficha.responsavel_id)}</p>
             </div>
             <div className="text-center">
               {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada e temporária do Storage */}
-              {assinaturaUrl ? <img src={assinaturaUrl} alt="Assinatura da responsável pela pendência" className="h-24 w-64 rounded-lg border border-line bg-white object-contain" /> : <div className="h-24 w-64 rounded-lg border border-dashed border-line" />}
-              <p className="mt-1 text-xs text-muted">Assinatura da responsável pela pendência</p>
+              {assinaturaUrl ? <img src={assinaturaUrl} alt="Assinatura da responsável" className="h-24 w-64 rounded-lg border border-line bg-white object-contain" /> : <div className="h-24 w-64 rounded-lg border border-dashed border-line" />}
+              <p className="mt-1 text-xs text-muted">Assinatura da responsável pela {exig ? "exigência" : "pendência"}</p>
             </div>
           </div>
         )}
