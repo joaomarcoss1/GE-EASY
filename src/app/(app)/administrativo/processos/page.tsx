@@ -22,6 +22,7 @@ import { FormDrawerButton } from "@/components/ui/form-drawer";
 import { editarCaso } from "@/lib/actions/comercial";
 import { CASO_FIELDS } from "@/components/processos/caso-fields";
 import { abrirFicha } from "@/lib/actions/fichas-pendencia";
+import { DossieButton } from "@/components/dossie/dossie-button";
 
 export const metadata: Metadata = { title: "Processos dos clientes" };
 
@@ -222,6 +223,7 @@ export default async function ProcessosClientesPage({ searchParams }: { searchPa
                               </button>
                             </form>
                           )}
+                          <DossieButton casoId={c.id} cliente={c.clientes.nome} tipo={c.tipo} compacto />
                           {podeEditar && <FormDrawerButton action={editarCaso} fields={CASO_FIELDS} values={{ protocolo_inss: c.protocolo_inss, situacao_atual: c.situacao_atual, observacoes: c.observacoes }} hidden={{ id: c.id }} title="Editar processo" description={`${c.clientes.nome} · ${c.tipo}`} icon="edit" variant="ghost" size="icon" width="max-w-lg" />}
                           {wa && (
                             <a href={wa} target="_blank" rel="noopener noreferrer" title="Conversar no WhatsApp" aria-label={`WhatsApp de ${c.clientes.nome}`} className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-600 text-white transition hover:bg-emerald-700">

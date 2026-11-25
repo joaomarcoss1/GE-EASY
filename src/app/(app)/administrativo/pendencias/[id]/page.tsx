@@ -17,6 +17,7 @@ import { CabecalhoFicha, EncerrarFicha, NovaAnotacao, ResolvidaToggle } from "@/
 import { cn } from "@/lib/cn";
 import { opcoesEncaminhamento, SELECT_FICHA, type FichaCompleta, type ItemFicha } from "@/lib/fichas-pendencia";
 import { ExigenciaPrazo } from "@/components/processos/exigencia-prazo";
+import { DossieButton } from "@/components/dossie/dossie-button";
 
 export const metadata: Metadata = { title: "Ficha de acompanhamento" };
 
@@ -69,6 +70,7 @@ export default async function FichaPendenciaPage({ params }: { params: Promise<{
           <div className="flex flex-wrap gap-2">
             <LinkButton href={setor ? T.rota : "/administrativo/encaminhados"} variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /> {setor ? T.titulo : "Encaminhados para mim"}</LinkButton>
             <LinkButton href={`/clientes/${ficha.cliente_id}`} variant="secondary" size="sm">Ficha do cliente</LinkButton>
+            <DossieButton casoId={ficha.caso_id} cliente={ficha.clientes?.nome ?? "Cliente"} tipo={caso?.tipo ?? ""} />
             <LinkButton href={`/administrativo/pendencias/${ficha.id}/imprimir`} variant="secondary" size="sm" prefetch={false}><Printer className="h-4 w-4" /> Imprimir</LinkButton>
           </div>
         }

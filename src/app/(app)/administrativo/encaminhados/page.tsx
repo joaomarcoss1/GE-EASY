@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusCasoSelect } from "@/components/clientes/status-caso-select";
 import { SELECT_FICHA_LINHA, TabelaFichas, type FichaLinha } from "@/components/pendencias/fila-setor";
+import { DossieButton } from "@/components/dossie/dossie-button";
 
 export const metadata: Metadata = { title: "Encaminhados para mim" };
 
@@ -59,7 +60,7 @@ export default async function EncaminhadosPage({ searchParams }: { searchParams:
           {!hab.length ? <EmptyState title="Nenhum processo esperando habilitação" /> : (
             <div className="overflow-x-auto">
               <table className="table-base">
-                <thead><tr><th>Cliente</th><th>Tipo</th><th>Na fila desde</th><th>Situação</th></tr></thead>
+                <thead><tr><th>Cliente</th><th>Tipo</th><th>Na fila desde</th><th>Situação</th><th /></tr></thead>
                 <tbody>
                   {hab.map((c) => (
                     <tr key={c.id}>
@@ -67,6 +68,7 @@ export default async function EncaminhadosPage({ searchParams }: { searchParams:
                       <td className="text-sm">{c.tipo}</td>
                       <td className="whitespace-nowrap text-xs text-muted">{date(c.updated_at)}</td>
                       <td>{podeMudar ? <StatusCasoSelect casoId={c.id} status={c.status} podeRestritos={restritos} protocolo={c.protocolo_inss} situacao={c.situacao_atual} /> : <StatusBadge options={CASO_STATUS} value={c.status} />}</td>
+                      <td><DossieButton casoId={c.id} cliente={c.clientes.nome} tipo={c.tipo} compacto /></td>
                     </tr>
                   ))}
                 </tbody>

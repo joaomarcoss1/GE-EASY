@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { DOC_CATEGORIAS } from "@/lib/constants";
+import { DOC_CATEGORIAS, TIPOS_ACAO } from "@/lib/constants";
 import { dbError, formToObject, guard, isUuid, zodErrors, zs } from "./utils";
 import type { ActionState } from "./types";
 
@@ -199,6 +199,9 @@ const tipoSchema = z.object({
   aplica_pj: zs.bool(),
   validade_dias: zs.number(1, 3650),
   ativo: zs.bool(),
+  escopo: z.enum(["cadastro", "processo"]).default("cadastro"),
+  tipos_acao: z.array(z.string().refine((t) => TIPOS_ACAO.some((o) => o.value === t), "Benefício inválido")).max(20).optional().default([]),
+  destinos: z.array(z.enum(["inss", "justica"])).max(2).optional().default([]),
 });
 
 export async function salvarTipoDocumento(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -206,7 +209,9 @@ export async function salvarTipoDocumento(_: ActionState, formData: FormData): P
   if ("denied" in g) return g.denied;
   const parsed = tipoSchema.safeParse(formToObject(formData));
   if (!parsed.success) return zodErrors(parsed.error);
-  const { id, ...v } = parsed.data;
+  const { id, ...dados } = parsed.data;
+  // tipos e destinos só valem para documentos do processo
+  const v = dados.escopo === "processo" ? dados : { ...dados, tipos_acao: [], destinos: [] };
   if (!v.aplica_pf && !v.aplica_pj) return { error: "Marque se vale para pessoa física, jurídica ou ambas." };
   const supabase = await createClient();
   const { error } = id ? await supabase.from("documento_tipos").update(v).eq("id", id) : await supabase.from("documento_tipos").insert(v);

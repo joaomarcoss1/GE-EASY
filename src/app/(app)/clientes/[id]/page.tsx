@@ -31,6 +31,7 @@ import { StatusCasoSelect } from "@/components/clientes/status-caso-select";
 import { ExigenciaPrazo } from "@/components/processos/exigencia-prazo";
 import { CASO_FIELDS } from "@/components/processos/caso-fields";
 import { editarCaso } from "@/lib/actions/comercial";
+import { DossieButton } from "@/components/dossie/dossie-button";
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -250,6 +251,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
                       <div className="flex flex-wrap gap-1">
                         {canWrite ? <StatusCasoSelect casoId={c.id} status={c.status} podeRestritos={can(profile, "processos.status_restritos")} protocolo={c.protocolo_inss} situacao={c.situacao_atual} /> : <StatusBadge options={CASO_STATUS} value={c.status} />}
                         {canWrite && <FormDrawerButton action={editarCaso} fields={CASO_FIELDS} values={{ protocolo_inss: c.protocolo_inss, situacao_atual: c.situacao_atual, observacoes: c.observacoes }} hidden={{ id: c.id }} title="Editar processo" description={c.tipo} icon="edit" variant="ghost" size="icon" width="max-w-lg" />}
+                        <DossieButton casoId={c.id} cliente={cliente.nome} tipo={c.tipo} compacto />
                         {c.status === "exigencia" && <ExigenciaPrazo casoId={c.id} prazo={c.exigencia_prazo} prorrogada={c.exigencia_prorrogada} podeProrrogar={canWrite} />}
                         {c.pendencia && <Badge tone="amber">{optionLabel(CASO_PENDENCIAS, c.pendencia)}</Badge>}
                         {c.exigencia_cumprida && <Badge tone="green">exigência cumprida</Badge>}

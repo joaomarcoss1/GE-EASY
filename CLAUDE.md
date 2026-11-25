@@ -55,6 +55,13 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   processo em `habilitacao` e os que já mudaram (via `can_access_cliente`); fila em `/administrativo/encaminhados`.
   Gatilho `cliente_caso_avisar_setor`: troca de status por uma pessoa para pendência/exigência/análise/habilitação avisa o
   setor (chave `caso_status:<caso>:<status>:<dia>`; o aviso da ficha usa a mesma chave e substitui texto e link).
+- Clientes do assessor: `clientes.assessor_id` → `assessores.user_id` (o assessor vê os seus; a supervisora, os da equipe via
+  `is_supervisor_de`), em `can_access_cliente` + política `clientes_select_assessor`. A carteira (prazo de documentação) não muda.
+- Documentos do processo e dossiê: `documento_tipos.escopo` = `cadastro` (completa o cadastro; `situacao_documental` só olha
+  esses) ou `processo` (com `tipos_acao` e `destinos` inss/justica). `checklist_processo(caso, destino)`; dossiê em
+  `src/lib/dossie/gerar.ts` (ZIP: resumo PDF, PDF único com PDFs/imagens, pasta Documentos; nunca a senha gov) pela rota
+  `/api/casos/[id]/dossie` (GET checklist + anteriores, POST gera), gravado no Storage e registrado em `dossies`.
+  Botão `DossieButton` na ficha do cliente, lista de processos, fila de habilitação e ficha de pendências/exigências.
 - Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
 - Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).
 - Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,

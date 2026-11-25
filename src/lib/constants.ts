@@ -217,7 +217,25 @@ export const DOC_CATEGORIAS: Option[] = [
   { value: "vistoria", label: "Vistoria" },
   { value: "documentos_pessoais", label: "Documentos pessoais" },
   { value: "contrato_assinado", label: "Contrato assinado" },
+  { value: "cnis", label: "Extrato do CNIS" },
+  { value: "certidao_nascimento", label: "Certidão de nascimento" },
+  { value: "autodeclaracao_rural", label: "Autodeclaração rural" },
+  { value: "prova_rural", label: "Provas da atividade rural" },
+  { value: "ctps", label: "Carteira de trabalho (CTPS)" },
+  { value: "cadunico", label: "CadÚnico" },
+  { value: "composicao_familiar", label: "Grupo familiar e renda" },
+  { value: "certidao_obito", label: "Certidão de óbito" },
+  { value: "vinculo_dependente", label: "Prova de vínculo (casamento, filiação)" },
+  { value: "decisao_inss", label: "Decisão do INSS" },
+  { value: "declaracao_hipossuficiencia", label: "Declaração de hipossuficiência" },
+  { value: "dossie", label: "Dossiê gerado" },
   { value: "outros", label: "Outros" },
+];
+
+/** Para onde o dossiê do processo vai. */
+export const DOSSIE_DESTINOS: Option[] = [
+  { value: "inss", label: "INSS (requerimento administrativo)" },
+  { value: "justica", label: "Justiça (ação judicial)" },
 ];
 
 /** Tipos de ação do cadastro comercial (o valor é o mesmo usado na base de processos). */
