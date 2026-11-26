@@ -24,26 +24,32 @@ export default async function MeuResumoPage({ searchParams }: { searchParams: Pr
   const ini = `${dia}T00:00:00-03:00`;
   const fim = `${addDays(dia, 1)}T00:00:00-03:00`;
   const supabase = await createClient();
-  const [{ data: atual }, { count: processos }, { count: ligacoes }, { count: visitas }, { count: documentos }, { data: cli }] = await Promise.all([
+  const mostrarExigencias = can(profile, "fichas.exigencias");
+  const [{ data: atual }, { count: processos }, { count: ligacoes }, { count: visitas }, { count: documentos }, { data: cli }, { count: exigencias }] = await Promise.all([
     supabase.from("resumos_diarios").select("*").eq("usuario_id", userId).eq("data", dia).maybeSingle(),
     supabase.from("clientes").select("id", { count: "exact", head: true }).eq("consultor_id", userId).gte("created_at", ini).lt("created_at", fim),
     supabase.from("interacoes").select("id", { count: "exact", head: true }).eq("autor_id", userId).eq("tipo", "ligacao").gte("created_at", ini).lt("created_at", fim),
     supabase.from("visitas").select("id", { count: "exact", head: true }).eq("consultor_id", userId).gte("checkin_em", ini).lt("checkin_em", fim),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("enviado_por", userId).gte("created_at", ini).lt("created_at", fim),
     supabase.from("clientes").select("id, nome, telefone, whatsapp").order("updated_at", { ascending: false }).limit(400),
+    // exigências que a própria pessoa tirou de "exigência" hoje (mesma regra da meta exigencias_cumpridas)
+    mostrarExigencias
+      ? supabase.from("cliente_casos_historico").select("id", { count: "exact", head: true }).eq("usuario_id", userId).eq("de", "exigencia")
+          .not("para", "in", "(exigencia,arquivo_morto,indeferido)").gte("em", ini).lt("em", fim)
+      : Promise.resolve({ count: 0 }),
   ]);
-  const sugestao = { processos: processos ?? 0, ligacoes: ligacoes ?? 0, visitas: visitas ?? 0, documentos: documentos ?? 0 };
+  const sugestao = { processos: processos ?? 0, ligacoes: ligacoes ?? 0, visitas: visitas ?? 0, documentos: documentos ?? 0, exigencias: exigencias ?? 0 };
   const clientes: ClienteRapido[] = (cli ?? []).map((c) => ({ id: c.id as string, nome: c.nome as string, telefone: (c.whatsapp || c.telefone) as string | null }));
   const r = atual as (ResumoDiaInput & { enviado_em: string }) | null;
   const inicial: ResumoDiaInput = r
     ? {
         data: dia, processos_novos: r.processos_novos, processos_trabalhados: r.processos_trabalhados, ligacoes: r.ligacoes, visitas: r.visitas,
-        documentos_coletados: r.documentos_coletados, pendencias_resolvidas: r.pendencias_resolvidas, ligacoes_detalhe: r.ligacoes_detalhe ?? [],
+        documentos_coletados: r.documentos_coletados, pendencias_resolvidas: r.pendencias_resolvidas, exigencias_cumpridas: r.exigencias_cumpridas ?? 0, ligacoes_detalhe: r.ligacoes_detalhe ?? [],
         avaliacao: r.avaliacao ?? null, atividades: r.atividades ?? "", dificuldades: r.dificuldades ?? "", plano_amanha: r.plano_amanha ?? "",
       }
     : {
         data: dia, processos_novos: sugestao.processos, processos_trabalhados: 0, ligacoes: sugestao.ligacoes, visitas: sugestao.visitas,
-        documentos_coletados: sugestao.documentos, pendencias_resolvidas: 0, ligacoes_detalhe: [], avaliacao: null, atividades: "", dificuldades: "", plano_amanha: "",
+        documentos_coletados: sugestao.documentos, pendencias_resolvidas: 0, exigencias_cumpridas: sugestao.exigencias, ligacoes_detalhe: [], avaliacao: null, atividades: "", dificuldades: "", plano_amanha: "",
       };
   const aba = "rounded-lg px-3 py-1.5 text-sm font-semibold";
 
@@ -60,7 +66,7 @@ export default async function MeuResumoPage({ searchParams }: { searchParams: Pr
           </div>
         }
       />
-      <ResumoDiaForm key={dia} inicial={inicial} clientes={clientes} sugestao={sugestao} data={dia} enviadoEm={r?.enviado_em ?? null} />
+      <ResumoDiaForm key={dia} inicial={inicial} clientes={clientes} sugestao={sugestao} mostrarExigencias={mostrarExigencias} data={dia} enviadoEm={r?.enviado_em ?? null} />
     </div>
   );
 }

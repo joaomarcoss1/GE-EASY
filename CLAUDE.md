@@ -70,7 +70,8 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   `/rotas/[id]/relatorio`. App de campo: `/campo` (tipos de fila `checklist` e `assinatura_rota`).
 - Resumo do dia: `resumos_diarios` (um por usuário/dia; só hoje ou ontem), tela `/comercial/meu-resumo`
   (`salvarResumoDia`; ligações para clientes viram `interacoes` uma única vez), gestão em `/comercial/resumo-diario`,
-  planilha `/api/resumos`, lembrete `lembrar_resumo_diario()` às 18h. Meta `ligacoes` = por dia, o maior entre o
+  planilha `/api/resumos`, lembrete `lembrar_resumo_diario()` às 18h. Quem tem `fichas.exigencias` também informa
+  `exigencias_cumpridas` (sugerido pelo histórico de status do dia, mesma regra da meta). Meta `ligacoes` = por dia, o maior entre o
   declarado no resumo e as ligações do histórico.
 - Login por nome de usuário: `profiles.usuario` (único, só o servidor define) e conta com e-mail técnico
   `<usuario>@usuarios.geeasy.invalid` (`src/lib/usuario-login.ts`). `signIn` aceita e-mail ou usuário; criação em

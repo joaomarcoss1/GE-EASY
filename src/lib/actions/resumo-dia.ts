@@ -26,6 +26,7 @@ const resumoSchema = z.object({
   visitas: n(200),
   documentos_coletados: n(500),
   pendencias_resolvidas: n(500),
+  exigencias_cumpridas: n(500).default(0),
   ligacoes_detalhe: z.array(ligacaoSchema).max(200),
   avaliacao: z.enum(["otimo", "bom", "regular", "dificil"]).nullable().optional(),
   atividades: texto(1000),

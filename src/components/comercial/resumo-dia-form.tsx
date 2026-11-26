@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
 
 type Ligacao = ResumoDiaInput["ligacoes_detalhe"][number];
-type Contador = "processos_novos" | "processos_trabalhados" | "ligacoes" | "visitas" | "documentos_coletados" | "pendencias_resolvidas";
+type Contador = "processos_novos" | "processos_trabalhados" | "ligacoes" | "visitas" | "documentos_coletados" | "pendencias_resolvidas" | "exigencias_cumpridas";
 
 export interface ClienteRapido {
   id: string;
@@ -24,12 +24,14 @@ const CONTADORES: { k: Contador; label: string; ajuda: string }[] = [
   { k: "documentos_coletados", label: "Documentos coletados", ajuda: "" },
   { k: "pendencias_resolvidas", label: "Pendências resolvidas", ajuda: "" },
 ];
+const EXIGENCIAS: { k: Contador; label: string; ajuda: string } = { k: "exigencias_cumpridas", label: "Exigências cumpridas", ajuda: "Processos que saíram de exigência hoje" };
 
 /** Resumo do dia em até 2 minutos: números do sistema já sugeridos, ligações em um toque e três observações curtas. */
-export function ResumoDiaForm({ inicial, clientes, sugestao, data, enviadoEm }: {
+export function ResumoDiaForm({ inicial, clientes, sugestao, mostrarExigencias, data, enviadoEm }: {
   inicial: ResumoDiaInput;
   clientes: ClienteRapido[];
-  sugestao: { processos: number; ligacoes: number; visitas: number; documentos: number };
+  sugestao: { processos: number; ligacoes: number; visitas: number; documentos: number; exigencias: number };
+  mostrarExigencias?: boolean;
   data: string;
   enviadoEm: string | null;
 }) {
@@ -42,6 +44,7 @@ export function ResumoDiaForm({ inicial, clientes, sugestao, data, enviadoEm }: 
   const porNome = useMemo(() => new Map(clientes.map((c) => [c.nome.toLowerCase(), c])), [clientes]);
   const set = <K extends keyof ResumoDiaInput>(k: K, valor: ResumoDiaInput[K]) => setV((s) => ({ ...s, [k]: valor }));
   const total = Math.max(v.ligacoes, v.ligacoes_detalhe.length);
+  const contadores = mostrarExigencias || (v.exigencias_cumpridas ?? 0) > 0 ? [...CONTADORES, EXIGENCIAS] : CONTADORES;
 
   const addLigacao = () => {
     const n = nome.trim();
@@ -68,14 +71,14 @@ export function ResumoDiaForm({ inicial, clientes, sugestao, data, enviadoEm }: 
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:bg-brand-900/30 dark:text-brand-100">
         <Sparkles className="h-4 w-4 shrink-0" />
-        <span>O sistema registrou hoje: <b>{sugestao.processos}</b> processo(s) cadastrado(s), <b>{sugestao.ligacoes}</b> ligação(ões) no histórico, <b>{sugestao.visitas}</b> visita(s) e <b>{sugestao.documentos}</b> documento(s). Já preenchemos para você.</span>
+        <span>O sistema registrou hoje: <b>{sugestao.processos}</b> processo(s) cadastrado(s), <b>{sugestao.ligacoes}</b> ligação(ões) no histórico, <b>{sugestao.visitas}</b> visita(s) e <b>{sugestao.documentos}</b> documento(s){mostrarExigencias && <> e <b>{sugestao.exigencias}</b> exigência(s) cumprida(s)</>}. Já preenchemos para você.</span>
       </div>
 
       <section>
         <h2 className="mb-2 text-sm font-semibold">1. Números do dia</h2>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {CONTADORES.map((c) => {
-            const valor = c.k === "ligacoes" ? total : v[c.k];
+          {contadores.map((c) => {
+            const valor = c.k === "ligacoes" ? total : (v[c.k] ?? 0);
             return (
               <div key={c.k} className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2">
                 <div className="min-w-0">

@@ -17,6 +17,7 @@ interface Resumo {
   visitas: number;
   documentos_coletados: number;
   pendencias_resolvidas: number;
+  exigencias_cumpridas: number;
   ligacoes_detalhe: { id: string; nome: string; resultado: string; cliente_id?: string | null }[];
   avaliacao: string | null;
   atividades: string | null;
@@ -73,6 +74,7 @@ export async function ResumosEnviados({ dia, gestao, podeExportar }: { dia: stri
                 {[
                   ["Processos novos", r.processos_novos], ["Trabalhados", r.processos_trabalhados], ["Ligações", r.ligacoes],
                   ["Visitas", r.visitas], ["Documentos", r.documentos_coletados], ["Pendências resolvidas", r.pendencias_resolvidas],
+                  ...(r.exigencias_cumpridas ? [["Exigências cumpridas", r.exigencias_cumpridas]] : []),
                 ].map(([l, n]) => <span key={l as string} className="rounded-lg bg-surface-2 px-2.5 py-1"><b className="tabular-nums">{num(n as number)}</b> <span className="text-muted">{l}</span></span>)}
               </div>
               {r.ligacoes_detalhe.length > 0 && (

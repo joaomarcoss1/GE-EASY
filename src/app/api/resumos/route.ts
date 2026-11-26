@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 interface Resumo {
   usuario_id: string; data: string; processos_novos: number; processos_trabalhados: number; ligacoes: number; visitas: number;
-  documentos_coletados: number; pendencias_resolvidas: number; avaliacao: string | null; atividades: string | null; dificuldades: string | null;
+  documentos_coletados: number; pendencias_resolvidas: number; exigencias_cumpridas: number; avaliacao: string | null; atividades: string | null; dificuldades: string | null;
   plano_amanha: string | null; atualizado_em: string; ligacoes_detalhe: { nome: string; resultado: string; cliente_id?: string | null }[];
 }
 const rot = (o: { value: string; label: string }[], v: string | null) => (v ? (o.find((x) => x.value === v)?.label ?? v) : "");
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   const porPessoa = [...new Set(resumos.map((r) => r.usuario_id))].map((u) => {
     const l = resumos.filter((r) => r.usuario_id === u);
     const soma = (k: keyof Resumo) => l.reduce((a, r) => a + Number(r[k] ?? 0), 0);
-    return { nome: nome(u), dias: l.length, novos: soma("processos_novos"), trab: soma("processos_trabalhados"), lig: soma("ligacoes"), vis: soma("visitas"), docs: soma("documentos_coletados"), pend: soma("pendencias_resolvidas") };
+    return { nome: nome(u), dias: l.length, novos: soma("processos_novos"), trab: soma("processos_trabalhados"), lig: soma("ligacoes"), vis: soma("visitas"), docs: soma("documentos_coletados"), pend: soma("pendencias_resolvidas"), exig: soma("exigencias_cumpridas") };
   }).sort((a, b) => b.novos - a.novos);
   const ligacoes = resumos.flatMap((r) => r.ligacoes_detalhe.map((l) => ({ ...l, data: r.data, usuario: nome(r.usuario_id) })));
 
@@ -71,6 +71,7 @@ export async function GET(req: NextRequest) {
         { titulo: "Visitas", valor: (r) => r.vis, formato: "inteiro", largura: 10 },
         { titulo: "Documentos", valor: (r) => r.docs, formato: "inteiro", largura: 11 },
         { titulo: "Pendências resolvidas", valor: (r) => r.pend, formato: "inteiro", largura: 12 },
+        { titulo: "Exigências cumpridas", valor: (r) => r.exig, formato: "inteiro", largura: 12 },
       ], porPessoa),
       aba<Resumo>("Resumos", [
         { titulo: "Data", valor: (r) => paraData(r.data), formato: "data", largura: 12 },
@@ -81,6 +82,7 @@ export async function GET(req: NextRequest) {
         { titulo: "Visitas", valor: (r) => r.visitas, formato: "inteiro", largura: 9 },
         { titulo: "Documentos", valor: (r) => r.documentos_coletados, formato: "inteiro", largura: 10 },
         { titulo: "Pendências resolvidas", valor: (r) => r.pendencias_resolvidas, formato: "inteiro", largura: 11 },
+        { titulo: "Exigências cumpridas", valor: (r) => r.exigencias_cumpridas ?? 0, formato: "inteiro", largura: 11 },
         { titulo: "Dia", valor: (r) => rot(DIA_AVALIACOES, r.avaliacao), largura: 10 },
         { titulo: "Destaques", valor: (r) => r.atividades ?? "", largura: 40 },
         { titulo: "Dificuldades / pendências", valor: (r) => r.dificuldades ?? "", largura: 40 },
