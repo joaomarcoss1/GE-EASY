@@ -71,7 +71,7 @@ export function ResumoDiaForm({ inicial, clientes, sugestao, mostrarExigencias, 
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:bg-brand-900/30 dark:text-brand-100">
         <Sparkles className="h-4 w-4 shrink-0" />
-        <span>O sistema registrou hoje: <b>{sugestao.processos}</b> processo(s) cadastrado(s), <b>{sugestao.ligacoes}</b> ligação(ões) no histórico, <b>{sugestao.visitas}</b> visita(s) e <b>{sugestao.documentos}</b> documento(s){mostrarExigencias && <> e <b>{sugestao.exigencias}</b> exigência(s) cumprida(s)</>}. Já preenchemos para você.</span>
+        <span>O sistema registrou hoje: <b>{sugestao.processos}</b> processo(s) cadastrado(s), <b>{sugestao.ligacoes}</b> ligação(ões) no histórico, <b>{sugestao.visitas}</b> visita(s){mostrarExigencias ? ", " : " e "}<b>{sugestao.documentos}</b> documento(s){mostrarExigencias && <> e <b>{sugestao.exigencias}</b> exigência(s) cumprida(s)</>}. Já preenchemos para você.</span>
       </div>
 
       <section>
