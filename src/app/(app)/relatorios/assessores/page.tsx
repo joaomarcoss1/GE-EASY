@@ -49,9 +49,12 @@ export default async function RelatorioAssessoresPage({ searchParams }: { search
         eyebrow="Relatórios"
         title="Relatório por assessor"
         description={`${titulo} · processos recebidos de ${date(f.de)} a ${date(f.ate)}`}
-        actions={can(profile, "clientes.exportar") && (
-          <LinkButton href={`/api/relatorios/assessores?${qs}`} variant="secondary" prefetch={false}><Download className="h-4 w-4" /> Exportar planilha</LinkButton>
-        )}
+        actions={
+          <>
+            <LinkButton href="/relatorios/equipe" variant="secondary">Relatório da equipe</LinkButton>
+            {can(profile, "clientes.exportar") && <LinkButton href={`/api/relatorios/assessores?${qs}`} variant="secondary" prefetch={false}><Download className="h-4 w-4" /> Exportar planilha</LinkButton>}
+          </>
+        }
       />
       <Card className="mb-6">
         <form className="flex flex-col flex-wrap gap-3 p-4 sm:flex-row sm:items-end" method="get">

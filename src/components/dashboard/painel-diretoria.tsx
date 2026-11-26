@@ -19,6 +19,7 @@ import { MetaProgresso, type MetaLinha } from "@/components/metas/metas-processo
 import { ExigenciaPrazo } from "@/components/processos/exigencia-prazo";
 import { carregarInconsistencias } from "@/lib/inconsistencias";
 import { AgendaCard, greeting, MinhasTarefasCard, todayLong } from "@/components/juridico/dashboard-widgets";
+import { carregarEquipe, INDICADOR_ROTULO, totalAcoes } from "@/lib/equipe";
 
 const COR: Record<string, string> = {
   em_analise: "bg-sky-500", pendencia: "bg-amber-500", exigencia: "bg-red-500", habilitado: "bg-emerald-500",
@@ -46,7 +47,7 @@ export async function PainelDiretoria({ session, firstName, alert }: { session: 
   const ini12 = firstDay(meses[0]);
   const em7 = new Date(Date.now() + 7 * 86_400_000).toISOString();
 
-  const [resumoRes, casos12, metasRes, tramitesRes, exigRes, docsRes, judRes, assessoresRes, profiles, inc] = await Promise.all([
+  const [resumoRes, casos12, metasRes, tramitesRes, exigRes, docsRes, judRes, assessoresRes, profiles, inc, equipe] = await Promise.all([
     supabase.rpc("cliente_casos_resumo"),
     fetchAll<CasoMin>((f, t) =>
       supabase.from("cliente_casos").select("id, status, recebido_em, habilitado_em, assessor_id").or(`recebido_em.gte.${ini12},habilitado_em.gte.${ini12}`).order("id").range(f, t) as unknown as PromiseLike<{ data: CasoMin[] | null; error: { message: string } | null }>,
@@ -60,7 +61,9 @@ export async function PainelDiretoria({ session, firstName, alert }: { session: 
     supabase.from("assessores").select("id, nome"),
     getProfileMap(),
     carregarInconsistencias(can(profile, "rotas.ver")),
+    can(profile, "clientes.ver_todos") ? carregarEquipe(iniMes, hoje) : Promise.resolve([]),
   ]);
+  const equipeOrdem = [...equipe].sort((a, b) => totalAcoes(b) - totalAcoes(a) || a.nome.localeCompare(b.nome));
 
   const porStatus = ((resumoRes.data ?? {}) as { por_status?: Record<string, number> }).por_status ?? {};
   const total = Object.values(porStatus).reduce((a, n) => a + n, 0);
@@ -252,6 +255,36 @@ export async function PainelDiretoria({ session, firstName, alert }: { session: 
           </Card>
         </div>
       </div>
+
+      {equipeOrdem.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader icon={<UserCheck className="h-4 w-4" />} title="Equipe no mês" description="O que cada pessoa registrou no sistema: análises, pendências, exigências, habilitações, fichas e resumos" action={<Link href="/relatorios/equipe" className={linkCls}>Relatório da equipe</Link>} />
+          <div className="overflow-x-auto">
+            <table className="table-base">
+              <thead><tr><th>Pessoa</th><th>Meta do mês</th><th className="text-right">Análises</th><th className="text-right">Pendências</th><th className="text-right">Exigências</th><th className="text-right">Habilitou</th><th className="text-right">Fichas</th><th className="text-right">Resumos</th></tr></thead>
+              <tbody>
+                {equipeOrdem.map((l) => {
+                  const ind = Object.keys(l.metas).find((k) => k in INDICADOR_ROTULO);
+                  const feito = ind ? Number((l as unknown as Record<string, number>)[ind] ?? 0) : 0;
+                  const parado = totalAcoes(l) === 0;
+                  return (
+                    <tr key={l.usuario_id}>
+                      <td><span className="font-medium">{l.nome}</span>{parado && <div className="text-[11px] text-amber-700 dark:text-amber-300">nada registrado no mês</div>}</td>
+                      <td className="whitespace-nowrap text-sm">{ind ? <><b className="tabular-nums">{num(feito)}</b> de {num(l.metas[ind])} <span className="text-xs text-muted">{INDICADOR_ROTULO[ind]}</span></> : <span className="text-xs text-muted">—</span>}</td>
+                      <td className="text-right tabular-nums">{num(l.analises)}</td>
+                      <td className="text-right tabular-nums">{num(l.pendencias_resolvidas)}</td>
+                      <td className="text-right tabular-nums">{num(l.exigencias_cumpridas)}</td>
+                      <td className="text-right tabular-nums">{num(l.habilitados)}</td>
+                      <td className="text-right tabular-nums">{num(l.fichas_abertas + l.fichas_encerradas)}</td>
+                      <td className="text-right tabular-nums">{num(l.resumos)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <AgendaCard userId={userId} />

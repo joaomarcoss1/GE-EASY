@@ -63,6 +63,8 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   `/api/casos/[id]/dossie` (GET checklist + anteriores, POST gera), gravado no bucket privado `dossies` (ZIP + PDF único,
   até 50 MB cada) e registrado em `dossies`. Reclassificar documento (só a categoria): `reclassificar_documento()`.
   Botão `DossieButton` na ficha do cliente, lista de processos, fila de habilitação e ficha de pendências/exigências.
+- Relatório da equipe interna: `produtividade_equipe(de, ate)` (definer; exige `clientes.ver_todos`; conta pelo histórico de status,
+  fichas, dossiês e resumos), tela `/relatorios/equipe` e cartão "Equipe no mês" no painel da diretoria (`src/lib/equipe.ts`).
 - Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
 - Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).
 - Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,
