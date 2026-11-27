@@ -67,6 +67,9 @@ entre outros. Decisões e entrega das fases 1–3: `docs/ERP-MULTIEMPRESA.md` e 
   fichas, dossiês e resumos), tela `/relatorios/equipe` e cartão "Equipe no mês" no painel da diretoria (`src/lib/equipe.ts`).
 - Painel administrativo (`/administrativo`): `painel_processos_adm()` (invoker; status, filas dos setores, benefícios, exigências,
   atenção) em `components/administrativo/painel-processos.tsx` + metas/ritmo/movimentações da equipe em `painel-equipe.tsx`.
+- Metas são privadas: só o master e quem tem `metas.ver_equipe` (Vanuza) veem as de todos e a produção da equipe
+  (`metas_processos`/`metas` RLS, `metas_processos_painel`, `produtividade_equipe`); os demais veem só as próprias
+  (funcionário ou o seu cadastro de assessor, `minhas_metas_assessor()`). Editar metas exige também `metas.ver_equipe`.
 - Inconsistências: `inconsistencias_processos()`/`inconsistencias_rotas()` (invoker), tela `/administrativo/inconsistencias`.
 - Planilhas: `src/lib/planilha` (exceljs, logo embutida, cabeçalho, data/autor). Exportações devolvem .xlsx (`?formato=csv` legado).
 - Rotas: `objetivo_tipo`, `cidades`, `corretores`, `participantes`; `rota_checklists` (saída/chegada, foto do painel, km,

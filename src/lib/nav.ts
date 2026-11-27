@@ -77,7 +77,7 @@ const ALL_NAV: NavGroup[] = [
       { href: "/comercial/meu-resumo", label: "Meu resumo do dia", icon: "ClipboardList", permission: "clientes.view" },
       { href: "/administrativo/inconsistencias", label: "Inconsistências", icon: "ShieldAlert", permission: "clientes.ver_todos" },
       { href: "/relatorios/assessores", label: "Relatório por assessor", icon: "FileBarChart", permission: "clientes.ver_todos" },
-      { href: "/relatorios/equipe", label: "Relatório da equipe", icon: "Users", permission: "clientes.ver_todos" },
+      { href: "/relatorios/equipe", label: "Relatório da equipe", icon: "Users", permission: "metas.ver_equipe" },
       { href: "/rotas", label: "Rotas", icon: "Route", permission: "rotas.ver" },
       { href: "/rotas/mapa", label: "Mapa do campo", icon: "Map", permission: "rotas.ver" },
       { href: "/rotas/despesas", label: "Despesas de rota", icon: "Receipt", permission: "despesas.aprovar" },

@@ -37,23 +37,30 @@ function diasUteis(mes: string, hoje: string) {
   return { total, passados };
 }
 
-/** Painel administrativo, parte 2: metas individuais, ritmo e movimentações da equipe interna. */
-export async function PainelEquipe() {
+/**
+ * Painel administrativo, parte 2: metas individuais, ritmo e movimentações. Com `todas` (master ou metas.ver_equipe),
+ * a equipe inteira; sem, só a pessoa logada (o banco também restringe metas e produtividade).
+ */
+export async function PainelEquipe({ todas, userId }: { todas: boolean; userId: string }) {
   const hoje = todayISO();
   const mes = currentMonth();
   const ini14 = addDays(hoje, -13);
   const supabase = await createClient();
-  const [equipe, { data: movs }, { data: filaHab }, profiles] = await Promise.all([
+  let qMovs = supabase.from("cliente_casos_historico").select("id, de, para, em, usuario_id, cliente_casos(tipo, cliente_id, clientes(nome))").not("usuario_id", "is", null).gte("em", spStartOf(ini14));
+  if (!todas) qMovs = qMovs.eq("usuario_id", userId);
+  const [equipeBruta, { data: movs }, { data: filaHab }, profiles] = await Promise.all([
     carregarEquipe(firstDay(mes), hoje),
-    supabase.from("cliente_casos_historico").select("id, de, para, em, usuario_id, cliente_casos(tipo, cliente_id, clientes(nome))").not("usuario_id", "is", null).gte("em", spStartOf(ini14)).order("em", { ascending: false }).limit(1000),
+    qMovs.order("em", { ascending: false }).limit(1000),
     supabase.from("cliente_casos").select("id", { count: "exact", head: true }).eq("status", "habilitacao").then((r) => ({ data: r.count ?? 0 })),
     getProfileMap(),
   ]);
   const { total: uteis, passados } = diasUteis(mes, hoje);
+  const equipe = todas ? equipeBruta : equipeBruta.filter((l) => l.usuario_id === userId);
 
-  // quem aparece nos cartões: quem tem meta individual, quem habilita (comercial listado) ou quem movimentou algo
+  // quem aparece nos cartões: quem tem meta individual, quem habilita (comercial listado) ou quem movimentou algo;
+  // sem a visão da equipe, sempre o próprio cartão
   const pessoas = equipe
-    .filter((l) => Object.keys(l.metas).some((k) => k in SETOR_IND) || l.papel === "consultor" || totalAcoes(l) > 0)
+    .filter((l) => !todas || Object.keys(l.metas).some((k) => k in SETOR_IND) || l.papel === "consultor" || totalAcoes(l) > 0)
     .map((l, i) => {
       const ind = Object.keys(l.metas).find((k) => k in SETOR_IND) ?? (l.papel === "consultor" ? "habilitados" : null);
       const s = ind ? SETOR_IND[ind] : null;
@@ -76,16 +83,16 @@ export async function PainelEquipe() {
   return (
     <>
       {pessoas.length === 0 ? (
-        <Card className="p-5 text-sm text-muted">Nenhuma pessoa da equipe com meta ou movimentação neste mês.</Card>
+        <Card className="mb-4 p-5 text-sm text-muted">{todas ? "Nenhuma pessoa da equipe com meta ou movimentação neste mês." : "Você ainda não tem meta cadastrada neste mês."}</Card>
       ) : (
-        <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className={cn("mb-4 grid gap-4", todas ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2 xl:grid-cols-3")}>
           {pessoas.map(({ l, ind, setor, cor }) => <CartaoPessoa key={l.usuario_id} l={l} ind={ind} setor={setor} cor={cor} uteis={uteis} passados={passados} filaHab={filaHab ?? 0} />)}
         </div>
       )}
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
-          <CardHeader icon={<Users className="h-4 w-4" />} title="Movimentações por dia" description="Mudanças de status feitas por cada pessoa · últimos 14 dias" />
+          <CardHeader icon={<Users className="h-4 w-4" />} title="Movimentações por dia" description={todas ? "Mudanças de status feitas por cada pessoa · últimos 14 dias" : "Mudanças de status feitas por você · últimos 14 dias"} />
           <div className="p-5">
             <div className="flex h-36 items-end gap-1.5 border-b border-line" role="img" aria-label="Mudanças de status por dia nos últimos 14 dias">
               {porDia.map((x) => (
@@ -102,13 +109,15 @@ export async function PainelEquipe() {
             </div>
             {lista.length === 0 && (
               <p className="mt-4 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-                Nenhuma mudança de status registrada pela equipe nos últimos 14 dias. As barras sobem conforme cada pessoa muda o status dos processos no sistema.
+                {todas
+                  ? "Nenhuma mudança de status registrada pela equipe nos últimos 14 dias. As barras sobem conforme cada pessoa muda o status dos processos no sistema."
+                  : "Nenhuma mudança de status sua nos últimos 14 dias. As barras sobem conforme você muda o status dos processos no sistema."}
               </p>
             )}
           </div>
         </Card>
         <Card>
-          <CardHeader icon={<History className="h-4 w-4" />} title="Últimas movimentações da equipe" action={<Link href="/relatorios/equipe" className={linkCls}>Relatório da equipe</Link>} />
+          <CardHeader icon={<History className="h-4 w-4" />} title={todas ? "Últimas movimentações da equipe" : "Minhas últimas movimentações"} action={todas ? <Link href="/relatorios/equipe" className={linkCls}>Relatório da equipe</Link> : undefined} />
           {lista.length === 0 ? (
             <p className="m-5 rounded-xl border border-dashed border-line p-5 text-center text-sm text-muted">
               Ainda não há movimentações. Aqui aparece quem mudou o status, de qual cliente, de qual status para qual e quando.

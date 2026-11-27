@@ -55,7 +55,10 @@ export default async function MetasProcessosPage({ searchParams }: { searchParam
   const { ref: refParam } = await searchParams;
   const hoje = todayISO();
   const ref = isISODate(refParam) && refParam <= hoje ? refParam : hoje;
-  const manage = can(profile, "metas.manage");
+  // ver as metas de todos: só master e "metas.ver_equipe" (o banco devolve só as próprias aos demais);
+  // cadastrar/editar exige também ver a equipe
+  const verEquipe = can(profile, "metas.ver_equipe");
+  const manage = verEquipe && can(profile, "metas.manage");
   const supabase = await createClient();
   const [{ data: painel, error }, { data: cadastro }, { data: assessoresData }, usuarios] = await Promise.all([
     supabase.rpc("metas_processos_painel", { p_ref: ref }),
@@ -79,13 +82,14 @@ export default async function MetasProcessosPage({ searchParams }: { searchParam
     <>
       <PageHeader
         eyebrow="Metas"
-        title="Metas de processos"
+        title={verEquipe ? "Metas de processos" : "Minhas metas"}
         description={`Referência: ${ref.split("-").reverse().join("/")} — metas diárias deste dia, mensais de ${monthLong(mesRef)} e anuais de ${ref.slice(0, 4)}. ${batidas} de ${linhas.length} batida(s).`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/metas/processos?ref=${addDays(`${mesRef}-01`, -1)}`} className={navBtn} aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /> Mês anterior</Link>
             {ref !== hoje && <Link href="/metas/processos" className={navBtn}>Hoje <ChevronRight className="h-4 w-4" /></Link>}
-            {can(profile, "clientes.ver_todos") && <LinkButton href="/relatorios/assessores" variant="secondary" size="sm">Relatório por assessor</LinkButton>}
+            {verEquipe && <LinkButton href="/relatorios/equipe" variant="secondary" size="sm">Relatório da equipe</LinkButton>}
+            {verEquipe && <LinkButton href="/relatorios/assessores" variant="secondary" size="sm">Relatório por assessor</LinkButton>}
             {manage && <FormDrawerButton action={salvarMetaProcesso} fields={fields} values={{ alvo: "assessor", periodicidade: "mensal", indicador: "processos_novos" }} title="Nova meta" label="Nova meta" variant="accent" width="max-w-lg" />}
           </div>
         }
@@ -94,7 +98,14 @@ export default async function MetasProcessosPage({ searchParams }: { searchParam
       {error ? (
         <Card><EmptyState title="Não foi possível carregar as metas" description="Tente novamente em instantes." /></Card>
       ) : linhas.length === 0 ? (
-        <Card><EmptyState icon={<Target className="h-6 w-6" />} title="Nenhuma meta ativa" description={manage ? "Cadastre as metas em “Nova meta”." : "A gestão ainda não cadastrou metas."} /></Card>
+        <Card><EmptyState icon={<Target className="h-6 w-6" />} title="Nenhuma meta ativa" description={manage ? "Cadastre as metas em “Nova meta”." : verEquipe ? "A gestão ainda não cadastrou metas." : "Você ainda não tem meta cadastrada. Fale com a gestão."} /></Card>
+      ) : !verEquipe ? (
+        <Card>
+          <CardHeader icon={<Target className="h-4 w-4" />} title="Minhas metas" description="Só você e a gestão veem as suas metas" />
+          <div className="divide-y divide-line px-5">
+            {linhas.map((m) => <MetaProgresso key={`${m.meta_id}-${m.assessor_id}`} m={m} hoje={hoje} />)}
+          </div>
+        </Card>
       ) : (
         <div className="grid gap-6 xl:grid-cols-2">
           <Card>

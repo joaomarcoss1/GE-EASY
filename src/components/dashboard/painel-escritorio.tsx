@@ -67,7 +67,9 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
   const vencidas = exigencias.filter((e) => e.exigencia_prazo && e.exigencia_prazo < hoje).length;
   const docs = (docRes.data ?? []) as { id: string; nome: string; prazo_documentacao: string | null }[];
   const meusAss = new Set((meusAssRes.data ?? []).map((a) => a.id as string));
-  const metas = ((metasRes.data ?? []) as MetaLinha[]).filter((m) => veBase || m.alvo === "empresa" || m.usuario_id === userId || (m.assessor_id && meusAss.has(m.assessor_id)));
+  // o banco só devolve todas as metas para quem tem metas.ver_equipe; os demais recebem só as próprias
+  const metasEquipe = can(profile, "metas.ver_equipe");
+  const metas = ((metasRes.data ?? []) as MetaLinha[]).filter((m) => metasEquipe || m.usuario_id === userId || (m.assessor_id && meusAss.has(m.assessor_id)));
 
   return (
     <>
@@ -175,7 +177,7 @@ export async function PainelEscritorio({ session, firstName, alert }: { session:
 
         <div className="space-y-6">
           <Card>
-            <CardHeader icon={<Target className="h-4 w-4" />} title="Metas" description={veBase ? "Da empresa, dos consultores e dos corretores" : "As gerais e as suas"} action={<Link href="/metas/processos" className={linkCls}>Ver metas</Link>} />
+            <CardHeader icon={<Target className="h-4 w-4" />} title="Metas" description={metasEquipe ? "Da empresa, da equipe, dos consultores e dos corretores" : "As suas metas"} action={<Link href="/metas/processos" className={linkCls}>Ver metas</Link>} />
             {metas.length === 0 ? (
               <EmptyState title="Nenhuma meta ativa" description="As metas são cadastradas em Metas." />
             ) : (

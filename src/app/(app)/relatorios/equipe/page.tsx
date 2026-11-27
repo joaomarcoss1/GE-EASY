@@ -26,7 +26,8 @@ function principal(l: LinhaEquipe) {
 
 /** O que cada pessoa da equipe interna (Pendências, Exigências, Análise, Habilitação) fez no período. */
 export default async function RelatorioEquipePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  await requirePermission("clientes.ver_todos");
+  // metas e produção de todos: só o master e quem recebeu "metas.ver_equipe"
+  await requirePermission("metas.ver_equipe");
   const sp = await searchParams;
   const { de, ate } = rangeParam(sp.de, sp.ate);
   const hoje = todayISO();

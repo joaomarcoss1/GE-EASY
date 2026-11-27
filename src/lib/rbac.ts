@@ -23,6 +23,7 @@ export const FUNCIONALIDADES = [
   "visitas.checkin",
   "comissoes.view",
   "metas.manage",
+  "metas.ver_equipe",
   "consultores.manage",
   "processos.view",
   "processos.write",

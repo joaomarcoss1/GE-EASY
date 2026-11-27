@@ -21,7 +21,7 @@ export interface LinhaEquipe {
   metas: Record<string, number>;
 }
 
-/** Produtividade da equipe interna no período (banco: `produtividade_equipe`, exige `clientes.ver_todos`). */
+/** Produtividade no período (banco: `produtividade_equipe`): toda a equipe com `metas.ver_equipe`; senão, só a própria linha. */
 export async function carregarEquipe(de: string, ate: string): Promise<LinhaEquipe[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("produtividade_equipe", { p_de: de, p_ate: ate });

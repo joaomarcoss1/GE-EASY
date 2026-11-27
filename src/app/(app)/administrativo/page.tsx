@@ -33,10 +33,11 @@ function Secao({ titulo, tag }: { titulo: string; tag: string }) {
 
 /** Painel administrativo: processos dos clientes, metas e movimentações da equipe e a base documental. */
 export default async function AdministrativoPage() {
-  const { profile } = await requireArea("administrativo");
+  const { profile, userId } = await requireArea("administrativo");
   const supabase = await createClient();
   const hoje = todayISO();
-  const verEquipe = can(profile, "clientes.ver_todos");
+  // metas e movimentações de todos: só master e "metas.ver_equipe"; os demais veem só as próprias
+  const verEquipe = can(profile, "metas.ver_equipe");
   const [{ count: fila }, { count: transferidos }, { count: vencendo }, pendentes, { data: recentes }, { data: encaminhamentos }, nomes] = await Promise.all([
     supabase.from("documentos").select("id", { count: "exact", head: true }).in("analise_status", ["enviado", "em_analise"]).not("cliente_id", "is", null),
     supabase.from("clientes").select("id", { count: "exact", head: true }).eq("status_cadastro", "transferido_administrativo"),
@@ -70,12 +71,8 @@ export default async function AdministrativoPage() {
       <Secao titulo="Processos" tag="agora" />
       <PainelProcessos docsConferir={fila ?? 0} />
 
-      {verEquipe && (
-        <>
-          <Secao titulo="Equipe: metas e movimentações" tag={monthLong(currentMonth())} />
-          <PainelEquipe />
-        </>
-      )}
+      <Secao titulo={verEquipe ? "Equipe: metas e movimentações" : "Minha meta e movimentações"} tag={monthLong(currentMonth())} />
+      <PainelEquipe todas={verEquipe} userId={userId} />
 
       <Secao titulo="Base e documentação" tag="cadastros" />
       <div className="grid gap-4 xl:grid-cols-3">

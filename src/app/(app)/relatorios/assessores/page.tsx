@@ -51,7 +51,7 @@ export default async function RelatorioAssessoresPage({ searchParams }: { search
         description={`${titulo} · processos recebidos de ${date(f.de)} a ${date(f.ate)}`}
         actions={
           <>
-            <LinkButton href="/relatorios/equipe" variant="secondary">Relatório da equipe</LinkButton>
+            {can(profile, "metas.ver_equipe") && <LinkButton href="/relatorios/equipe" variant="secondary">Relatório da equipe</LinkButton>}
             {can(profile, "clientes.exportar") && <LinkButton href={`/api/relatorios/assessores?${qs}`} variant="secondary" prefetch={false}><Download className="h-4 w-4" /> Exportar planilha</LinkButton>}
           </>
         }

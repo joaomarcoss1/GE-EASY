@@ -61,7 +61,7 @@ export async function PainelDiretoria({ session, firstName, alert }: { session: 
     supabase.from("assessores").select("id, nome"),
     getProfileMap(),
     carregarInconsistencias(can(profile, "rotas.ver")),
-    can(profile, "clientes.ver_todos") ? carregarEquipe(iniMes, hoje) : Promise.resolve([]),
+    can(profile, "metas.ver_equipe") ? carregarEquipe(iniMes, hoje) : Promise.resolve([]),
   ]);
   const equipeOrdem = [...equipe].sort((a, b) => totalAcoes(b) - totalAcoes(a) || a.nome.localeCompare(b.nome));
 
