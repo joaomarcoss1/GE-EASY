@@ -100,7 +100,7 @@ export async function PainelProcessos({ docsConferir }: { docsConferir: number }
                       <td className={cn("text-right tabular-nums", !s.entraram && "text-muted")}>{num(s.entraram)}</td>
                       <td className={cn("text-right tabular-nums", !s.sairam && "text-muted")}>{num(s.sairam)}</td>
                       <td className={cn("text-right tabular-nums", s.parados15 ? "font-bold text-amber-700 dark:text-amber-300" : "text-muted")}>{num(s.parados15)}</td>
-                      <td className={cn("text-right tabular-nums", s.dias_medio == null && "text-muted")}>{s.dias_medio == null ? "—" : `${num(s.dias_medio)} dia(s)`}</td>
+                      <td className={cn("whitespace-nowrap text-right tabular-nums", s.dias_medio == null && "text-muted")}>{s.dias_medio == null ? "—" : `${num(s.dias_medio)} dia(s)`}</td>
                     </tr>
                   );
                 })}
